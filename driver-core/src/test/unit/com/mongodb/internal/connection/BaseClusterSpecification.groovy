@@ -115,8 +115,7 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary()))
-                .server.description.address == firstServer
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary())).description.address == firstServer
     }
 
     def 'should use server selector passed to selectServer if server selector in cluster settings is null'() {
@@ -132,7 +131,7 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ServerAddressSelector(firstServer)).server.description.address == firstServer
+        cluster.selectServer(new ServerAddressSelector(firstServer)).description.address == firstServer
     }
 
     def 'should timeout with useful message'() {
@@ -189,8 +188,7 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()))
-                .server.description.address == thirdServer
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary())).description.address == thirdServer
 
         cleanup:
         cluster?.close()
@@ -213,7 +211,7 @@ class BaseClusterSpecification extends Specification {
         def latch = new CountDownLatch(1)
         def thread = new Thread({
             try {
-                cluster.selectServer()(new ReadPreferenceServerSelector(ReadPreference.primary()))
+                cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()))
             } catch (MongoInterruptedException e) {
                 latch.countDown()
             }
@@ -359,8 +357,8 @@ class BaseClusterSpecification extends Specification {
 
     def selectServerAsync(BaseCluster cluster, ServerAddress serverAddress) {
         def serverLatch = new ServerLatch()
-        cluster.selectServerAsync(new ServerAddressSelector(serverAddress)) { ServerTuple result, MongoException e ->
-            serverLatch.server = result != null ? result.getServer() : null
+        cluster.selectServerAsync(new ServerAddressSelector(serverAddress)) { Server result, MongoException e ->
+            serverLatch.server = result
             serverLatch.throwable = e
             serverLatch.latch.countDown()
         }

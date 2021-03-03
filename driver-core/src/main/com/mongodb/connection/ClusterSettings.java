@@ -21,6 +21,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.annotations.Immutable;
 import com.mongodb.annotations.NotThreadSafe;
 import com.mongodb.event.ClusterListener;
+import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.ServerAddressHelper;
 import com.mongodb.internal.selector.LatencyMinimizingServerSelector;
 import com.mongodb.lang.Nullable;
@@ -388,6 +389,7 @@ public final class ClusterSettings {
      * </ul>
      *
      * @return the server selector, which may be null
+     * @see Cluster#selectServer(com.mongodb.selector.ServerSelector)
      */
     @Nullable
     public ServerSelector getServerSelector() {

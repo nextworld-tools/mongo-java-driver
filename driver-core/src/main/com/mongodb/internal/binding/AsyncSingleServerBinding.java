@@ -18,12 +18,14 @@ package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
+import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.connection.ServerDescription;
+import com.mongodb.internal.connection.AsyncConnection;
 import com.mongodb.internal.connection.Cluster;
-import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.internal.connection.Server;
 import com.mongodb.internal.selector.ServerAddressSelector;
+import com.mongodb.selector.ServerSelector;
 import com.mongodb.internal.session.SessionContext;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -31,9 +33,9 @@ import static com.mongodb.assertions.Assertions.notNull;
 /**
  * A simple binding where all connection sources are bound to the server specified in the constructor.
  *
- * @since 3.0
+ * @since 3.11
  */
-public class SingleServerBinding extends AbstractReferenceCounted implements ReadWriteBinding {
+public class AsyncSingleServerBinding extends AbstractReferenceCounted implements AsyncReadWriteBinding {
     private final Cluster cluster;
     private final ServerAddress serverAddress;
     private final ReadPreference readPreference;
@@ -43,7 +45,7 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
      * @param cluster       a non-null  Cluster which will be used to select a server to bind to
      * @param serverAddress a non-null  address of the server to bind to
      */
-    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress) {
+    public AsyncSingleServerBinding(final Cluster cluster, final ServerAddress serverAddress) {
         this(cluster, serverAddress, ReadPreference.primary());
     }
 
@@ -53,15 +55,10 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
      * @param serverAddress  a non-null  address of the server to bind to
      * @param readPreference a non-null  ReadPreference for read operations
      */
-    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, final ReadPreference readPreference) {
+    public AsyncSingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, final ReadPreference readPreference) {
         this.cluster = notNull("cluster", cluster);
         this.serverAddress = notNull("serverAddress", serverAddress);
         this.readPreference = notNull("readPreference", readPreference);
-    }
-
-    @Override
-    public ConnectionSource getWriteConnectionSource() {
-        return new SingleServerBindingConnectionSource();
     }
 
     @Override
@@ -70,8 +67,27 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
     }
 
     @Override
-    public ConnectionSource getReadConnectionSource() {
-        return new SingleServerBindingConnectionSource();
+    public void getReadConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
+        getAsyncSingleServerBindingConnectionSource(new ServerAddressSelector(serverAddress), callback);
+    }
+
+    @Override
+    public void getWriteConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
+        getAsyncSingleServerBindingConnectionSource(new ServerAddressSelector(serverAddress), callback);
+    }
+
+    private void getAsyncSingleServerBindingConnectionSource(final ServerSelector serverSelector,
+                                                             final SingleResultCallback<AsyncConnectionSource> callback) {
+        cluster.selectServerAsync(serverSelector, new SingleResultCallback<Server>() {
+            @Override
+            public void onResult(final Server result, final Throwable t) {
+                if (t != null) {
+                    callback.onResult(null, t);
+                } else {
+                    callback.onResult(new AsyncSingleServerBindingConnectionSource(result), null);
+                }
+            }
+        });
     }
 
     @Override
@@ -80,17 +96,17 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
     }
 
     @Override
-    public SingleServerBinding retain() {
+    public AsyncSingleServerBinding retain() {
         super.retain();
         return this;
     }
 
-    private final class SingleServerBindingConnectionSource extends AbstractReferenceCounted implements ConnectionSource {
+    private final class AsyncSingleServerBindingConnectionSource extends AbstractReferenceCounted implements AsyncConnectionSource {
         private final Server server;
 
-        private SingleServerBindingConnectionSource() {
-            SingleServerBinding.this.retain();
-            server = cluster.selectServer(new ServerAddressSelector(serverAddress));
+        private AsyncSingleServerBindingConnectionSource(final Server server) {
+            AsyncSingleServerBinding.this.retain();
+            this.server = server;
         }
 
         @Override
@@ -104,12 +120,11 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
         }
 
         @Override
-        public Connection getConnection() {
-            return cluster.selectServer(new ServerAddressSelector(serverAddress)).getConnection();
+        public void getConnection(final SingleResultCallback<AsyncConnection> callback) {
+            server.getConnectionAsync(callback);
         }
 
-        @Override
-        public ConnectionSource retain() {
+        public AsyncConnectionSource retain() {
             super.retain();
             return this;
         }
@@ -118,9 +133,8 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
         public void release() {
             super.release();
             if (super.getCount() == 0) {
-                SingleServerBinding.this.release();
+                AsyncSingleServerBinding.this.release();
             }
         }
     }
 }
-

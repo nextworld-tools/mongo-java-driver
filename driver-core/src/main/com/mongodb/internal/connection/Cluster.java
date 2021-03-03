@@ -65,9 +65,22 @@ public interface Cluster extends Closeable {
     @Nullable
     BsonTimestamp getClusterTime();
 
-    ServerTuple selectServer(ServerSelector serverSelector);
+    /**
+     * Get a MongoDB server that matches the criteria defined by the serverSelector
+     *
+     * @param serverSelector a ServerSelector that defines how to select the required Server
+     * @return a Server that meets the requirements
+     * @throws com.mongodb.MongoTimeoutException if the timeout has been reached before a server matching the selector is available
+     */
+    Server selectServer(ServerSelector serverSelector);
 
-    void selectServerAsync(ServerSelector serverSelector, SingleResultCallback<ServerTuple> callback);
+    /**
+     * Asynchronously gets a MongoDB server that matches the criteria defined by the serverSelector.
+     *
+     * @param serverSelector a ServerSelector that defines how to select the required Server
+     * @param callback the callback to invoke when the server is found or an error occurs
+     */
+    void selectServerAsync(ServerSelector serverSelector, SingleResultCallback<Server> callback);
 
     /**
      * Closes connections to the servers in the cluster.  After this is called, this cluster instance can no longer be used.

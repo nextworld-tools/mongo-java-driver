@@ -24,7 +24,6 @@ import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.connection.ReadConcernAwareNoOpSessionContext;
 import com.mongodb.internal.connection.Server;
-import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.ServerAddressSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
@@ -99,18 +98,15 @@ public class ClusterBinding extends AbstractReferenceCounted implements ClusterA
 
     private final class ClusterBindingConnectionSource extends AbstractReferenceCounted implements ConnectionSource {
         private final Server server;
-        private final ServerDescription serverDescription;
 
         private ClusterBindingConnectionSource(final ServerSelector serverSelector) {
-            ServerTuple serverTuple = cluster.selectServer(serverSelector);
-            this.server = serverTuple.getServer();
-            this.serverDescription = serverTuple.getServerDescription();
+            this.server = cluster.selectServer(serverSelector);
             ClusterBinding.this.retain();
         }
 
         @Override
         public ServerDescription getServerDescription() {
-            return serverDescription;
+            return server.getDescription();
         }
 
         @Override

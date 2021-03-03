@@ -25,7 +25,6 @@ import com.mongodb.internal.connection.AsyncConnection;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.internal.connection.Server;
-import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
 import com.mongodb.internal.session.SessionContext;
@@ -74,20 +73,20 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
         notNull("cluster", cluster);
         this.readPreference = notNull("readPreference", readPreference);
         final CountDownLatch latch = new CountDownLatch(2);
-        cluster.selectServerAsync(new WritableServerSelector(), new SingleResultCallback<ServerTuple>() {
+        cluster.selectServerAsync(new WritableServerSelector(), new SingleResultCallback<Server>() {
             @Override
-            public void onResult(final ServerTuple result, final Throwable t) {
+            public void onResult(final Server result, final Throwable t) {
                 if (t == null) {
-                    writeServer = result.getServer();
+                    writeServer = result;
                     latch.countDown();
                 }
             }
         });
-        cluster.selectServerAsync(new ReadPreferenceServerSelector(readPreference), new SingleResultCallback<ServerTuple>() {
+        cluster.selectServerAsync(new ReadPreferenceServerSelector(readPreference), new SingleResultCallback<Server>() {
             @Override
-            public void onResult(final ServerTuple result, final Throwable t) {
+            public void onResult(final Server result, final Throwable t) {
                 if (t == null) {
-                    readServer = result.getServer();
+                    readServer = result;
                     latch.countDown();
                 }
             }

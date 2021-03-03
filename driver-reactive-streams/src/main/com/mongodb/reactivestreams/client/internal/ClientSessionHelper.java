@@ -60,10 +60,10 @@ public class ClientSessionHelper {
             return Mono.create(sink ->
                 mongoClient.getCluster()
                         .selectServerAsync(this::getServerDescriptionListToConsiderForSessionSupport,
-                                           (serverTuple, t) -> {
+                                           (server, t) -> {
                                                if (t != null) {
                                                    sink.success();
-                                               } else if (serverTuple.getServerDescription().getLogicalSessionTimeoutMinutes() == null) {
+                                               } else if (server.getDescription().getLogicalSessionTimeoutMinutes() == null) {
                                                    sink.success();
                                                } else {
                                                    sink.success(createClientSession(options, executor));

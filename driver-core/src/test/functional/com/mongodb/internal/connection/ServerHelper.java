@@ -43,8 +43,7 @@ public final class ServerHelper {
     }
 
     public static void waitForLastRelease(final ServerAddress address, final Cluster cluster) {
-        DefaultServer server = (DefaultServer) cluster.selectServer(new ServerAddressSelector(address))
-                .getServer();
+        DefaultServer server = (DefaultServer) cluster.selectServer(new ServerAddressSelector(address));
         DefaultConnectionPool connectionProvider = (DefaultConnectionPool) server.getConnectionPool();
         ConcurrentPool<UsageTrackingInternalConnection> pool = connectionProvider.getPool();
         long startTime = System.currentTimeMillis();
@@ -62,8 +61,7 @@ public final class ServerHelper {
     }
 
     private static void checkPool(final ServerAddress address, final Cluster cluster) {
-        DefaultServer server = (DefaultServer) cluster.selectServer(new ServerAddressSelector(address))
-                .getServer();
+        DefaultServer server = (DefaultServer) cluster.selectServer(new ServerAddressSelector(address));
         DefaultConnectionPool connectionProvider = (DefaultConnectionPool) server.getConnectionPool();
         ConcurrentPool<UsageTrackingInternalConnection> pool = connectionProvider.getPool();
         if (pool.getInUseCount() > 0) {
