@@ -194,24 +194,21 @@ final class CommandOperationHelper {
                                                  final CommandCreator commandCreator, final Decoder<D> decoder,
                                                  final CommandReadTransformer<D, T> transformer, final boolean retryReads,
                                                  final Connection connection) {
+        BsonDocument command = commandCreator.create(source.getServerDescription(), connection.getDescription());
         MongoException exception;
         try {
-            BsonDocument command = commandCreator.create(source.getServerDescription(), connection.getDescription());
-            try {
-                return executeCommand(database, command, decoder, source, connection, binding.getReadPreference(), transformer,
-                        binding.getSessionContext(), binding.getServerApi());
-            } catch (MongoException e) {
-                exception = e;
+            return executeCommand(database, command, decoder, source, connection, binding.getReadPreference(), transformer,
+                    binding.getSessionContext(), binding.getServerApi());
+        } catch (MongoException e) {
+            exception = e;
 
-                if (!shouldAttemptToRetryRead(retryReads, e)) {
-                    if (retryReads) {
-                        logUnableToRetry(command.getFirstKey(), e);
-                    }
-                    throw exception;
+            if (!shouldAttemptToRetryRead(retryReads, e)) {
+                if (retryReads) {
+                    logUnableToRetry(command.getFirstKey(), e);
                 }
+                throw exception;
             }
-        }
-        finally {
+        } finally {
             connection.release();
         }
 
