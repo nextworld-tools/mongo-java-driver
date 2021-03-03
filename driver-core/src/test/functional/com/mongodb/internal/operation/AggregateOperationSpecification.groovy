@@ -339,7 +339,6 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 6) })
     def 'should be able to explain an empty pipeline'() {
         given:
         def operation = new AggregateOperation(getNamespace(), [], new BsonDocumentCodec())
@@ -385,7 +384,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
         when:
         execute(operation, async)
-        BsonDocument explainPlan = execute(operation.asExplainableOperation(QUERY_PLANNER, new BsonDocumentCodec()), async)
+        BsonDocument explainPlan = execute(operation.asExplainableOperation(QUERY_PLANNER), async)
 
         then:
         getKeyPattern(explainPlan.getArray('stages').get(0).asDocument().getDocument('$cursor')) == index
