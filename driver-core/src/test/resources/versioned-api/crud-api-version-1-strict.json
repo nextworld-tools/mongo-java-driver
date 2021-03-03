@@ -593,7 +593,6 @@
     },
     {
       "description": "estimatedDocumentCount appends declared API version",
-      "skipReason": "DRIVERS-1437 count was removed from API version 1",
       "operations": [
         {
           "name": "estimatedDocumentCount",

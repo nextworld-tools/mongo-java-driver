@@ -1,5 +1,5 @@
 {
-  "description": "RunCommand helper: No API version declared",
+  "description": "RunCommand helper: API version 1 declared",
   "schemaVersion": "1.1",
   "runOnRequirements": [
     {
@@ -12,7 +12,10 @@
         "id": "client",
         "observeEvents": [
           "commandStartedEvent"
-        ]
+        ],
+        "serverApi": {
+          "version": "1"
+        }
       }
     },
     {
@@ -25,7 +28,7 @@
   ],
   "tests": [
     {
-      "description": "runCommand does not inspect or change the command document",
+      "description": "runCommand overrides an API version declared in the command",
       "operations": [
         {
           "name": "runCommand",
@@ -36,10 +39,6 @@
               "ping": 1,
               "apiVersion": "server_will_never_support_this_api_version"
             }
-          },
-          "expectError": {
-            "isError": true,
-            "isClientError": false
           }
         }
       ],
@@ -51,16 +50,14 @@
               "commandStartedEvent": {
                 "command": {
                   "ping": 1,
-                  "apiVersion": "server_will_never_support_this_api_version",
+                  "apiVersion": "1",
                   "apiStrict": {
-                    "$$exists": false
+                    "$$unsetOrMatches": false
                   },
                   "apiDeprecationErrors": {
-                    "$$exists": false
+                    "$$unsetOrMatches": false
                   }
-                },
-                "commandName": "ping",
-                "databaseName": "versioned-api-tests"
+                }
               }
             }
           ]
@@ -68,7 +65,7 @@
       ]
     },
     {
-      "description": "runCommand does not prevent sending invalid API version declarations",
+      "description": "runCommand only overrides specified options",
       "operations": [
         {
           "name": "runCommand",
@@ -79,10 +76,6 @@
               "ping": 1,
               "apiStrict": true
             }
-          },
-          "expectError": {
-            "isError": true,
-            "isClientError": false
           }
         }
       ],
@@ -94,16 +87,12 @@
               "commandStartedEvent": {
                 "command": {
                   "ping": 1,
-                  "apiVersion": {
-                    "$$exists": false
-                  },
+                  "apiVersion": "1",
                   "apiStrict": true,
                   "apiDeprecationErrors": {
-                    "$$exists": false
+                    "$$unsetOrMatches": false
                   }
-                },
-                "commandName": "ping",
-                "databaseName": "versioned-api-tests"
+                }
               }
             }
           ]
