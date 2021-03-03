@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit
 
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
-import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.ClusterFixture.getSslSettings
 import static com.mongodb.internal.connection.CommandHelper.executeCommand
 
@@ -51,8 +50,7 @@ class AsyncStreamTimeoutsSpecification extends OperationFunctionalSpecification 
         given:
         def connection = new InternalStreamConnectionFactory(
                 new AsynchronousSocketChannelStreamFactory(openSocketSettings, getSslSettings()), getCredentialWithCache(), null, null,
-                [], getServerApi())
-                .create(new ServerId(new ClusterId(), new ServerAddress(new InetSocketAddress('192.168.255.255', 27017))))
+                [], null).create(new ServerId(new ClusterId(), new ServerAddress(new InetSocketAddress('192.168.255.255', 27017))))
 
         when:
         connection.open()
@@ -66,7 +64,7 @@ class AsyncStreamTimeoutsSpecification extends OperationFunctionalSpecification 
         given:
         def connection = new InternalStreamConnectionFactory(
                 new AsynchronousSocketChannelStreamFactory(readSocketSettings, getSslSettings()), getCredentialWithCache(), null, null,
-                [], getServerApi(),).create(new ServerId(new ClusterId(), getPrimary()))
+                [], null,).create(new ServerId(new ClusterId(), getPrimary()))
         connection.open()
 
         getCollectionHelper().insertDocuments(new BsonDocument('_id', new BsonInt32(1)));
@@ -86,7 +84,7 @@ class AsyncStreamTimeoutsSpecification extends OperationFunctionalSpecification 
     def 'should throw a MongoSocketOpenException when the Netty Stream fails to open'() {
         given:
         def connection = new InternalStreamConnectionFactory(
-                new NettyStreamFactory(openSocketSettings, getSslSettings()), getCredentialWithCache(), null, null, [], getServerApi(),
+                new NettyStreamFactory(openSocketSettings, getSslSettings()), getCredentialWithCache(), null, null, [], null,
         ).create(new ServerId(new ClusterId(), new ServerAddress(new InetSocketAddress('192.168.255.255', 27017))))
 
         when:
@@ -100,7 +98,7 @@ class AsyncStreamTimeoutsSpecification extends OperationFunctionalSpecification 
     def 'should throw a MongoSocketReadTimeoutException with the Netty stream'() {
         given:
         def connection = new InternalStreamConnectionFactory(
-                new NettyStreamFactory(readSocketSettings, getSslSettings()), getCredentialWithCache(), null, null, [], getServerApi(),
+                new NettyStreamFactory(readSocketSettings, getSslSettings()), getCredentialWithCache(), null, null, [], null,
         ).create(new ServerId(new ClusterId(), getPrimary()))
         connection.open()
 

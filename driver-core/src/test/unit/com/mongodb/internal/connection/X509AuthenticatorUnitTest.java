@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 
 import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
-import static com.mongodb.internal.connection.MessageHelper.getApiVersionField;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -130,9 +129,7 @@ public class X509AuthenticatorUnitTest {
         String command = MessageHelper.decodeCommandAsJson(sent.get(0));
         String expectedCommand = "{\"authenticate\": 1, "
                 + "\"user\": \"CN=client,OU=kerneluser,O=10Gen,L=New York City,ST=New York,C=US\", "
-                + "\"mechanism\": \"MONGODB-X509\""
-                + getApiVersionField()
-                + "}";
+                + "\"mechanism\": \"MONGODB-X509\"}";
 
         assertEquals(expectedCommand, command);
     }

@@ -37,7 +37,6 @@ import spock.lang.Shared
 
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
-import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.ClusterFixture.getSslSettings
 import static com.mongodb.internal.bulk.WriteRequest.Type.REPLACE
 import static com.mongodb.internal.bulk.WriteRequest.Type.UPDATE
@@ -49,7 +48,7 @@ class WriteProtocolCommandEventSpecification extends OperationFunctionalSpecific
 
     def setupSpec() {
         connection = new InternalStreamConnectionFactory(new NettyStreamFactory(SocketSettings.builder().build(), getSslSettings()),
-                getCredentialWithCache(), null, null, [], null, getServerApi())
+                getCredentialWithCache(), null, null, [], null, null)
                 .create(new ServerId(new ClusterId(), getPrimary()))
         connection.open()
     }
@@ -87,7 +86,7 @@ class WriteProtocolCommandEventSpecification extends OperationFunctionalSpecific
         cleanup:
         // force acknowledgement
         new CommandProtocolImpl(getDatabaseName(), new BsonDocument('drop', new BsonString(getCollectionName())),
-                            NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec(), getServerApi())
+                            NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec())
                 .sessionContext(NoOpSessionContext.INSTANCE)
                 .execute(connection)
 
@@ -124,7 +123,7 @@ class WriteProtocolCommandEventSpecification extends OperationFunctionalSpecific
         cleanup:
         // force acknowledgement
         new CommandProtocolImpl(getDatabaseName(), new BsonDocument('drop', new BsonString(getCollectionName())),
-                NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec(), getServerApi())
+                NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec())
                 .sessionContext(NoOpSessionContext.INSTANCE)
                 .execute(connection)
 
@@ -160,7 +159,7 @@ class WriteProtocolCommandEventSpecification extends OperationFunctionalSpecific
         cleanup:
         // force acknowledgement
         new CommandProtocolImpl(getDatabaseName(), new BsonDocument('drop', new BsonString(getCollectionName())),
-                NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec(), getServerApi())
+                NO_OP_FIELD_NAME_VALIDATOR, ReadPreference.primary(), new BsonDocumentCodec())
                 .sessionContext(NoOpSessionContext.INSTANCE)
                 .execute(connection)
 

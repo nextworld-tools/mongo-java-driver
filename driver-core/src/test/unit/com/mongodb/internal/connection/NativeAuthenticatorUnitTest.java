@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutionException;
 
 import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
-import static com.mongodb.internal.connection.MessageHelper.getApiVersionField;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -118,13 +117,9 @@ public class NativeAuthenticatorUnitTest {
 
         String secondCommand = MessageHelper.decodeCommandAsJson(sent.get(1));
 
-        assertEquals("{\"getnonce\": 1" + getApiVersionField() + "}", firstCommand);
+        assertEquals("{\"getnonce\": 1}", firstCommand);
         assertEquals("{\"authenticate\": 1, \"user\": \"\u53f0\u5317\", "
                      + "\"nonce\": \"2375531c32080ae8\", "
-                     + "\"key\": \"4fb55df196e38eea50d2b8b200acfa8b\""
-                     + getApiVersionField()
-                     + "}",
-                secondCommand);
+                     + "\"key\": \"4fb55df196e38eea50d2b8b200acfa8b\"}", secondCommand);
     }
-
 }

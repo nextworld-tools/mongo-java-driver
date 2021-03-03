@@ -256,7 +256,7 @@ class DefaultServerConnectionSpecification extends Specification {
 
         then:
         1 * executor.executeAsync({
-            compare(new CommandProtocolImpl('test', command, validator, ReadPreference.primary(), codec, getServerApi()), it)
+            compare(new CommandProtocolImpl('test', command, validator, ReadPreference.primary(), codec), it)
         }, internalConnection, NoOpSessionContext.INSTANCE, callback)
     }
 
