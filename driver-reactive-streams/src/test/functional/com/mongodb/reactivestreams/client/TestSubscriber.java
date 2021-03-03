@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
@@ -34,8 +33,6 @@ public class TestSubscriber<T> implements Subscriber<T> {
     private final ArrayList<Throwable> onErrorEvents = new ArrayList<>();
     private final ArrayList<Void> onCompleteEvents = new ArrayList<>();
 
-    private Consumer<Subscription> doOnSubscribe = sub -> {};
-
     private Subscription subscription;
 
     public TestSubscriber() {
@@ -44,11 +41,6 @@ public class TestSubscriber<T> implements Subscriber<T> {
     @Override
     public void onSubscribe(final Subscription subscription) {
         this.subscription = subscription;
-        doOnSubscribe.accept(subscription);
-    }
-
-    public void doOnSubscribe(final Consumer<Subscription> doOnSubscribe) {
-        this.doOnSubscribe = doOnSubscribe;
     }
 
     /**
