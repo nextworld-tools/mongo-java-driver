@@ -47,8 +47,7 @@ allprojects {
         options {
             author = true
             version = true
-            links = ['https://docs.oracle.com/en/java/javase/11/docs/api/',
-                    'https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/']
+            links 'https://docs.oracle.com/en/java/javase/11/docs/api/'
             tagletPath single(utilProject.sourceSets.main.output.classesDirs)
             taglets 'ManualTaglet'
             taglets 'DochubTaglet'
