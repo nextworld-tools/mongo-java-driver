@@ -88,7 +88,6 @@ object Indexes {
    * @return the index specification
    * @see [[http://docs.mongodb.org/manual/core/geohaystack geoHaystack index]]
    */
-  @deprecated("geoHaystack is deprecated in MongoDB 4.4", "4.2.1")
   def geoHaystack(fieldName: String, additional: Bson): Bson = JIndexes.geoHaystack(fieldName, additional)
 
   /**

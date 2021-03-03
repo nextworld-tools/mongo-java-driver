@@ -376,10 +376,8 @@ public class IndexOptions {
      *
      * @return the specified the number of units within which to group the location values for geoHaystack Indexes
      * @mongodb.driver.manual core/geohaystack/ geoHaystack Indexes
-     * @deprecated geoHaystack is deprecated in MongoDB 4.4
      */
     @Nullable
-    @Deprecated
     public Double getBucketSize() {
         return bucketSize;
     }
@@ -390,9 +388,7 @@ public class IndexOptions {
      * @param bucketSize the specified the number of units within which to group the location values for geoHaystack Indexes
      * @return this
      * @mongodb.driver.manual core/geohaystack/ geoHaystack Indexes
-     * @deprecated geoHaystack is deprecated in MongoDB 4.4
      */
-    @Deprecated
     public IndexOptions bucketSize(@Nullable final Double bucketSize) {
         this.bucketSize = bucketSize;
         return this;
