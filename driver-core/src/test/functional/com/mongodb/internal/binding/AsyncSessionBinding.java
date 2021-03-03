@@ -87,8 +87,7 @@ public final class AsyncSessionBinding implements AsyncReadWriteBinding {
 
     @Override
     public AsyncReadWriteBinding retain() {
-        wrapped.retain();
-        return this;
+        return wrapped.retain();
     }
 
     @Override
@@ -131,8 +130,7 @@ public final class AsyncSessionBinding implements AsyncReadWriteBinding {
 
         @Override
         public AsyncConnectionSource retain() {
-            wrapped.retain();
-            return this;
+            return wrapped.retain();
         }
 
         @Override
