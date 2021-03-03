@@ -483,7 +483,6 @@ public final class Operations<TDocument> {
                 .dropTarget(renameCollectionOptions.isDropTarget());
     }
 
-    @SuppressWarnings("deprecation")
     public CreateIndexesOperation createIndexes(final List<IndexModel> indexes, final CreateIndexOptions createIndexOptions) {
         notNull("indexes", indexes);
         notNull("createIndexOptions", createIndexOptions);
