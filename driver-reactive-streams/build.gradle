@@ -70,6 +70,5 @@ afterEvaluate {
             'org.bson.*',
             'com.mongodb.crypt.capi.*;resolution:=optional',
             'com.mongodb.*',
-            'reactor.core.*',
     ].join(',')
 }
