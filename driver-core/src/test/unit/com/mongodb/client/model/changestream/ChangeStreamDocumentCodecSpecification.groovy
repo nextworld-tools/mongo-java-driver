@@ -29,7 +29,6 @@ import org.bson.codecs.EncoderContext
 import org.bson.codecs.ValueCodecProvider
 import spock.lang.Specification
 
-import static java.util.Collections.singletonList
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders
 
 class ChangeStreamDocumentCodecSpecification extends Specification {
@@ -72,7 +71,7 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
                         BsonDocument.parse('{_id: 1}'),
                         new BsonTimestamp(1234, 2)
                         ,
-                        new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}'), null),
+                        new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}')),
                         null, null
                 ),
                 new ChangeStreamDocument<Document>(OperationType.UPDATE,
@@ -83,8 +82,7 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
                         BsonDocument.parse('{_id: 1}'),
                         new BsonTimestamp(1234, 2)
                         ,
-                        new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}'),
-                                singletonList(new TruncatedArray('education', 2))),
+                        new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}')),
                         null, null
                 ),
                 new ChangeStreamDocument<Document>(OperationType.REPLACE,
@@ -199,7 +197,6 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
          email: 'alice@10gen.com'
       },
       removedFields: ['phoneNumber']
-      "truncatedArrays": []
    }
 }
 ''',
@@ -219,13 +216,7 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
       updatedFields: {
          email: 'alice@10gen.com'
       },
-      removedFields: ['phoneNumber'],
-      "truncatedArrays": [
-         {
-            "field": "education",
-            "newSize": 2
-         }
-      ]
+      removedFields: ['phoneNumber']
    },
    fullDocument: {
       _id: 1,
