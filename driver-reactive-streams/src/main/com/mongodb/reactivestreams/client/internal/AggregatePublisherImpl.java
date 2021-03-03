@@ -142,33 +142,36 @@ final class AggregatePublisherImpl<T> extends BatchCursorPublisher<T> implements
     private <E> Publisher<E> publishExplain(final Class<E> explainResultClass, @Nullable final ExplainVerbosity verbosity) {
         notNull("explainDocumentClass", explainResultClass);
         return getMongoOperationPublisher().createReadOperationMono(() ->
-                        asAggregateOperation(1).asAsyncExplainableOperation(verbosity,
+                        asAggregateOperation().asAsyncExplainableOperation(verbosity,
                                 getCodecRegistry().get(explainResultClass)),
                 getClientSession());
     }
 
     @Override
-    AsyncReadOperation<AsyncBatchCursor<T>> asAsyncReadOperation(final int initialBatchSize) {
+    AsyncReadOperation<AsyncBatchCursor<T>> asAsyncReadOperation() {
         MongoNamespace outNamespace = getOutNamespace();
 
         if (outNamespace != null) {
             AsyncWriteOperation<Void> aggregateToCollectionOperation = getAggregateToCollectionOperation();
 
-            FindOptions findOptions = new FindOptions().collation(collation).batchSize(initialBatchSize);
-
+            FindOptions findOptions = new FindOptions().collation(collation);
+            Integer batchSize = getBatchSize();
+            if (batchSize != null) {
+                findOptions.batchSize(batchSize);
+            }
             AsyncReadOperation<AsyncBatchCursor<T>> findOperation =
                     getOperations().find(outNamespace, new BsonDocument(), getDocumentClass(), findOptions);
 
             return new WriteOperationThenCursorReadOperation<>(aggregateToCollectionOperation, findOperation);
         } else {
-            return asAggregateOperation(initialBatchSize);
+            return asAggregateOperation();
         }
     }
 
-    private AggregateOperation<T> asAggregateOperation(final int initialBatchSize) {
+    private AggregateOperation<T> asAggregateOperation() {
         return getOperations()
                 .aggregate(pipeline, getDocumentClass(), maxTimeMS, maxAwaitTimeMS,
-                           initialBatchSize, collation, hint, comment, allowDiskUse, aggregationLevel);
+                        getBatchSize(), collation, hint, comment, allowDiskUse, aggregationLevel);
     }
 
     private AsyncWriteOperation<Void> getAggregateToCollectionOperation() {

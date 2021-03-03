@@ -44,7 +44,6 @@ public class ListIndexesPublisherImplTest extends TestHelper {
 
         ListIndexesOperation<Document> expectedOperation =
                 new ListIndexesOperation<>(NAMESPACE, getDefaultCodecRegistry().get(Document.class))
-                        .batchSize(Integer.MAX_VALUE)
                         .retryReads(true);
 
         // default input should be as expected

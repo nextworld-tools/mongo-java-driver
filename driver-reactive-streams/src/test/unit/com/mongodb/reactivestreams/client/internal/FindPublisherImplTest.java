@@ -52,7 +52,6 @@ public class FindPublisherImplTest extends TestHelper {
         FindPublisher<Document> publisher = new FindPublisherImpl<>(null, createMongoOperationPublisher(executor), new Document());
 
         FindOperation<Document> expectedOperation = new FindOperation<>(NAMESPACE, getDefaultCodecRegistry().get(Document.class))
-                .batchSize(Integer.MAX_VALUE)
                 .retryReads(true)
                 .filter(new BsonDocument());
 

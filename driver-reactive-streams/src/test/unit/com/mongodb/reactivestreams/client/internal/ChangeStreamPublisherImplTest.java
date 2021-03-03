@@ -55,7 +55,6 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
 
         ChangeStreamOperation<ChangeStreamDocument<Document>> expectedOperation =
                 new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, pipeline, codec)
-                        .batchSize(Integer.MAX_VALUE)
                         .retryReads(true);
 
         // default input should be as expected
@@ -94,7 +93,6 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
 
         ChangeStreamOperation<BsonDocument> expectedOperation =
                 new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, pipeline, getDefaultCodecRegistry().get(BsonDocument.class))
-                        .batchSize(Integer.MAX_VALUE)
                         .retryReads(true);
 
         // default input should be as expected

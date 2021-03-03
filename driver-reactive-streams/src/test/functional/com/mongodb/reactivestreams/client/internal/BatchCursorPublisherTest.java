@@ -166,7 +166,7 @@ public class BatchCursorPublisherTest {
         BatchCursorPublisher<Document> publisher = new BatchCursorPublisher<Document>(
                 null, OPERATION_PUBLISHER) {
             @Override
-            AsyncReadOperation<AsyncBatchCursor<Document>> asAsyncReadOperation(final int initialBatchSize) {
+            AsyncReadOperation<AsyncBatchCursor<Document>> asAsyncReadOperation() {
                 return readOperation;
             }
         };
