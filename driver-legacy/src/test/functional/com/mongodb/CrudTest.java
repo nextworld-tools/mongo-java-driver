@@ -24,7 +24,7 @@ import org.bson.BsonDocument;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
+import static com.mongodb.Fixture.getMongoClientURI;
 
 // See https://github.com/mongodb/specifications/tree/master/source/crud/tests
 @RunWith(Parameterized.class)
@@ -38,9 +38,9 @@ public class CrudTest extends AbstractCrudTest {
 
     @Override
     protected void createMongoClient(final CommandListener commandListener) {
-        mongoClient = new MongoClient(getMongoClientSettingsBuilder()
-                .addCommandListener(commandListener)
-                .build());
+        MongoClientURI mongoClientURI = getMongoClientURI(MongoClientOptions.builder()
+                .addCommandListener(commandListener));
+        mongoClient = new MongoClient(mongoClientURI);
     }
 
     @Override

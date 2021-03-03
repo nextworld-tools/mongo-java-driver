@@ -25,8 +25,6 @@ import org.junit.After;
 
 import java.util.UUID;
 
-import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
-
 public class UuidRepresentationTest extends AbstractUuidRepresentationTest {
 
     private MongoClient mongoClient;
@@ -39,10 +37,9 @@ public class UuidRepresentationTest extends AbstractUuidRepresentationTest {
 
     @Override
     protected void createMongoClient(final UuidRepresentation uuidRepresentation, final CodecRegistry codecRegistry) {
-        mongoClient = new MongoClient(getMongoClientSettingsBuilder()
+        mongoClient = new MongoClient(Fixture.getMongoClientURI(MongoClientOptions.builder(Fixture.getOptions())
                 .uuidRepresentation(uuidRepresentation)
-                .codecRegistry(codecRegistry)
-                .build());
+                .codecRegistry(codecRegistry)));
     }
 
     @Override

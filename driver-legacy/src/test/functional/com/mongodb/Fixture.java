@@ -21,7 +21,6 @@ import org.bson.UuidRepresentation;
 
 import java.util.List;
 
-import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.internal.connection.ClusterDescriptionHelper.getPrimaries;
 
 /**
@@ -39,11 +38,8 @@ public final class Fixture {
 
     public static synchronized com.mongodb.MongoClient getMongoClient() {
         if (mongoClient == null) {
-            MongoClientOptions.Builder builder = MongoClientOptions.builder().uuidRepresentation(UuidRepresentation.STANDARD);
-            if (getServerApi() != null) {
-                builder.serverApi(getServerApi());
-            }
-            MongoClientURI mongoURI = new MongoClientURI(getMongoClientURIString(), builder);
+            MongoClientURI mongoURI = new MongoClientURI(getMongoClientURIString(),
+                    MongoClientOptions.builder().uuidRepresentation(UuidRepresentation.STANDARD));
             mongoClient = new MongoClient(mongoURI);
             Runtime.getRuntime().addShutdownHook(new ShutdownHook());
         }
@@ -85,9 +81,6 @@ public final class Fixture {
     }
 
     public static synchronized MongoClientURI getMongoClientURI(final MongoClientOptions.Builder builder) {
-        if (getServerApi() != null) {
-            builder.serverApi(getServerApi());
-        }
         return new MongoClientURI(getMongoClientURIString(), builder);
     }
 

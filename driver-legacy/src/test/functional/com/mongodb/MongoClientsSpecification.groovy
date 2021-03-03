@@ -27,7 +27,6 @@ import spock.lang.IgnoreIf
 import static Fixture.getDefaultDatabaseName
 import static Fixture.getMongoClientURI
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
-import static com.mongodb.Fixture.getOptions
 
 class  MongoClientsSpecification extends FunctionalSpecification {
 
@@ -36,7 +35,7 @@ class  MongoClientsSpecification extends FunctionalSpecification {
         given:
         def expectedWinningAddresses = [] as Set
         def actualWinningAddresses = [] as Set
-        def optionsBuilder = MongoClientOptions.builder(getOptions())
+        def optionsBuilder = MongoClientOptions.builder()
         // select the suitable server with the highest port number
                 .serverSelector { ClusterDescription clusterDescription ->
             def highestPortServer
