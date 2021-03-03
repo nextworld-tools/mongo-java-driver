@@ -16,9 +16,8 @@
 
 package org.mongodb.scala
 
-import com.mongodb.ExplainVerbosity
-
 import java.util.concurrent.TimeUnit
+
 import com.mongodb.reactivestreams.client.AggregatePublisher
 import org.mongodb.scala.model.Collation
 import org.scalamock.scalatest.proxy.MockFactory
@@ -46,8 +45,6 @@ class AggregateObservableSpec extends BaseSpec with MockFactory {
     val collation = Collation.builder().locale("en").build()
     val hint = Document("{hint: 1}")
     val batchSize = 10
-    val ct = classOf[Document]
-    val verbosity = ExplainVerbosity.QUERY_PLANNER
 
     wrapper.expects(Symbol("allowDiskUse"))(true).once()
     wrapper.expects(Symbol("maxTime"))(duration.toMillis, TimeUnit.MILLISECONDS).once()
@@ -57,8 +54,6 @@ class AggregateObservableSpec extends BaseSpec with MockFactory {
     wrapper.expects(Symbol("comment"))("comment").once()
     wrapper.expects(Symbol("hint"))(hint).once()
     wrapper.expects(Symbol("batchSize"))(batchSize).once()
-    wrapper.expects(Symbol("explain"))(ct).once()
-    wrapper.expects(Symbol("explain"))(ct, verbosity).once()
 
     observable.allowDiskUse(true)
     observable.maxTime(duration)
@@ -68,8 +63,6 @@ class AggregateObservableSpec extends BaseSpec with MockFactory {
     observable.comment("comment")
     observable.hint(hint)
     observable.batchSize(batchSize)
-    observable.explain[Document]()
-    observable.explain[Document](verbosity)
 
     wrapper.expects(Symbol("toCollection"))().once()
     observable.toCollection()
