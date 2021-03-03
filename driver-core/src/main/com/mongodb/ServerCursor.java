@@ -16,8 +16,6 @@
 
 package com.mongodb;
 
-import com.mongodb.annotations.Immutable;
-
 import java.io.Serializable;
 
 /**
@@ -26,7 +24,6 @@ import java.io.Serializable;
  *
  * @since 3.0
  */
-@Immutable
 public final class ServerCursor implements Serializable {
 
     private static final long serialVersionUID = -7013636754565190109L;
