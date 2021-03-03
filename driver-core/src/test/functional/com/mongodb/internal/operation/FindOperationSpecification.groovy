@@ -404,7 +404,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
         def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
                 .hint((BsonValue) hint)
-                .asExplainableOperation(null, new BsonDocumentCodec())
+                .asExplainableOperation()
 
         when:
         def explainPlan = execute(operation, async)
