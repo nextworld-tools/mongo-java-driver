@@ -27,7 +27,6 @@ import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.CreateIndexOptions;
 import com.mongodb.client.model.DeleteOptions;
 import com.mongodb.client.model.DropIndexOptions;
-import com.mongodb.client.model.EstimatedDocumentCountOptions;
 import com.mongodb.client.model.FindOneAndDeleteOptions;
 import com.mongodb.client.model.FindOneAndReplaceOptions;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
@@ -40,6 +39,7 @@ import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import com.mongodb.internal.client.model.AggregationLevel;
+import com.mongodb.internal.client.model.CountStrategy;
 import com.mongodb.internal.client.model.FindOptions;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -79,12 +79,8 @@ public final class SyncOperations<TDocument> {
                 retryWrites, retryReads);
     }
 
-    public ReadOperation<Long> countDocuments(final Bson filter, final CountOptions options) {
-        return operations.countDocuments(filter, options);
-    }
-
-    public ReadOperation<Long> estimatedDocumentCount(final EstimatedDocumentCountOptions options) {
-        return operations.estimatedDocumentCount(options);
+    public ReadOperation<Long> count(final Bson filter, final CountOptions options, final CountStrategy countStrategy) {
+        return operations.count(filter, options, countStrategy);
     }
 
     public <TResult> ReadOperation<BatchCursor<TResult>> findFirst(final Bson filter, final Class<TResult> resultClass,
