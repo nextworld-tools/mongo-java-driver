@@ -16,13 +16,10 @@
 
 package org.mongodb
 
-import org.bson.BsonDocumentReader
-import org.bson.codecs.{ DecoderContext, DocumentCodec }
-import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.internal.WriteConcernImplicits
-
 import _root_.scala.language.implicitConversions
 import _root_.scala.reflect.ClassTag
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.internal.WriteConcernImplicits
 
 /**
  * The MongoDB Scala Driver package
@@ -395,12 +392,9 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
 
   implicit def bsonDocumentToDocument(doc: BsonDocument): Document = new Document(doc)
 
-  implicit def documentToUntypedDocument(doc: Document): org.bson.Document =
-    bsonDocumentToUntypedDocument(doc.underlying)
+  implicit def bsonDocumentToUntypedDocument(doc: BsonDocument): org.bson.Document =
+    org.bson.Document.parse(doc.toJson())
 
-  private lazy val DOCUMENT_CODEC = new DocumentCodec()
-  implicit def bsonDocumentToUntypedDocument(doc: BsonDocument): org.bson.Document = {
-    DOCUMENT_CODEC.decode(new BsonDocumentReader(doc), DecoderContext.builder().build())
-  }
+  implicit def documentToUntypedDocument(doc: Document): org.bson.Document = org.bson.Document.parse(doc.toJson())
 
 }
