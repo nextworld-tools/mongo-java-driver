@@ -335,7 +335,7 @@ public class DBCursor implements Cursor, Iterable<DBObject> {
      * @return a {@code DBObject} containing the explain output for this DBCursor's query
      * @throws MongoException if the operation failed
      * @mongodb.driver.manual reference/command/explain Explain Output
-     * @mongodb.server.release 3.0
+     * @deprecated Replace with direct use of the explain command using the runCommand helper method
      */
     @Deprecated
     public DBObject explain() {
