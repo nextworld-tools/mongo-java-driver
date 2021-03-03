@@ -115,7 +115,7 @@ public final class MongoClientImpl implements MongoClient {
         return crypt;
     }
 
-    public MongoClientSettings getSettings() {
+    MongoClientSettings getSettings() {
         return settings;
     }
 

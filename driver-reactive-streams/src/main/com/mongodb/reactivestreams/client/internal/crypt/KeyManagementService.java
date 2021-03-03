@@ -32,7 +32,6 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.MonoSink;
 
 import javax.net.ssl.SSLContext;
-import java.io.Closeable;
 import java.nio.channels.CompletionHandler;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-class KeyManagementService implements Closeable {
+class KeyManagementService {
     private final int defaultPort;
     private final TlsChannelStreamFactoryFactory tlsChannelStreamFactoryFactory;
     private final StreamFactory streamFactory;
@@ -54,6 +53,7 @@ class KeyManagementService implements Closeable {
                                                                            .build(),
                                                                    SslSettings.builder().enabled(true).context(sslContext).build());
     }
+
 
     public void close() {
         tlsChannelStreamFactoryFactory.close();

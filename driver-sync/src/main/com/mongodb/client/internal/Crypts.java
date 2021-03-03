@@ -32,39 +32,42 @@ import static com.mongodb.internal.capi.MongoCryptHelper.createMongoCryptOptions
 
 public final class Crypts {
 
-    public static Crypt createCrypt(final MongoClientImpl client, final AutoEncryptionSettings options) {
-        MongoClient internalClient = null;
-        MongoClientSettings keyVaultMongoClientSettings = options.getKeyVaultMongoClientSettings();
-        if (keyVaultMongoClientSettings == null || !options.isBypassAutoEncryption()) {
-            MongoClientSettings settings = MongoClientSettings.builder(client.getSettings())
-                    .applyToConnectionPoolSettings(builder -> builder.minSize(0))
-                    .autoEncryptionSettings(null)
-                    .build();
-            internalClient = MongoClients.create(settings);
-        }
-        MongoClient collectionInfoRetrieverClient = internalClient;
-        MongoClient keyVaultClient = keyVaultMongoClientSettings == null
-                ? internalClient : MongoClients.create(keyVaultMongoClientSettings);
+    public static Crypt createCrypt(final MongoClient client, final AutoEncryptionSettings options) {
         return new Crypt(MongoCrypts.create(createMongoCryptOptions(options.getKmsProviders(),
                 options.getSchemaMap())),
-                options.isBypassAutoEncryption() ? null : new CollectionInfoRetriever(collectionInfoRetrieverClient),
+                new CollectionInfoRetriever(client),
                 new CommandMarker(options.isBypassAutoEncryption(), options.getExtraOptions()),
-                new KeyRetriever(keyVaultClient, new MongoNamespace(options.getKeyVaultNamespace())),
+                createKeyRetriever(client, options.getKeyVaultMongoClientSettings(), options.getKeyVaultNamespace()),
                 createKeyManagementService(),
-                options.isBypassAutoEncryption(),
-                internalClient);
+                options.isBypassAutoEncryption());
     }
 
     static Crypt create(final MongoClient keyVaultClient, final ClientEncryptionSettings options) {
         return new Crypt(MongoCrypts.create(
                 createMongoCryptOptions(options.getKmsProviders(), null)),
-                createKeyRetriever(keyVaultClient, options.getKeyVaultNamespace()),
+                createKeyRetriever(keyVaultClient, false, options.getKeyVaultNamespace()),
                 createKeyManagementService());
     }
 
-    private static KeyRetriever createKeyRetriever(final MongoClient keyVaultClient,
+    private static KeyRetriever createKeyRetriever(final MongoClient defaultKeyVaultClient,
+                                                   final MongoClientSettings keyVaultMongoClientSettings,
                                                    final String keyVaultNamespaceString) {
-        return new KeyRetriever(keyVaultClient, new MongoNamespace(keyVaultNamespaceString));
+        MongoClient keyVaultClient;
+        boolean keyRetrieverOwnsClient;
+        if (keyVaultMongoClientSettings != null) {
+            keyVaultClient = MongoClients.create(keyVaultMongoClientSettings);
+            keyRetrieverOwnsClient = true;
+        } else {
+            keyVaultClient = defaultKeyVaultClient;
+            keyRetrieverOwnsClient = false;
+        }
+
+        return createKeyRetriever(keyVaultClient, keyRetrieverOwnsClient, keyVaultNamespaceString);
+    }
+
+    private static KeyRetriever createKeyRetriever(final MongoClient keyVaultClient, final boolean keyRetrieverOwnsClient,
+                                                   final String keyVaultNamespaceString) {
+        return new KeyRetriever(keyVaultClient, keyRetrieverOwnsClient, new MongoNamespace(keyVaultNamespaceString));
     }
 
     private static KeyManagementService createKeyManagementService() {
