@@ -116,7 +116,7 @@ class BaseClusterSpecification extends Specification {
 
         expect:
         cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary()))
-                .serverDescription.address == firstServer
+                .server.description.address == firstServer
     }
 
     def 'should use server selector passed to selectServer if server selector in cluster settings is null'() {
@@ -132,7 +132,7 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ServerAddressSelector(firstServer)).serverDescription.address == firstServer
+        cluster.selectServer(new ServerAddressSelector(firstServer)).server.description.address == firstServer
     }
 
     def 'should timeout with useful message'() {
@@ -190,7 +190,7 @@ class BaseClusterSpecification extends Specification {
 
         expect:
         cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()))
-                .serverDescription.address == thirdServer
+                .server.description.address == thirdServer
 
         cleanup:
         cluster?.close()
@@ -272,10 +272,10 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(firstServer, REPLICA_SET_SECONDARY, allServers)
 
         when:
-        def serverDescription = selectServerAsync(cluster, firstServer).getDescription()
+        def server = selectServerAsyncAndGet(cluster, firstServer)
 
         then:
-        serverDescription.address == firstServer
+        server.description.address == firstServer
 
         cleanup:
         cluster?.close()
@@ -300,8 +300,8 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_SECONDARY, allServers)
 
         then:
-        secondServerLatch.getDescription().address == secondServer
-        thirdServerLatch.getDescription().address == thirdServer
+        secondServerLatch.get().description.address == secondServer
+        thirdServerLatch.get().description.address == thirdServer
 
         cleanup:
         cluster?.close()
@@ -361,7 +361,6 @@ class BaseClusterSpecification extends Specification {
         def serverLatch = new ServerLatch()
         cluster.selectServerAsync(new ServerAddressSelector(serverAddress)) { ServerTuple result, MongoException e ->
             serverLatch.server = result != null ? result.getServer() : null
-            serverLatch.serverDescription = result != null ? result.serverDescription : null
             serverLatch.throwable = e
             serverLatch.latch.countDown()
         }
@@ -371,7 +370,6 @@ class BaseClusterSpecification extends Specification {
     class ServerLatch {
         CountDownLatch latch = new CountDownLatch(1)
         Server server
-        ServerDescription serverDescription
         Throwable throwable
 
         def get() {
@@ -380,14 +378,6 @@ class BaseClusterSpecification extends Specification {
                 throw throwable
             }
             server
-        }
-
-        def getDescription() {
-            latch.await()
-            if (throwable != null) {
-                throw throwable
-            }
-            serverDescription
         }
     }
 }

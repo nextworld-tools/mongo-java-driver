@@ -48,8 +48,6 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
     private AsyncConnection writeConnection;
     private volatile Server readServer;
     private volatile Server writeServer;
-    private volatile ServerDescription readServerDescription;
-    private volatile ServerDescription writeServerDescription;
 
     /**
      * Create a new binding with the given cluster.
@@ -81,7 +79,6 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
             public void onResult(final ServerTuple result, final Throwable t) {
                 if (t == null) {
                     writeServer = result.getServer();
-                    writeServerDescription = result.getServerDescription();
                     latch.countDown();
                 }
             }
@@ -91,7 +88,6 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
             public void onResult(final ServerTuple result, final Throwable t) {
                 if (t == null) {
                     readServer = result.getServer();
-                    readServerDescription = result.getServerDescription();
                     latch.countDown();
                 }
             }
@@ -166,14 +162,14 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
         if (readPreference == primary()) {
             getWriteConnectionSource(callback);
         } else {
-            callback.onResult(new SingleAsyncConnectionSource(readServerDescription, readConnection), null);
+            callback.onResult(new SingleAsyncConnectionSource(readServer, readConnection), null);
         }
     }
 
     @Override
     public void getWriteConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
         isTrue("open", getCount() > 0);
-        callback.onResult(new SingleAsyncConnectionSource(writeServerDescription, writeConnection), null);
+        callback.onResult(new SingleAsyncConnectionSource(writeServer, writeConnection), null);
     }
 
     @Override
@@ -186,19 +182,18 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
     }
 
     private final class SingleAsyncConnectionSource extends AbstractReferenceCounted implements AsyncConnectionSource {
-        private final ServerDescription serverDescription;
+        private final Server server;
         private final AsyncConnection connection;
 
-        private SingleAsyncConnectionSource(final ServerDescription serverDescription,
-                                            final AsyncConnection connection) {
-            this.serverDescription = serverDescription;
+        private SingleAsyncConnectionSource(final Server server, final AsyncConnection connection) {
+            this.server = server;
             this.connection = connection;
             AsyncSingleConnectionBinding.this.retain();
         }
 
         @Override
         public ServerDescription getServerDescription() {
-            return serverDescription;
+            return server.getDescription();
         }
 
         @Override

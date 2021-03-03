@@ -21,7 +21,7 @@ import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.connection.NoOpSessionContext;
-import com.mongodb.internal.connection.ServerTuple;
+import com.mongodb.internal.connection.Server;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
 import com.mongodb.internal.session.SessionContext;
@@ -39,8 +39,9 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     private final ReadPreference readPreference;
     private final Connection readConnection;
     private final Connection writeConnection;
-    private final ServerDescription readServerDescription;
-    private final ServerDescription writeServerDescription;
+    private final Server readServer;
+    private final Server writeServer;
+
     private int count = 1;
 
     /**
@@ -61,12 +62,10 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     public SingleConnectionBinding(final Cluster cluster, final ReadPreference readPreference) {
         notNull("cluster", cluster);
         this.readPreference = notNull("readPreference", readPreference);
-        ServerTuple writeServerTuple = cluster.selectServer(new WritableServerSelector());
-        writeServerDescription = writeServerTuple.getServerDescription();
-        writeConnection = writeServerTuple.getServer().getConnection();
-        ServerTuple readServerTuple = cluster.selectServer(new ReadPreferenceServerSelector(readPreference));
-        readServerDescription = readServerTuple.getServerDescription();
-        readConnection = readServerTuple.getServer().getConnection();
+        writeServer = cluster.selectServer(new WritableServerSelector()).getServer();
+        writeConnection = writeServer.getConnection();
+        readServer = cluster.selectServer(new ReadPreferenceServerSelector(readPreference)).getServer();
+        readConnection = readServer.getConnection();
     }
 
     @Override
@@ -101,7 +100,7 @@ public class SingleConnectionBinding implements ReadWriteBinding {
         if (readPreference == primary()) {
             return getWriteConnectionSource();
         } else {
-            return new SingleConnectionSource(readServerDescription, readConnection);
+            return new SingleConnectionSource(readServer, readConnection);
         }
     }
 
@@ -113,23 +112,23 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     @Override
     public ConnectionSource getWriteConnectionSource() {
         isTrue("open", getCount() > 0);
-        return new SingleConnectionSource(writeServerDescription, writeConnection);
+        return new SingleConnectionSource(writeServer, writeConnection);
     }
 
     private final class SingleConnectionSource implements ConnectionSource {
-        private final ServerDescription serverDescription;
         private final Connection connection;
+        private final Server server;
         private int count = 1;
 
-        SingleConnectionSource(final ServerDescription serverDescription, final Connection connection) {
-            this.serverDescription = serverDescription;
+        SingleConnectionSource(final Server server, final Connection connection) {
+            this.server = server;
             this.connection = connection;
             SingleConnectionBinding.this.retain();
         }
 
         @Override
         public ServerDescription getServerDescription() {
-            return serverDescription;
+            return server.getDescription();
         }
 
         @Override
