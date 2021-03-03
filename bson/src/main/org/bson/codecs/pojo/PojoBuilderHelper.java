@@ -166,8 +166,6 @@ final class PojoBuilderHelper {
     }
 
     private static boolean isAssignableClass(final Class<?> propertyTypeClass, final Class<?> typeDataClass) {
-        notNull("propertyTypeClass", propertyTypeClass);
-        notNull("typeDataClass", typeDataClass);
         return propertyTypeClass.isAssignableFrom(typeDataClass) || typeDataClass.isAssignableFrom(propertyTypeClass);
     }
 
