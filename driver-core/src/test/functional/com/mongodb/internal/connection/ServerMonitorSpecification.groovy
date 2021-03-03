@@ -199,8 +199,8 @@ class ServerMonitorSpecification extends OperationFunctionalSpecification {
                 new InternalStreamConnectionFactory(new SocketStreamFactory(SocketSettings.builder()
                         .connectTimeout(500, TimeUnit.MILLISECONDS)
                         .build(),
-                        getSslSettings()), getCredentialWithCache(), null, null, [], null, null),
-                new TestConnectionPool(), null)
+                        getSslSettings()), getCredentialWithCache(), null, null, [], null),
+                new TestConnectionPool())
         serverMonitor.start()
         serverMonitor
     }

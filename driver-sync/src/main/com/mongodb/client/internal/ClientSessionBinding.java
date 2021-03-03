@@ -19,7 +19,6 @@ package com.mongodb.client.internal;
 import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.client.ClientSession;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerDescription;
@@ -31,7 +30,6 @@ import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.session.ClientSessionContext;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static org.bson.assertions.Assertions.notNull;
 
@@ -101,12 +99,6 @@ public class ClientSessionBinding implements ReadWriteBinding {
         return sessionContext;
     }
 
-    @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return wrapped.getServerApi();
-    }
-
     private boolean isActiveShardedTxn() {
         return session.hasActiveTransaction() && wrapped.getCluster().getDescription().getType() == ClusterType.SHARDED;
     }
@@ -136,11 +128,6 @@ public class ClientSessionBinding implements ReadWriteBinding {
         @Override
         public SessionContext getSessionContext() {
             return sessionContext;
-        }
-
-        @Override
-        public ServerApi getServerApi() {
-            return wrapped.getServerApi();
         }
 
         @Override

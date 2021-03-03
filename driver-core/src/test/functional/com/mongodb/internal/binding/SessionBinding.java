@@ -17,11 +17,9 @@
 package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static org.bson.assertions.Assertions.notNull;
 
@@ -66,12 +64,6 @@ public class SessionBinding implements ReadWriteBinding {
     }
 
     @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return wrapped.getServerApi();
-    }
-
-    @Override
     public ConnectionSource getWriteConnectionSource() {
         return new SessionBindingConnectionSource(wrapped.getWriteConnectionSource());
     }
@@ -91,11 +83,6 @@ public class SessionBinding implements ReadWriteBinding {
         @Override
         public SessionContext getSessionContext() {
             return sessionContext;
-        }
-
-        @Override
-        public ServerApi getServerApi() {
-            return wrapped.getServerApi();
         }
 
         @Override

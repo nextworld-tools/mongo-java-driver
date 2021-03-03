@@ -18,7 +18,6 @@ package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
@@ -26,7 +25,6 @@ import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ServerAddressSelector;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -38,19 +36,27 @@ import static com.mongodb.assertions.Assertions.notNull;
 public class SingleServerBinding extends AbstractReferenceCounted implements ReadWriteBinding {
     private final Cluster cluster;
     private final ServerAddress serverAddress;
-    @Nullable
-    private final ServerApi serverApi;
+    private final ReadPreference readPreference;
 
     /**
      * Creates an instance, defaulting to {@link com.mongodb.ReadPreference#primary()} for reads.
      * @param cluster       a non-null  Cluster which will be used to select a server to bind to
      * @param serverAddress a non-null  address of the server to bind to
-     * @param serverApi     the server API, which may be null
      */
-    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, @Nullable final ServerApi serverApi) {
+    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress) {
+        this(cluster, serverAddress, ReadPreference.primary());
+    }
+
+    /**
+     * Creates an instance.
+     * @param cluster        a non-null  Cluster which will be used to select a server to bind to
+     * @param serverAddress  a non-null  address of the server to bind to
+     * @param readPreference a non-null  ReadPreference for read operations
+     */
+    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, final ReadPreference readPreference) {
         this.cluster = notNull("cluster", cluster);
         this.serverAddress = notNull("serverAddress", serverAddress);
-        this.serverApi = serverApi;
+        this.readPreference = notNull("readPreference", readPreference);
     }
 
     @Override
@@ -60,7 +66,7 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
 
     @Override
     public ReadPreference getReadPreference() {
-        return ReadPreference.primary();
+        return readPreference;
     }
 
     @Override
@@ -71,12 +77,6 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
     @Override
     public SessionContext getSessionContext() {
         return NoOpSessionContext.INSTANCE;
-    }
-
-    @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return serverApi;
     }
 
     @Override
@@ -102,11 +102,6 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
         @Override
         public SessionContext getSessionContext() {
             return NoOpSessionContext.INSTANCE;
-        }
-
-        @Override
-        public ServerApi getServerApi() {
-            return serverApi;
         }
 
         @Override

@@ -33,7 +33,6 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.ClusterFixture.getSslSettings;
 
 @Ignore
@@ -52,8 +51,7 @@ public class PlainAuthenticatorTest {
         source = System.getProperty("org.mongod.test.source");
         password = System.getProperty("org.mongodb.test.password");
         internalConnection = new InternalStreamConnectionFactory(streamFactory, null, null,
-                null, Collections.<MongoCompressor>emptyList(), null, getServerApi()).create(new ServerId(new ClusterId(),
-                new ServerAddress(host)));
+                null, Collections.<MongoCompressor>emptyList(), null).create(new ServerId(new ClusterId(), new ServerAddress(host)));
         connectionDescription = new ConnectionDescription(new ServerId(new ClusterId(), new ServerAddress()));
     }
 
@@ -64,15 +62,13 @@ public class PlainAuthenticatorTest {
 
     @Test
     public void testSuccessfulAuthentication() {
-        PlainAuthenticator authenticator = new PlainAuthenticator(getCredentialWithCache(userName, source, password.toCharArray()),
-                getServerApi());
+        PlainAuthenticator authenticator = new PlainAuthenticator(getCredentialWithCache(userName, source, password.toCharArray()));
         authenticator.authenticate(internalConnection, connectionDescription);
     }
 
     @Test(expected = MongoSecurityException.class)
     public void testUnsuccessfulAuthentication() {
-        PlainAuthenticator authenticator = new PlainAuthenticator(getCredentialWithCache(userName, source, "wrong".toCharArray()),
-                getServerApi());
+        PlainAuthenticator authenticator = new PlainAuthenticator(getCredentialWithCache(userName, source, "wrong".toCharArray()));
         authenticator.authenticate(internalConnection, connectionDescription);
     }
 

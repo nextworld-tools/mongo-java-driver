@@ -19,8 +19,6 @@ package com.mongodb.internal.connection;
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoSecurityException;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
-import com.mongodb.lang.Nullable;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -38,8 +36,8 @@ import static com.mongodb.assertions.Assertions.isTrue;
 class PlainAuthenticator extends SaslAuthenticator {
     private static final String DEFAULT_PROTOCOL = "mongodb";
 
-    PlainAuthenticator(final MongoCredentialWithCache credential, final @Nullable ServerApi serverApi) {
-        super(credential, serverApi);
+    PlainAuthenticator(final MongoCredentialWithCache credential) {
+        super(credential);
     }
 
     @Override

@@ -103,19 +103,11 @@ public final class JsonTestServerVersionChecker {
     }
 
     public static ServerVersion getMinServerVersionForField(final String fieldName, final BsonDocument document) {
-        return getMinServerVersion(document.getString(fieldName).getValue());
-    }
-
-    public static ServerVersion getMinServerVersion(final String serverVersion) {
-        return new ServerVersion(getVersionList(serverVersion));
+        return new ServerVersion(getVersionList(document.getString(fieldName).getValue()));
     }
 
     public static ServerVersion getMaxServerVersionForField(final String fieldName, final BsonDocument document) {
-        return getMaxServerVersionForField(document.getString(fieldName).getValue());
-    }
-
-    public static ServerVersion getMaxServerVersionForField(final String serverVersion) {
-        List<Integer> versionList = getVersionList(serverVersion);
+        List<Integer> versionList = getVersionList(document.getString(fieldName).getValue());
         if (versionList.size() > 2 && versionList.get(2).equals(0)) {
             versionList = asList(versionList.get(0), versionList.get(1), Integer.MAX_VALUE);
         }

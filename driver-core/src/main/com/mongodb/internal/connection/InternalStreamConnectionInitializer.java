@@ -20,13 +20,11 @@ import com.mongodb.MongoCompressor;
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoException;
 import com.mongodb.MongoSecurityException;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.connection.ConnectionId;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.connection.ServerType;
 import com.mongodb.internal.async.SingleResultCallback;
-import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -44,19 +42,17 @@ import static com.mongodb.internal.connection.DescriptionHelper.createServerDesc
 import static java.lang.String.format;
 
 public class InternalStreamConnectionInitializer implements InternalConnectionInitializer {
-    private final Authenticator authenticator;
+    private Authenticator authenticator;
     private final BsonDocument clientMetadataDocument;
     private final List<MongoCompressor> requestedCompressors;
     private final boolean checkSaslSupportedMechs;
-    private final ServerApi serverApi;
 
     public InternalStreamConnectionInitializer(final Authenticator authenticator, final BsonDocument clientMetadataDocument,
-                                               final List<MongoCompressor> requestedCompressors, final @Nullable ServerApi serverApi) {
+                                               final List<MongoCompressor> requestedCompressors) {
         this.authenticator = authenticator;
         this.clientMetadataDocument = clientMetadataDocument;
         this.requestedCompressors = notNull("requestedCompressors", requestedCompressors);
         this.checkSaslSupportedMechs = authenticator instanceof DefaultAuthenticator;
-        this.serverApi = serverApi;
     }
 
     @Override
@@ -108,7 +104,7 @@ public class InternalStreamConnectionInitializer implements InternalConnectionIn
 
         long start = System.nanoTime();
         try {
-            isMasterResult = executeCommand("admin", isMasterCommandDocument, serverApi, internalConnection);
+            isMasterResult = executeCommand("admin", isMasterCommandDocument, internalConnection);
         } catch (MongoException e) {
             if (checkSaslSupportedMechs && e.getCode() == USER_NOT_FOUND_CODE) {
                 MongoCredential credential = authenticator.getMongoCredential();
@@ -162,7 +158,7 @@ public class InternalStreamConnectionInitializer implements InternalConnectionIn
         }
 
         return applyGetLastErrorResult(executeCommandWithoutCheckingForFailure("admin",
-                new BsonDocument("getlasterror", new BsonInt32(1)), serverApi,
+                new BsonDocument("getlasterror", new BsonInt32(1)),
                 internalConnection),
                 description);
     }

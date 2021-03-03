@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -58,7 +57,7 @@ public class X509AuthenticatorNoUserNameTest {
     public void testSuccessfulAuthentication() {
         enqueueSuccessfulAuthenticationReply();
 
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticate(connection, connectionDescriptionThreeFour);
+        new X509Authenticator(getCredentialWithCache()).authenticate(connection, connectionDescriptionThreeFour);
 
         validateMessages();
     }
@@ -66,7 +65,7 @@ public class X509AuthenticatorNoUserNameTest {
     @Test
     public void testUnsuccessfulAuthenticationWhenServerVersionLessThanThreeFour() {
         try {
-            new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticate(connection, connectionDescriptionThreeTwo);
+            new X509Authenticator(getCredentialWithCache()).authenticate(connection, connectionDescriptionThreeTwo);
             fail();
         } catch (MongoSecurityException e) {
             assertEquals("User name is required for the MONGODB-X509 authentication mechanism on server versions less than 3.4",
@@ -79,8 +78,7 @@ public class X509AuthenticatorNoUserNameTest {
         enqueueSuccessfulAuthenticationReply();
 
         FutureResultCallback<Void> futureCallback = new FutureResultCallback<Void>();
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticateAsync(connection, connectionDescriptionThreeFour,
-                futureCallback);
+        new X509Authenticator(getCredentialWithCache()).authenticateAsync(connection, connectionDescriptionThreeFour, futureCallback);
 
         futureCallback.get();
 
@@ -90,8 +88,7 @@ public class X509AuthenticatorNoUserNameTest {
     @Test
     public void testUnsuccessfulAuthenticationWhenServerVersionLessThanThreeFourAsync() throws ExecutionException, InterruptedException {
         FutureResultCallback<Void> futureCallback = new FutureResultCallback<Void>();
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticateAsync(connection, connectionDescriptionThreeTwo,
-                futureCallback);
+        new X509Authenticator(getCredentialWithCache()).authenticateAsync(connection, connectionDescriptionThreeTwo, futureCallback);
 
         try {
             futureCallback.get();

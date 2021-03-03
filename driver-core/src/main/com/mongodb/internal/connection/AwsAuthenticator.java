@@ -21,7 +21,6 @@ import com.mongodb.MongoCredential;
 import com.mongodb.MongoException;
 import com.mongodb.MongoInternalException;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonBinary;
@@ -57,8 +56,8 @@ public class AwsAuthenticator extends SaslAuthenticator {
     private static final String MONGODB_AWS_MECHANISM_NAME = "MONGODB-AWS";
     private static final int RANDOM_LENGTH = 32;
 
-    public AwsAuthenticator(final MongoCredentialWithCache credential, final @Nullable ServerApi serverApi) {
-        super(credential, serverApi);
+    public AwsAuthenticator(final MongoCredentialWithCache credential) {
+        super(credential);
 
         if (getMongoCredential().getAuthenticationMechanism() != MONGODB_AWS) {
             throw new MongoException("Incorrect mechanism: " + getMongoCredential().getMechanism());

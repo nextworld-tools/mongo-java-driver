@@ -460,8 +460,8 @@ class MongoClientSettingsSpecification extends Specification {
                         'compressorList', 'connectionPoolSettingsBuilder', 'credential',
                         'heartbeatConnectTimeoutMS', 'heartbeatSocketTimeoutMS',
                         'readConcern', 'readPreference', 'retryReads',
-                        'retryWrites', 'serverApi', 'serverSettingsBuilder', 'socketSettingsBuilder', 'sslSettingsBuilder',
-                        'streamFactoryFactory', 'uuidRepresentation', 'writeConcern']
+                        'retryWrites', 'serverSettingsBuilder', 'socketSettingsBuilder', 'sslSettingsBuilder', 'streamFactoryFactory',
+                        'uuidRepresentation', 'writeConcern']
 
         then:
         actual == expected
@@ -475,7 +475,7 @@ class MongoClientSettingsSpecification extends Specification {
                         'applyToConnectionPoolSettings', 'applyToServerSettings', 'applyToSocketSettings', 'applyToSslSettings',
                         'autoEncryptionSettings', 'build', 'codecRegistry', 'commandListenerList', 'compressorList', 'credential',
                         'heartbeatConnectTimeoutMS', 'heartbeatSocketTimeoutMS', 'readConcern', 'readPreference', 'retryReads',
-                        'retryWrites', 'serverApi', 'streamFactoryFactory', 'uuidRepresentation',
+                        'retryWrites', 'streamFactoryFactory', 'uuidRepresentation',
                         'writeConcern']
         then:
         actual == expected

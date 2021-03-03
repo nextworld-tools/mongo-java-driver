@@ -19,10 +19,8 @@ package com.mongodb.internal.connection;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoException;
 import com.mongodb.MongoSecurityException;
-import com.mongodb.ServerApi;
-import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.internal.async.SingleResultCallback;
-import com.mongodb.lang.Nullable;
+import com.mongodb.connection.ConnectionDescription;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
@@ -39,8 +37,8 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
     private static final BsonString DEFAULT_MECHANISM_NAME = new BsonString(SCRAM_SHA_256.getMechanismName());
     private Authenticator delegate;
 
-    DefaultAuthenticator(final MongoCredentialWithCache credential, final @Nullable ServerApi serverApi) {
-        super(credential, serverApi);
+    DefaultAuthenticator(final MongoCredentialWithCache credential) {
+        super(credential);
         isTrueArgument("unspecified authentication mechanism", credential.getAuthenticationMechanism() == null);
     }
 
@@ -92,14 +90,14 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
 
     private Authenticator getLegacyDefaultAuthenticator(final ConnectionDescription connectionDescription) {
         if (serverIsAtLeastVersionThreeDotZero(connectionDescription)) {
-            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_1), getServerApi());
+            return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_1));
         } else {
-            return new NativeAuthenticator(getMongoCredentialWithCache(), getServerApi());
+            return new NativeAuthenticator(getMongoCredentialWithCache());
         }
     }
 
     Authenticator getAuthenticatorForIsMaster() {
-        return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256), getServerApi());
+        return new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(SCRAM_SHA_256));
     }
 
     private void setDelegate(final ConnectionDescription connectionDescription) {
@@ -110,7 +108,7 @@ class DefaultAuthenticator extends Authenticator implements SpeculativeAuthentic
         if (connectionDescription.getSaslSupportedMechanisms() != null)  {
             BsonArray saslSupportedMechs = connectionDescription.getSaslSupportedMechanisms();
             AuthenticationMechanism mechanism = saslSupportedMechs.contains(DEFAULT_MECHANISM_NAME) ? SCRAM_SHA_256 : SCRAM_SHA_1;
-            delegate = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism), getServerApi());
+            delegate = new ScramShaAuthenticator(getMongoCredentialWithCache().withMechanism(mechanism));
         } else {
             delegate = getLegacyDefaultAuthenticator(connectionDescription);
         }

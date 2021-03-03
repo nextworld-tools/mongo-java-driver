@@ -19,12 +19,10 @@ package com.mongodb.internal.connection;
 import com.mongodb.AuthenticationMechanism;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoSecurityException;
-import com.mongodb.ServerApi;
-import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.diagnostics.logging.Logger;
 import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.internal.async.SingleResultCallback;
-import com.mongodb.lang.Nullable;
+import com.mongodb.connection.ConnectionDescription;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
@@ -38,8 +36,8 @@ class X509Authenticator extends Authenticator implements SpeculativeAuthenticato
     public static final Logger LOGGER = Loggers.getLogger("authenticator");
     private BsonDocument speculativeAuthenticateResponse;
 
-    X509Authenticator(final MongoCredentialWithCache credential, final @Nullable ServerApi serverApi) {
-        super(credential, serverApi);
+    X509Authenticator(final MongoCredentialWithCache credential) {
+        super(credential);
     }
 
     @Override
@@ -50,7 +48,7 @@ class X509Authenticator extends Authenticator implements SpeculativeAuthenticato
         try {
             validateUserName(connectionDescription);
             BsonDocument authCommand = getAuthCommand(getMongoCredential().getUserName());
-            executeCommand(getMongoCredential().getSource(), authCommand, getServerApi(), connection);
+            executeCommand(getMongoCredential().getSource(), authCommand, connection);
         } catch (MongoCommandException e) {
             throw new MongoSecurityException(getMongoCredential(), "Exception authenticating", e);
         }

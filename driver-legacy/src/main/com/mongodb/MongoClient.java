@@ -819,8 +819,7 @@ public class MongoClient implements Closeable {
     private void cleanCursors() {
         ServerCursorAndNamespace cur;
         while ((cur = orphanedCursors.poll()) != null) {
-            ReadWriteBinding binding = new SingleServerBinding(delegate.getCluster(), cur.serverCursor.getAddress(),
-                    options.getServerApi());
+            ReadWriteBinding binding = new SingleServerBinding(delegate.getCluster(), cur.serverCursor.getAddress());
             try {
                 ConnectionSource source = binding.getReadConnectionSource();
                 try {

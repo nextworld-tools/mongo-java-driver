@@ -259,7 +259,6 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
         def source = Stub(ConnectionSource)
         def connection = Mock(Connection)
         binding.readPreference >> ReadPreference.primary()
-        binding.serverApi >> null
         binding.readConnectionSource >> source
         binding.sessionContext >> sessionContext
         source.connection >> connection
@@ -281,7 +280,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
         then:
         _ * connection.description >> new ConnectionDescription(new ConnectionId(new ServerId(new ClusterId(), new ServerAddress())),
                  6, STANDALONE, 1000, 100000, 100000, [])
-        1 * connection.command(_, commandDocument, _, _, _, sessionContext, null) >>
+        1 * connection.command(_, commandDocument, _, _, _, sessionContext) >>
                 new BsonDocument('results', new BsonArrayWrapper([]))
                         .append('counts',
                         new BsonDocument('input', new BsonInt32(0))

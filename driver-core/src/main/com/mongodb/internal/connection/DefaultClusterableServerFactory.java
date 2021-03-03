@@ -20,7 +20,6 @@ import com.mongodb.MongoCompressor;
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoDriverInformation;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ClusterId;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ConnectionPoolSettings;
@@ -29,7 +28,6 @@ import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.StreamFactory;
 import com.mongodb.event.CommandListener;
 import com.mongodb.event.ServerListener;
-import com.mongodb.lang.Nullable;
 
 import java.util.Collections;
 import java.util.List;
@@ -46,15 +44,13 @@ public class DefaultClusterableServerFactory implements ClusterableServerFactory
     private final String applicationName;
     private final MongoDriverInformation mongoDriverInformation;
     private final List<MongoCompressor> compressorList;
-    @Nullable
-    private final ServerApi serverApi;
 
     public DefaultClusterableServerFactory(final ClusterId clusterId, final ClusterSettings clusterSettings,
                                            final ServerSettings serverSettings, final ConnectionPoolSettings connectionPoolSettings,
                                            final StreamFactory streamFactory, final StreamFactory heartbeatStreamFactory,
                                            final MongoCredential credential, final CommandListener commandListener,
                                            final String applicationName, final MongoDriverInformation mongoDriverInformation,
-                                           final List<MongoCompressor> compressorList, final @Nullable ServerApi serverApi) {
+                                           final List<MongoCompressor> compressorList) {
         this.clusterId = clusterId;
         this.clusterSettings = clusterSettings;
         this.serverSettings = serverSettings;
@@ -66,7 +62,6 @@ public class DefaultClusterableServerFactory implements ClusterableServerFactory
         this.applicationName = applicationName;
         this.mongoDriverInformation = mongoDriverInformation;
         this.compressorList = compressorList;
-        this.serverApi = serverApi;
     }
 
     @Override
@@ -76,7 +71,7 @@ public class DefaultClusterableServerFactory implements ClusterableServerFactory
                                     final ClusterClock clusterClock) {
         ConnectionPool connectionPool = new DefaultConnectionPool(new ServerId(clusterId, serverAddress),
                 new InternalStreamConnectionFactory(streamFactory, credential, applicationName,
-                        mongoDriverInformation, compressorList, commandListener, serverApi), connectionPoolSettings);
+                        mongoDriverInformation, compressorList, commandListener), connectionPoolSettings);
 
         connectionPool.start();
 
@@ -84,8 +79,7 @@ public class DefaultClusterableServerFactory implements ClusterableServerFactory
         ServerMonitorFactory serverMonitorFactory =
             new DefaultServerMonitorFactory(new ServerId(clusterId, serverAddress), serverSettings, clusterClock,
                     new InternalStreamConnectionFactory(heartbeatStreamFactory, null,
-                            applicationName, mongoDriverInformation, Collections.<MongoCompressor>emptyList(), null, serverApi),
-                    connectionPool, serverApi);
+                            applicationName, mongoDriverInformation, Collections.<MongoCompressor>emptyList(), null), connectionPool);
 
         return new DefaultServer(new ServerId(clusterId, serverAddress), clusterSettings.getMode(), connectionPool,
                 new DefaultConnectionFactory(), serverMonitorFactory, serverDescriptionChangedListener, serverListener, commandListener,

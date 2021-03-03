@@ -633,9 +633,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
                 getReadConcern() >> ReadConcern.DEFAULT
                 getOperationTime() >> new BsonTimestamp()
             }
-            getServerApi() >> null
             getReadConnectionSource() >> Stub(ConnectionSource) {
-                getServerApi() >> null
                 getConnection() >> Stub(Connection) {
                      command(*_) >> {
                          changeStream = getChangeStream(it[1])

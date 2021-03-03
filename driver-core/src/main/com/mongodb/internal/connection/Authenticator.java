@@ -18,19 +18,16 @@ package com.mongodb.internal.connection;
 
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoInternalException;
-import com.mongodb.ServerApi;
-import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
 
 public abstract class Authenticator {
     private final MongoCredentialWithCache credential;
-    private final ServerApi serverApi;
 
-    Authenticator(@NonNull final MongoCredentialWithCache credential, @Nullable final ServerApi serverApi) {
+    Authenticator(@NonNull final MongoCredentialWithCache credential) {
         this.credential = credential;
-        this.serverApi = serverApi;
     }
 
     @NonNull
@@ -41,11 +38,6 @@ public abstract class Authenticator {
     @NonNull
     MongoCredential getMongoCredential() {
         return credential.getCredential();
-    }
-
-    @Nullable
-    ServerApi getServerApi() {
-        return serverApi;
     }
 
     @NonNull
