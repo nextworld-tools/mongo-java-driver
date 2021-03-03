@@ -65,8 +65,7 @@ class X509Authenticator extends Authenticator implements SpeculativeAuthenticato
             SingleResultCallback<Void> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
             try {
                 validateUserName(connectionDescription);
-                executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()),
-                        getServerApi(), connection,
+                executeCommandAsync(getMongoCredential().getSource(), getAuthCommand(getMongoCredential().getUserName()), connection,
                         new SingleResultCallback<BsonDocument>() {
                             @Override
                             public void onResult(final BsonDocument nonceResult, final Throwable t) {

@@ -17,13 +17,11 @@
 package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.AsyncConnection;
 import com.mongodb.internal.connection.NoOpSessionContext;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -36,22 +34,19 @@ public class AsyncSingleConnectionReadBinding extends AbstractReferenceCounted i
     private final ReadPreference readPreference;
     private final ServerDescription serverDescription;
     private final AsyncConnection connection;
-    @Nullable
-    private final ServerApi serverApi;
 
     /**
      * Construct an instance.
+     *
      * @param readPreference the read preferenced of this binding
      * @param serverDescription the description of the server
      * @param connection the connection to bind to.
-     * @param serverApi the serverApi,which may be null
      */
     public AsyncSingleConnectionReadBinding(final ReadPreference readPreference, final ServerDescription serverDescription,
-                                            final AsyncConnection connection, @Nullable final ServerApi serverApi) {
+                                            final AsyncConnection connection) {
         this.readPreference = notNull("readPreference", readPreference);
         this.serverDescription = notNull("serverDescription", serverDescription);
         this.connection = notNull("connection", connection).retain();
-        this.serverApi = serverApi;
     }
 
     @Override
@@ -62,12 +57,6 @@ public class AsyncSingleConnectionReadBinding extends AbstractReferenceCounted i
     @Override
     public SessionContext getSessionContext() {
         return NoOpSessionContext.INSTANCE;
-    }
-
-    @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return serverApi;
     }
 
     @Override
@@ -102,12 +91,6 @@ public class AsyncSingleConnectionReadBinding extends AbstractReferenceCounted i
         @Override
         public SessionContext getSessionContext() {
             return NoOpSessionContext.INSTANCE;
-        }
-
-        @Override
-        @Nullable
-        public ServerApi getServerApi() {
-            return serverApi;
         }
 
         @Override

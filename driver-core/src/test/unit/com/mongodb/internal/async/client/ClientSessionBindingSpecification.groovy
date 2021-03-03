@@ -179,6 +179,6 @@ class ClientSessionBindingSpecification extends Specification {
                         .build()), null)
             }
         }
-        new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, null)
+        new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT)
     }
 }

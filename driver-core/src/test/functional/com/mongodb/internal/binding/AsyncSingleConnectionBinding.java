@@ -19,7 +19,6 @@ package com.mongodb.internal.binding;
 import com.mongodb.MongoInternalException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.AsyncConnection;
@@ -30,7 +29,6 @@ import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -52,32 +50,28 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
     private volatile Server writeServer;
     private volatile ServerDescription readServerDescription;
     private volatile ServerDescription writeServerDescription;
-    @Nullable
-    private final ServerApi serverApi;
 
     /**
      * Create a new binding with the given cluster.
-     *  @param cluster     a non-null Cluster which will be used to select a server to bind to
+     *
+     * @param cluster     a non-null Cluster which will be used to select a server to bind to
      * @param maxWaitTime the maximum time to wait for a connection to become available.
      * @param timeUnit    a non-null TimeUnit for the maxWaitTime
-     * @param serverApi   the server api, which may be null
      */
-    public AsyncSingleConnectionBinding(final Cluster cluster, final long maxWaitTime, final TimeUnit timeUnit,
-                                        @Nullable final ServerApi serverApi) {
-        this(cluster, primary(), maxWaitTime, timeUnit, serverApi);
+    public AsyncSingleConnectionBinding(final Cluster cluster, final long maxWaitTime, final TimeUnit timeUnit) {
+        this(cluster, primary(), maxWaitTime, timeUnit);
     }
 
     /**
      * Create a new binding with the given cluster.
-     *  @param cluster        a non-null Cluster which will be used to select a server to bind to
+     *
+     * @param cluster        a non-null Cluster which will be used to select a server to bind to
      * @param readPreference the readPreference for reads, if not primary a separate connection will be used for reads
      * @param maxWaitTime    the maximum time to wait for a connection to become available.
      * @param timeUnit       a non-null TimeUnit for the maxWaitTime
-     * @param serverApi      the server api, which may be null
      */
     public AsyncSingleConnectionBinding(final Cluster cluster, final ReadPreference readPreference,
-                                        final long maxWaitTime, final TimeUnit timeUnit, @Nullable final ServerApi serverApi) {
-        this.serverApi = serverApi;
+                                        final long maxWaitTime, final TimeUnit timeUnit) {
 
         notNull("cluster", cluster);
         this.readPreference = notNull("readPreference", readPreference);
@@ -167,12 +161,6 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
     }
 
     @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return serverApi;
-    }
-
-    @Override
     public void getReadConnectionSource(final SingleResultCallback<AsyncConnectionSource> callback) {
         isTrue("open", getCount() > 0);
         if (readPreference == primary()) {
@@ -216,12 +204,6 @@ public class AsyncSingleConnectionBinding extends AbstractReferenceCounted imple
         @Override
         public SessionContext getSessionContext() {
             return NoOpSessionContext.INSTANCE;
-        }
-
-        @Override
-        @Nullable
-        public ServerApi getServerApi() {
-            return serverApi;
         }
 
         @Override

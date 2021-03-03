@@ -18,7 +18,6 @@ package com.mongodb.reactivestreams.client.internal.crypt;
 
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.internal.binding.AsyncClusterAwareReadWriteBinding;
@@ -27,7 +26,6 @@ import com.mongodb.internal.binding.AsyncReadWriteBinding;
 import com.mongodb.internal.connection.AsyncConnection;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
 
@@ -58,12 +56,6 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
     @Override
     public SessionContext getSessionContext() {
         return wrapped.getSessionContext();
-    }
-
-    @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return wrapped.getServerApi();
     }
 
     @Override
@@ -124,12 +116,6 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
         @Override
         public SessionContext getSessionContext() {
             return wrapped.getSessionContext();
-        }
-
-        @Override
-        @Nullable
-        public ServerApi getServerApi() {
-            return wrapped.getServerApi();
         }
 
         @Override

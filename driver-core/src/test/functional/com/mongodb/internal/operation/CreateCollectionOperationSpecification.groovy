@@ -25,6 +25,7 @@ import com.mongodb.client.model.ValidationLevel
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
+import org.bson.Document
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -159,7 +160,7 @@ class CreateCollectionOperationSpecification extends OperationFunctionalSpecific
         collectionNameExists(getCollectionName())
 
         when:
-        def stats = new CommandReadOperation<>(getDatabaseName(),
+        def stats = new CommandWriteOperation<BsonDocument>(getDatabaseName(),
                 new BsonDocument('collStats', new BsonString(getCollectionName())),
                 new BsonDocumentCodec()).execute(getBinding())
 
@@ -185,7 +186,7 @@ class CreateCollectionOperationSpecification extends OperationFunctionalSpecific
         execute(operation, async)
 
         then:
-        new CommandReadOperation<>(getDatabaseName(),
+        new CommandWriteOperation<Document>(getDatabaseName(),
                 new BsonDocument('collStats', new BsonString(getCollectionName())),
                 new DocumentCodec()).execute(getBinding())
                 .getInteger('nindexes') == expectedNumberOfIndexes

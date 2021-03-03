@@ -36,8 +36,8 @@ class AsyncSingleConnectionReadBindingSpecification extends Specification {
 
         when:
         def binding = new AsyncSingleConnectionReadBinding(ReadPreference.secondary(),
-                serverDescription,
-                connection, null)
+                                                           serverDescription,
+                                                           connection)
 
         then:
         binding.getReadPreference() == ReadPreference.secondary()
@@ -49,8 +49,8 @@ class AsyncSingleConnectionReadBindingSpecification extends Specification {
 
         when:
         def binding = new AsyncSingleConnectionReadBinding(ReadPreference.primary(),
-                serverDescription,
-                connection, null)
+                                                           serverDescription,
+                                                           connection)
 
         then:
         binding.getCount() == 1
@@ -79,8 +79,8 @@ class AsyncSingleConnectionReadBindingSpecification extends Specification {
         given:
         def connection = Stub(AsyncConnection)
         def binding = new AsyncSingleConnectionReadBinding(ReadPreference.primary(),
-                serverDescription,
-                connection, null)
+                                                           serverDescription,
+                                                           connection)
 
         when:
         AsyncConnectionSource source
@@ -98,8 +98,8 @@ class AsyncSingleConnectionReadBindingSpecification extends Specification {
 
         when:
         def binding = new AsyncSingleConnectionReadBinding(ReadPreference.primary(),
-                serverDescription,
-                connection, null)
+                                                           serverDescription,
+                                                           connection)
 
         then:
         1 * connection.retain() >> connection

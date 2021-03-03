@@ -52,7 +52,6 @@ import spock.lang.Specification
 
 import java.util.concurrent.CountDownLatch
 
-import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.MongoCredential.createCredential
 import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE
 import static com.mongodb.connection.ClusterConnectionMode.SINGLE
@@ -540,13 +539,13 @@ class DefaultServerSpecification extends Specification {
         if (async) {
             CountDownLatch latch = new CountDownLatch(1)
             testConnection.commandAsync('admin', new BsonDocument('ping', new BsonInt32(1)), NO_OP_FIELD_NAME_VALIDATOR,
-                    ReadPreference.primary(), new BsonDocumentCodec(), sessionContext, getServerApi()) {
+                    ReadPreference.primary(), new BsonDocumentCodec(), sessionContext) {
                 BsonDocument result, Throwable t -> latch.countDown()
             }
             latch.await()
         } else {
             testConnection.command('admin', new BsonDocument('ping', new BsonInt32(1)), NO_OP_FIELD_NAME_VALIDATOR,
-                    ReadPreference.primary(), new BsonDocumentCodec(), sessionContext, getServerApi())
+                    ReadPreference.primary(), new BsonDocumentCodec(), sessionContext, null)
         }
 
         then:

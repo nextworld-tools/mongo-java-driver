@@ -403,8 +403,8 @@ class OperationFunctionalSpecification extends Specification {
         if (checkCommand) {
             1 * connection.commandAsync(*_) >> {
                 assert it[1] == expectedCommand
-                if (it.size() == 11) {
-                    SplittablePayload payload = it[8]
+                if (it.size() == 10) {
+                    SplittablePayload payload = it[7]
                     payload.setPosition(payload.size())
                 }
                 it.last().onResult(result, null)
@@ -500,7 +500,6 @@ class OperationFunctionalSpecification extends Specification {
         }
 
         def connectionSource = Stub(AsyncConnectionSource) {
-            getServerApi() >> null
             getConnection(_) >> {
                 if (serverVersions.isEmpty()) {
                     it[0].onResult(null,
@@ -512,7 +511,6 @@ class OperationFunctionalSpecification extends Specification {
         }
 
         def writeBinding = Stub(AsyncWriteBinding) {
-            getServerApi() >> null
             getWriteConnectionSource(_) >> { it[0].onResult(connectionSource, null) }
             getSessionContext() >> Stub(SessionContext) {
                 hasSession() >> true

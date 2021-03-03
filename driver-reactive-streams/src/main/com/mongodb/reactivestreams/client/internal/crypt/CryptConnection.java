@@ -19,7 +19,6 @@ package com.mongodb.reactivestreams.client.internal.crypt;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
 import com.mongodb.WriteConcernResult;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.internal.async.SingleResultCallback;
@@ -97,15 +96,15 @@ class CryptConnection implements AsyncConnection {
     @Override
     public <T> void commandAsync(final String database, final BsonDocument command, final FieldNameValidator fieldNameValidator,
                                  final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
-                                 final SessionContext sessionContext, final ServerApi serverApi, final SingleResultCallback<T> callback) {
-        commandAsync(database, command, fieldNameValidator, readPreference, commandResultDecoder, sessionContext, serverApi,
-                true, null, null, callback);
+                                 final SessionContext sessionContext, final SingleResultCallback<T> callback) {
+        commandAsync(database, command, fieldNameValidator, readPreference, commandResultDecoder, sessionContext, true, null, null,
+                     callback);
     }
 
     @Override
     public <T> void commandAsync(final String database, final BsonDocument command, final FieldNameValidator commandFieldNameValidator,
                                  final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
-                                 final SessionContext sessionContext, final ServerApi serverApi, final boolean responseExpected,
+                                 final SessionContext sessionContext, final boolean responseExpected,
                                  @Nullable final SplittablePayload payload, @Nullable final FieldNameValidator payloadFieldNameValidator,
                                  final SingleResultCallback<T> callback) {
 
@@ -128,8 +127,7 @@ class CryptConnection implements AsyncConnection {
             crypt.encrypt(database, new RawBsonDocument(bsonOutput.getInternalBuffer(), 0, bsonOutput.getSize()))
                     .flatMap((Function<RawBsonDocument, Mono<RawBsonDocument>>) encryptedCommand ->
                             Mono.create(sink -> wrapped.commandAsync(database, encryptedCommand, commandFieldNameValidator, readPreference,
-                                                                     new RawBsonDocumentCodec(), sessionContext, serverApi,
-                                                                     responseExpected, null,
+                                                                     new RawBsonDocumentCodec(), sessionContext, responseExpected, null,
                                                                      null, sinkToCallback(sink))))
                     .flatMap(crypt::decrypt)
                     .map(decryptedResponse ->

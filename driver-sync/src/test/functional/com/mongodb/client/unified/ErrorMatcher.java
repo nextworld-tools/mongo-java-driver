@@ -57,11 +57,11 @@ final class ErrorMatcher {
                     e instanceof MongoClientException || e instanceof IllegalArgumentException);
         }
         if (expectedError.containsKey("errorContains")) {
-            assertTrue(context.getMessage("Exception must be of type MongoCommandException when checking for error codes"),
+            assertTrue("Exception must be of type MongoCommandException when checking for error codes",
                     e instanceof MongoCommandException);
             MongoCommandException mongoCommandException = (MongoCommandException) e;
             String errorContains = expectedError.getString("errorContains").getValue();
-            assertTrue(context.getMessage("Error message does not contain expected string: " + errorContains),
+            assertTrue("Error message does not contain expected string: " + errorContains,
                     mongoCommandException.getErrorMessage().contains(errorContains));
         }
         if (expectedError.containsKey("errorCodeName")) {
