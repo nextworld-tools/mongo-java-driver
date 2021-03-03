@@ -35,7 +35,7 @@ Legacy MongoClient API:
 
 ```java
 import com.mongodb.MongoClient;
-import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientURI;
 ```
 
 And the common elements between the legacy and new APIs:
@@ -130,13 +130,21 @@ MongoClient mongoClient = new MongoClient();
 - You can explicitly specify the hostname to connect to a MongoDB instance running on the specified host on port ``27017``:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://hostOne");
+MongoClient mongoClient = new MongoClient( "hostOne" );
 ```
 
-- You can explicitly specify the hostname and port:
+- You can explicitly specify the hostname and the port:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://hostOne:27018");
+MongoClient mongoClient = new MongoClient( "hostOne" , 27018 );
+```
+
+- You can specify the
+[`MongoClientURI`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientURI.html" >}}) connection string:
+
+```java
+ MongoClientURI connectionString = new MongoClientURI("mongodb://hostOne:27017,hostTwo:27017");
+ MongoClient mongoClient = new MongoClient(connectionString);
 ```
 
 The connection string mostly follows [RFC 3986](http://tools.ietf.org/html/rfc3986), with the exception of the domain name. For MongoDB, 

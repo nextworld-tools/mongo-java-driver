@@ -31,16 +31,15 @@ Legacy MongoClient API:
 
 ```java
 import com.mongodb.MongoClient;
-import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientURI;
 ```
 
 An authentication credential is represented as an instance of the
 [`MongoCredential`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoCredential.html" >}}) class. The [`MongoCredential`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoCredential.html" >}}) class includes static
 factory methods for each of the supported authentication mechanisms.
 
-You can also use a [`ConnectionString`]({{< apiref "mongodb-driver-core" "com/mongodb/ConnectionString.html" >}}) and pass it to a
-[`MongoClient()`]({{< apiref "mongodb-driver-legacy" "com/mongodb/MongoClient.html" >}}) constructor that takes a `ConnectionString` 
-parameter.
+You can also use a [`MongoClientURI`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientURI.html" >}}) and pass it to a
+[`MongoClient()`]({{< apiref "mongodb-driver-sync" "com/mongodb/client/MongoClient.html" >}}) constructor that takes a `MongoClientURI` parameter.
 
 ## Default Authentication Mechanism
 
@@ -77,12 +76,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string without explicitly specifying the authentication mechanism. Using the new MongoClient API:
@@ -94,7 +88,8 @@ MongoClient mongoClient = MongoClients.create("mongodb://user1:pwd1@host1/?authS
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://user1:pwd1@host1/?authSource=db1");
+MongoClientURI uri = new MongoClientURI("mongodb://user1:pwd1@host1/?authSource=db1");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
 For challenge and response mechanisms, using the default authentication mechanism is the recommended approach as it will make upgrading
@@ -141,12 +136,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=SCRAM-SHA-256`. Using the new MongoClient API:
@@ -158,7 +148,8 @@ MongoClient mongoClient = MongoClients.create("mongodb://user1:pwd1@host1/?authS
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=SCRAM-SHA-256");
+MongoClientURI uri = new MongoClientURI("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=SCRAM-SHA-256");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
 
@@ -190,12 +181,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=SCRAM-SHA-1`. Using the new MongoClient API:
@@ -207,7 +193,8 @@ MongoClient mongoClient = MongoClients.create("mongodb://user1:pwd1@host1/?authS
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=SCRAM-SHA-1");
+MongoClientURI uri = new MongoClientURI("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=SCRAM-SHA-1");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
 ## MONGODB-CR
@@ -245,12 +232,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=MONGODB-CR`. Using the new MongoClient API:
@@ -262,7 +244,8 @@ MongoClient mongoClient = MongoClients.create("mongodb://user1:pwd1@host1/?authS
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=MONGODB-CR");
+MongoClientURI uri = new MongoClientURI("mongodb://user1:pwd1@host1/?authSource=db1&authMechanism=MONGODB-CR");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
 {{% note %}}
@@ -302,12 +285,8 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClientOptions options = MongoClientOptions.builder().sslEnabled(true).build();
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential, options);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=MONGODB-X509`. Using the new MongoClient API:
@@ -319,7 +298,8 @@ MongoClient mongoClient = MongoClients.create("mongodb://subjectName@host1/?auth
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://subjectName@host1/?authMechanism=MONGODB-X509&ssl=true");
+MongoClientURI uri = new MongoClientURI("mongodb://subjectName@host1/?authMechanism=MONGODB-X509&ssl=true");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
 See the MongoDB server [x.509 tutorial]({{<docsref "tutorial/configure-x509-client-authentication/#add-x-509-certificate-subject-as-a-user" >}})
@@ -454,12 +434,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=GSSAPI`. Using the new MongoClient API:
@@ -471,7 +446,7 @@ MongoClient mongoClient = MongoClients.create("mongodb://username%40REALM.ME@hos
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://username%40REALM.ME@host1/?authMechanism=GSSAPI");
+MongoClientURI uri = new MongoClientURI("mongodb://username%40REALM.ME@host1/?authMechanism=GSSAPI");
 ```
 {{% note %}}
 
@@ -553,12 +528,7 @@ MongoClient mongoClient = MongoClients.create(
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient(
-        MongoClientSettings.builder()
-                .applyToClusterSettings(builder ->
-                        builder.hosts(Arrays.asList(new ServerAddress("host1", 27017))))
-                .credential(credential)
-                .build());
+MongoClient mongoClient = new MongoClient(new ServerAddress("host1", 27017), credential);
 ```
 
 Or use a connection string that explicitly specifies the `authMechanism=PLAIN`.  Using the new MongoClient API:
@@ -570,7 +540,7 @@ MongoClient mongoClient = MongoClients.create("mongodb://user1@host1/?authSource
 or using the legacy MongoClient API:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://user1@host1/?authSource=$external&authMechanism=PLAIN");
+MongoClientURI uri = new MongoClientURI("mongodb://user1@host1/?authSource=$external&authMechanism=PLAIN");
 ```
 
 {{% note %}}

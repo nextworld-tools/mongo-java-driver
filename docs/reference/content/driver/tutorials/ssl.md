@@ -14,6 +14,8 @@ The Java driver supports TLS/SSL connections to MongoDB servers using
 the underlying support for TLS/SSL provided by the JDK. 
 You can configure the driver to use TLS/SSL either with [`ConnectionString`]({{< apiref "mongodb-driver-core" "com/mongodb/ConnectionString" >}}) or with
 [`MongoClientSettings`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientSettings" >}}).
+With the legacy MongoClient API you can use either [`MongoClientURI`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientURI" >}}) or 
+[`MongoClientOptions`]({{< apiref "mongodb-driver-legacy" "com/mongodb/MongoClientOptions" >}}).
 
 ## MongoClient API (since 3.7)
 
@@ -75,52 +77,55 @@ MongoClient client = MongoClients.create(settings);
 
 ## Legacy MongoClient API
 
-### Specify TLS/SSL via connection string
+### Specify TLS/SSL via `MongoClientURI`
 
 ```java
+import com.mongodb.MongoClientURI;
 import com.mongodb.MongoClient;
 ```
 
-To specify TLS/SSL with a connection string, specify `ssl=true` as part of the connection string, as in:
+To specify TLS/SSL with [`MongoClientURI`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientURI" >}}), specify `ssl=true` as part of the connection
+string, as in:
 
 ```java
-MongoClient mongoClient = new MongoClient("mongodb://localhost/?ssl=true");
+MongoClientURI uri = new MongoClientURI("mongodb://localhost/?ssl=true");
+MongoClient mongoClient = new MongoClient(uri);
 ```
 
-### Specify TLS/SSL via `MongoClientSettings`
+### Specify TLS/SSL via `MongoClientOptions`
 
 ```java
-import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClient;
 ```
 
-To specify TLS/SSL with with [`MongoClientSettings`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientSettings" >}}), set the 
-`sslEnabled` property to `true`, as in:
+To specify TLS/SSL with with [`MongoClientOptions`]({{< apiref "mongodb-driver-legacy" "com/mongodb/MongoClientOptions" >}}), set the `sslEnabled` property to `true`, as in:
 
 ```java
- MongoClientSettings settings = MongoClientSettings.builder()
-        .applyToSslSettings(builder -> builder.enabled(true))
+MongoClientOptions options = MongoClientOptions.builder()
+        .sslEnabled(true)
         .build();
- MongoClient client = new MongoClient(settings);
+MongoClient client = new MongoClient("localhost", options);
 ```
 
-### Specify `SSLContext` via `MongoClientSettings`
+### Specify `SSLContext` via `MongoClientOptions`
 
 ```java
 import javax.net.ssl.SSLContext;
-import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClient;
 ```
 
 To specify the [`javax.net.ssl.SSLContext`](https://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) with 
-[`MongoClientSettings`]({{< apiref "mongodb-driver-core" "com/mongodb/MongoClientSettings" >}}), set the `sslContext` property, as in:
+[`MongoClientOptions`]({{< apiref "mongodb-driver-legacy" "com/mongodb/MongoClientOptions" >}}), set the `sslContext` property, as in:
 
 ```java
 SSLContext sslContext = ...
-MongoClientSettings settings = MongoClientSettings.builder()
-        .applyToSslSettings(builder -> builder.enabled(true).context(sslContext))
+MongoClientOptions options = MongoClientOptions.builder()
+        .sslEnabled(true)
+        .sslContext(sslContext)
         .build();
-MongoClient client = new MongoClient(settings);
+ MongoClient client = new MongoClient("localhost", options);
 ```
 
 ## Disable Hostname Verification
@@ -138,6 +143,15 @@ MongoClientSettings settings = MongoClientSettings.builder()
                     builder.enabled(true);
                     builder.invalidHostNameAllowed(true);
                 })
+        .build();
+```
+
+or, with the legacy `MongoClientOptions`]({{< apiref "mongodb-driver-legacy" "com/mongodb/MongoClientOptions" >}}), using the `sslInvalidHostNameAllowed` property:
+
+```java
+MongoClientOptions.builder()
+        .sslEnabled(true)
+        .sslInvalidHostNameAllowed(true)
         .build();
 ```
 
