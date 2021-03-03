@@ -173,7 +173,6 @@ public class Crypt implements Closeable {
     }
 
     @Override
-    @SuppressWarnings("try")
     public void close() {
         //noinspection EmptyTryBlock
         try (MongoCrypt mongoCrypt = this.mongoCrypt;
