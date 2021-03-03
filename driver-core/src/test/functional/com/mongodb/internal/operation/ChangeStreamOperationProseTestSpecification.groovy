@@ -96,7 +96,7 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
         setFailPoint(failPointDocument)
 
         then:
-        def result = next(cursor, async, callHasNext, 2)
+        def result = next(cursor, async, 2)
 
         then:
         result.size() == 2
@@ -107,10 +107,7 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
         waitForLastRelease(async ? getAsyncCluster() : getCluster())
 
         where:
-        async  | callHasNext
-        true   | false
-        false  | false
-        false  | true
+        async << [true, false]
     }
 
     //

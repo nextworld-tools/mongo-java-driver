@@ -64,11 +64,7 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, Boolean>() {
             @Override
             public Boolean apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
-                try {
-                    return queryBatchCursor.hasNext();
-                } finally {
-                    cachePostBatchResumeToken(queryBatchCursor);
-                }
+                return queryBatchCursor.hasNext();
             }
         });
     }
@@ -78,11 +74,9 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, List<T>>() {
             @Override
             public List<T> apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
-                try {
-                    return convertResults(queryBatchCursor.next());
-                } finally {
-                    cachePostBatchResumeToken(queryBatchCursor);
-                }
+                List<T> results = convertResults(queryBatchCursor.next());
+                cachePostBatchResumeToken(queryBatchCursor);
+                return results;
             }
         });
     }
@@ -92,11 +86,9 @@ final class ChangeStreamBatchCursor<T> implements AggregateResponseBatchCursor<T
         return resumeableOperation(new Function<AggregateResponseBatchCursor<RawBsonDocument>, List<T>>() {
             @Override
             public List<T> apply(final AggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
-                try {
-                    return convertResults(queryBatchCursor.tryNext());
-                } finally {
-                    cachePostBatchResumeToken(queryBatchCursor);
-                }
+                List<T> results = convertResults(queryBatchCursor.tryNext());
+                cachePostBatchResumeToken(queryBatchCursor);
+                return results;
             }
         });
     }
