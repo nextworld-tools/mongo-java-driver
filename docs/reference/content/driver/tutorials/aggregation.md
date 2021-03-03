@@ -19,6 +19,7 @@ The [aggregation pipeline]({{<docsref "core/aggregation-pipeline" >}}) is a fram
 - Include the following import statements:
 
      ```java
+     import com.mongodb.Block;
      import com.mongodb.client.MongoClients;
      import com.mongodb.client.MongoClient;
      import com.mongodb.client.MongoCollection;

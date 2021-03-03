@@ -48,6 +48,7 @@ import com.mongodb.client.MongoCollection;
 
 import org.bson.Document;
 import java.util.Arrays;
+import com.mongodb.Block;
 
 import com.mongodb.client.MongoCursor;
 import static com.mongodb.client.model.Filters.*;
@@ -355,15 +356,22 @@ The example prints one document:
 The following example returns and prints all documents where ``"i" > 50``:
 
 ```java
-collection.find(gt("i", 50))
-        .forEach(doc -> System.out.println(doc.toJson()));
+Block<Document> printBlock = new Block<Document>() {
+     @Override
+     public void apply(final Document document) {
+         System.out.println(document.toJson());
+     }
+};
+
+collection.find(gt("i", 50)).forEach(printBlock);
 ```
+
+The example uses the [`forEach`]({{< apiref "mongodb-driver-sync" "com/mongodb/client/MongoIterable.html#forEach(com.mongodb.Block)" >}}) method on the ``FindIterable`` object to apply a block to each document.
 
 To specify a filter for a range, such as ``50 < i <= 100``, you can use the [`and`]({{< apiref "mongodb-driver-core" "com/mongodb/client/model/Filters.html#and(org.bson.conversions.Bson...)" >}}) helper:
 
 ```java
-collection.find(and(gt("i", 50), lte("i", 100)))
-        .forEach(doc -> System.out.println(doc.toJson()));
+collection.find(and(gt("i", 50), lte("i", 100))).forEach(printBlock);
 ```
 
 ## Update Documents

@@ -19,6 +19,7 @@ To support geospatial queries, MongoDB provides various geospatial indexes as we
 - Include the following import statements:
 
      ```java
+     import com.mongodb.Block;
      import com.mongodb.client.MongoClients;
      import com.mongodb.client.MongoClient;
      import com.mongodb.client.MongoCollection;
@@ -28,6 +29,17 @@ To support geospatial queries, MongoDB provides various geospatial indexes as we
      import com.mongodb.client.model.Indexes;
      import com.mongodb.client.model.Filters;
      import org.bson.Document;
+     ```
+
+- Include the following code which the examples in the tutorials will use to print the results of the geospatial search:
+
+     ```java
+     Block<Document> printBlock = new Block<Document>() {
+            @Override
+            public void apply(final Document document) {
+                System.out.println(document.toJson());
+            }
+        };
      ```
 
 ## Connect to a MongoDB Deployment
@@ -63,6 +75,5 @@ The following example returns documents that are at least 1000 meters from and a
 
 ```java
 Point refPoint = new Point(new Position(-73.9667, 40.78));
-collection.find(Filters.near("contact.location", refPoint, 5000.0, 1000.0))
-        .forEach(doc -> System.out.println(doc.toJson()));
+collection.find(Filters.near("contact.location", refPoint, 5000.0, 1000.0)).forEach(printBlock);
 ```

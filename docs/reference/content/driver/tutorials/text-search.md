@@ -26,6 +26,7 @@ The Java driver provides the [`Filters.text()`]({{< apiref "mongodb-driver-core"
 - Include the following import statements:
 
      ```java
+     import com.mongodb.Block;
      import com.mongodb.client.MongoClients;
      import com.mongodb.client.MongoClient;
      import com.mongodb.client.MongoCollection;
@@ -37,6 +38,17 @@ The Java driver provides the [`Filters.text()`]({{< apiref "mongodb-driver-core"
      import com.mongodb.client.model.TextSearchOptions;
      import com.mongodb.client.model.Projections;
      import org.bson.Document;
+     ```
+
+- Include the following code which the examples in the tutorials will use to print the results of the text search:
+
+     ```java
+     Block<Document> printBlock = new Block<Document>() {
+            @Override
+            public void apply(final Document document) {
+                System.out.println(document.toJson());
+            }
+        };
      ```
 
 ## Connect to a MongoDB Deployment
@@ -91,8 +103,7 @@ For each matching document, text search assigns a score, representing the releva
 ```java
 collection.find(Filters.text("bakery cafe"))
                        .projection(Projections.metaTextScore("score"))
-                       .sort(Sorts.metaTextScore("score"))
-                       .forEach(doc -> System.out.println(doc.toJson()));
+                       .sort(Sorts.metaTextScore("score")).forEach(printBlock);
 ```
 
 ### Specify a Text Search Option
