@@ -35,7 +35,6 @@ public class TestSubscriber<T> implements Subscriber<T> {
     private final ArrayList<Void> onCompleteEvents = new ArrayList<>();
 
     private Consumer<Subscription> doOnSubscribe = sub -> {};
-    private Consumer<T> doOnNext = r -> {};
 
     private Subscription subscription;
 
@@ -52,10 +51,6 @@ public class TestSubscriber<T> implements Subscriber<T> {
         this.doOnSubscribe = doOnSubscribe;
     }
 
-    public void doOnNext(final Consumer<T> doOnNext) {
-        this.doOnNext = doOnNext;
-    }
-
     /**
      * Provides the Subscriber with a new item to observe.
      * <p>
@@ -69,7 +64,6 @@ public class TestSubscriber<T> implements Subscriber<T> {
      */
     @Override
     public void onNext(final T result) {
-        doOnNext.accept(result);
         onNextEvents.add(result);
     }
 
