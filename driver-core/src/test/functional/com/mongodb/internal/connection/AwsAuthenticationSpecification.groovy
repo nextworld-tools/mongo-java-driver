@@ -31,7 +31,7 @@ class AwsAuthenticationSpecification extends Specification {
 
         when:
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), connection)
 
         then:
         thrown(MongoCommandException)
@@ -49,7 +49,7 @@ class AwsAuthenticationSpecification extends Specification {
 
         when:
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), connection)
 
         then:
         true
