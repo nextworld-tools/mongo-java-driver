@@ -51,7 +51,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
@@ -159,8 +158,6 @@ public abstract class UnifiedTest {
         } else if (operation.containsKey("expectError")) {
             assertNotNull(context.getMessage("The operation expects an error but no exception was thrown"), result.getException());
             errorMatcher.assertErrorsMatch(operation.getDocument("expectError"), result.getException());
-        } else {
-            assertNull(context.getMessage("The operation expects no error but an exception occurred"), result.getException());
         }
         context.pop();
     }
