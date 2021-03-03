@@ -19,7 +19,6 @@ package com.mongodb.reactivestreams.client.syncadapter;
 import com.mongodb.Function;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoIterable;
-import com.mongodb.lang.Nullable;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -28,10 +27,8 @@ import java.util.function.Consumer;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
 
-class SyncMongoIterable<T> implements MongoIterable<T> {
+abstract class SyncMongoIterable<T> implements MongoIterable<T> {
     private final Publisher<T> wrapped;
-    @Nullable
-    private Integer batchSize;
 
     SyncMongoIterable(final Publisher<T> wrapped) {
         this.wrapped = wrapped;
@@ -44,7 +41,7 @@ class SyncMongoIterable<T> implements MongoIterable<T> {
 
     @Override
     public MongoCursor<T> cursor() {
-        return new SyncMongoCursor<>(wrapped, batchSize);
+        return new SyncMongoCursor<>(wrapped);
     }
 
     @Override
@@ -74,11 +71,5 @@ class SyncMongoIterable<T> implements MongoIterable<T> {
             }
         }
         return target;
-    }
-
-    @Override
-    public MongoIterable<T> batchSize(final int batchSize) {
-        this.batchSize = batchSize;
-        return this;
     }
 }

@@ -34,8 +34,6 @@ import java.util.concurrent.TimeUnit;
 
 class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument<T>> implements ChangeStreamIterable<T> {
     private final ChangeStreamPublisher<T> wrapped;
-    @Nullable
-    private Integer batchSize;
 
     SyncChangeStreamIterable(final ChangeStreamPublisher<T> wrapped) {
         super(wrapped);
@@ -97,7 +95,6 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
     @Override
     public ChangeStreamIterable<T> batchSize(final int batchSize) {
         wrapped.batchSize(batchSize);
-        this.batchSize = batchSize;
         return this;
     }
 
@@ -115,11 +112,7 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
 
     @Override
     public <TDocument> MongoIterable<TDocument> withDocumentClass(final Class<TDocument> clazz) {
-        SyncMongoIterable<TDocument> result = new SyncMongoIterable<>(wrapped.withDocumentClass(clazz));
-        if (batchSize != null) {
-            result.batchSize(batchSize);
-        }
-        return result;
+        throw new UnsupportedOperationException();
     }
 
     @Override
