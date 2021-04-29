@@ -467,7 +467,15 @@ class JsonScanner {
                     }else if (type == JsonTokenType.DOUBLE) {
                         return new JsonToken(JsonTokenType.DOUBLE, Double.parseDouble(lexeme));
                     } else {
-                        long value = Long.parseLong(lexeme);
+                        //long value = Long.parseLong(lexeme);
+                        // ** BEGIN NEXTWORLD MODS
+                        long value = 0;
+                        try {
+                            value = Long.parseLong(lexeme);
+                        } catch (NumberFormatException ex) {
+                            return new JsonToken(JsonTokenType.DOUBLE, Double.parseDouble(lexeme));
+                        }
+                        // ** END NEXTWORLD MODS
                         if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                             return new JsonToken(JsonTokenType.INT64, value);
                         } else {
