@@ -53,7 +53,11 @@ import static org.bson.assertions.Assertions.notNull;
 public class Document implements Map<String, Object>, Serializable, Bson {
     private static final long serialVersionUID = 6297731997167536582L;
 
-    private final LinkedHashMap<String, Object> documentAsMap;
+    /**
+     * Nextworld mod
+     * Changed from final to <nothing>
+     */
+    private LinkedHashMap<String, Object> documentAsMap;
 
     /**
      * Creates an empty Document instance.
@@ -526,10 +530,90 @@ public class Document implements Map<String, Object>, Serializable, Bson {
         return documentAsMap.hashCode();
     }
 
+
+
+    /**
+     * --BEGIN-- NEXTWORLD MODS
+     */
     @Override
     public String toString() {
-        return "Document{"
-               + documentAsMap
-               + '}';
+        return toJson();
+    }
+
+    /**
+     * Nextworld Mod
+     * @return the underlying map
+     */
+    public LinkedHashMap<String, Object> getDocumentAsMap() {
+        return documentAsMap;
+    }
+
+    /**
+     * Nextworld Mod
+     * @param mapToSet the map to set
+     */
+    public void setDocumentAsMap(final LinkedHashMap<String, Object> mapToSet) {
+        this.documentAsMap = mapToSet;
+    }
+
+    /**
+     * Mongo did not implement a getLong() with default value
+     * @param key
+     * @param defaultValue
+     * @return
+     */
+    public Long getLong(final Object key, long defaultValue) {
+        Object value = get(key);
+        return value == null ? defaultValue : (Long) value;
+    }
+
+    /**
+     * Mongo did not implement a getString() with default value
+     * @param key
+     * @param defaultValue
+     * @return
+     */
+    public String getString(final Object key, String defaultValue) {
+        Object value = get(key);
+        return value == null ? defaultValue : (String) value;
+    }
+
+    /**
+     *
+     * @param key
+     * @return
+     */
+    public Object getList (Object key){
+        try {
+            return get(key);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * @param key the key to get
+     * @return Document
+     */
+    public Document getDocument (String key){
+        Object obj = get(key);
+        if (obj instanceof Document) {
+            return (Document) obj;
+        } else {
+            return null;
+        }
+    }
+    /**
+        * @param key the key to get
+      * @return List<Document> the List<Document> to return
+                                                         */
+    @SuppressWarnings("unchecked")
+    public List<Document> getDocumentList (String key){
+        Object obj = this.get(key);
+        if (obj instanceof List) {
+            return (List<Document>) obj;
+        } else {
+            return null;
+        }
     }
 }

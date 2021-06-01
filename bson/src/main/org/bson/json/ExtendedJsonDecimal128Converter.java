@@ -21,9 +21,15 @@ import org.bson.types.Decimal128;
 class ExtendedJsonDecimal128Converter implements Converter<Decimal128> {
     @Override
     public void convert(final Decimal128 value, final StrictJsonWriter writer) {
-        writer.writeStartObject();
+        /*
+         * Nextworld mod
+         * Changed to just writeNumber
+         *
+         */
+       /*writer.writeStartObject();
         writer.writeName("$numberDecimal");
         writer.writeString(value.toString());
-        writer.writeEndObject();
+        writer.writeEndObject();*/
+        writer.writeNumber(value.toString());
     }
 }

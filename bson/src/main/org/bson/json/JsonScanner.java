@@ -54,6 +54,20 @@ class JsonScanner {
     }
 
     /**
+     * NextWorld customization
+     */
+    public JsonToken nwGetNumberAsString() {
+        int c = buffer.read();
+        while (c != -1 && Character.isWhitespace(c)) {
+            c = buffer.read();
+        }
+        if (c == -1) {
+            return new JsonToken(JsonTokenType.END_OF_FILE, "<eof>");
+        }
+        return scanNumber((char)c, true);
+    }
+
+    /**
      * Finds and returns the next complete token from this scanner. If scanner reached the end of the source, it will return a token with
      * {@code JSONTokenType.END_OF_FILE} type.
      *
@@ -233,6 +247,9 @@ class JsonScanner {
      */
     //CHECKSTYLE:OFF
     private JsonToken scanNumber(final char firstChar) {
+        return scanNumber(firstChar, false);
+    }
+    private JsonToken scanNumber(final char firstChar, boolean treatAsDecimal128) {
 
         int c = firstChar;
         StringBuilder sb = new StringBuilder();
@@ -445,10 +462,20 @@ class JsonScanner {
                 case DONE:
                     buffer.unread(c);
                     String lexeme = sb.toString();
-                    if (type == JsonTokenType.DOUBLE) {
+                    if(treatAsDecimal128){
+                        return new JsonToken(JsonTokenType.STRING, lexeme);
+                    }else if (type == JsonTokenType.DOUBLE) {
                         return new JsonToken(JsonTokenType.DOUBLE, Double.parseDouble(lexeme));
                     } else {
-                        long value = Long.parseLong(lexeme);
+                        //long value = Long.parseLong(lexeme);
+                        // ** BEGIN NEXTWORLD MODS
+                        long value = 0;
+                        try {
+                            value = Long.parseLong(lexeme);
+                        } catch (NumberFormatException ex) {
+                            return new JsonToken(JsonTokenType.DOUBLE, Double.parseDouble(lexeme));
+                        }
+                        // ** END NEXTWORLD MODS
                         if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
                             return new JsonToken(JsonTokenType.INT64, value);
                         } else {
