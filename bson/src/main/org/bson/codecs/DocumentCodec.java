@@ -190,9 +190,11 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
         if (readValue instanceof Number &&
                 fieldName !=null &&
                 (fieldName.equals("CurrencyValue") || fieldName.equals("CurrencyBigDecimalValue"))){
+            //Force CurrencyBigDecimalValue to ALWAYS be a BigDecimal (instead of sometimes being Decimal128)
             if(fieldName.equals("CurrencyBigDecimalValue") && readValue instanceof Decimal128){
                 document.put("CurrencyBigDecimalValue",((Decimal128) readValue).bigDecimalValue());
             }
+            //generate the checksum and add to the document
             long checksum = Document.generateCheckSum(readValue);
             document.put(fieldName + "Checksum", checksum);
         }
@@ -238,6 +240,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
                 continue;
             }
             String key = entry.getKey();
+            //Strip out the checksums so that they aren't persisted
             if(!Objects.equals(key, "CurrencyValueChecksum") && !Objects.equals(key, "CurrencyBigDecimalValueChecksum")) {
                 writer.writeName(key);
                 writeValue(writer, encoderContext, entry.getValue());
