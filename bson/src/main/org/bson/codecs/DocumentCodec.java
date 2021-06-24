@@ -16,6 +16,7 @@
 
 package org.bson.codecs;
 
+import com.google.common.primitives.Longs;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
 import org.bson.BsonReader;
@@ -26,11 +27,18 @@ import org.bson.Document;
 import org.bson.Transformer;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.types.Decimal128;
 
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import static java.util.Arrays.asList;
 import static org.bson.assertions.Assertions.notNull;
@@ -166,12 +174,34 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
         reader.readStartDocument();
         while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
             String fieldName = reader.readName();
-            document.put(fieldName, readValue(reader, decoderContext));
+            Object readValue = readValue(reader, decoderContext);
+            document.put(fieldName, readValue);
+            /**
+             * Nextworld Mod
+             */
+            checkAndHandleNwCurrency(document, fieldName, readValue);
         }
 
         reader.readEndDocument();
 
         return document;
+    }
+
+    /**
+     * Nextworld Mod
+     */
+    public void checkAndHandleNwCurrency(Document document, String fieldName, Object readValue) {
+        if (readValue instanceof Number &&
+                fieldName !=null &&
+                (fieldName.equals("CurrencyValue") || fieldName.equals("CurrencyBigDecimalValue"))){
+            //Force CurrencyBigDecimalValue to ALWAYS be a BigDecimal (instead of sometimes being Decimal128)
+            if(fieldName.equals("CurrencyBigDecimalValue") && readValue instanceof Decimal128){
+                document.put("CurrencyBigDecimalValue",((Decimal128) readValue).bigDecimalValue());
+            }
+            //generate the checksum and add to the document
+            long checksum = Document.generateCheckSum(readValue);
+            document.put("$" + fieldName + "Checksum", checksum);
+        }
     }
 
     @Override
@@ -213,8 +243,14 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
             if (skipField(encoderContext, entry.getKey())) {
                 continue;
             }
-            writer.writeName(entry.getKey());
-            writeValue(writer, encoderContext, entry.getValue());
+            String key = entry.getKey();
+
+            //Nextworld Mod
+            //Strip out the checksums so that they aren't persisted
+            if(!Objects.equals(key, "$CurrencyValueChecksum") && !Objects.equals(key, "$CurrencyBigDecimalValueChecksum")) {
+                writer.writeName(key);
+                writeValue(writer, encoderContext, entry.getValue());
+            }
         }
         writer.writeEndDocument();
     }

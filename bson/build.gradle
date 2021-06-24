@@ -23,3 +23,6 @@ ext {
 }
 
 jar.manifest.attributes['Import-Package'] = 'org.slf4j.*;resolution:=optional'
+dependencies {
+    implementation 'com.google.guava:guava-primitives:r03'
+}

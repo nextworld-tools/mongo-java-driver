@@ -139,7 +139,7 @@ public class JsonReader extends AbstractBsonReader {
                 case STRING:
                 case UNQUOTED_STRING:
                     /*
-                     * NextWorld customization
+                     * NextWorld mod
                      */
                     String name = nameToken.getValue(String.class);
                     setCurrentName(name);
@@ -160,7 +160,7 @@ public class JsonReader extends AbstractBsonReader {
             }
         }
         /*
-         * NextWorld customization
+         * NextWorld mod
          */
         if (nextWorldIsCurrencyBigDecimal){
             setCurrentBsonType(BsonType.DECIMAL128);

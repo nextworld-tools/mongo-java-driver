@@ -27,10 +27,13 @@ import org.bson.json.JsonMode;
 import org.bson.json.JsonReader;
 import org.bson.json.JsonWriter;
 import org.bson.json.JsonWriterSettings;
+import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
 
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -38,6 +41,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.CRC32;
+import java.util.zip.Checksum;
 
 import static java.lang.String.format;
 import static org.bson.assertions.Assertions.isTrue;
@@ -557,6 +562,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Nextworld Mod
      * Mongo did not implement a getLong() with default value
      * @param key
      * @param defaultValue
@@ -568,6 +574,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Nextworld Mod
      * Mongo did not implement a getString() with default value
      * @param key
      * @param defaultValue
@@ -579,7 +586,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
-     *
+     * Nextworld Mod
      * @param key
      * @return
      */
@@ -592,6 +599,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
+     * Nextworld Mod
      * @param key the key to get
      * @return Document
      */
@@ -604,9 +612,10 @@ public class Document implements Map<String, Object>, Serializable, Bson {
         }
     }
     /**
-        * @param key the key to get
-      * @return List<Document> the List<Document> to return
-                                                         */
+     * Nextworld Mod
+     * @param key the key to get
+     * @return List<Document> the List<Document> to return
+     */
     @SuppressWarnings("unchecked")
     public List<Document> getDocumentList (String key){
         Object obj = this.get(key);
@@ -616,4 +625,51 @@ public class Document implements Map<String, Object>, Serializable, Bson {
             return null;
         }
     }
+
+    /**
+     * Nextworld Mod
+     * @param key the key to get
+     * @return BigDecimal (Convert from Decimal128)
+     */
+    public BigDecimal getBigDecimal (Object key){
+        Object obj = get(key);
+        if (obj instanceof BigDecimal) {
+            return (BigDecimal) obj;
+        }else if(obj instanceof Decimal128) {
+            return ((Decimal128)obj).bigDecimalValue();
+        }else{
+            return null;
+        }
+    }
+
+    /**
+     * Nextworld Mod
+     * @param Object value the value for which to generate a checksum
+     * @return Long checksum
+     */
+    public static long generateCheckSum(Object value){
+        byte[] bytes = new byte[0];
+        if(value instanceof Long || value instanceof Integer){
+            bytes = BigInteger.valueOf(((Number) value).longValue()).toByteArray();
+        }else if (value instanceof BigDecimal){
+            bytes = ((BigDecimal)value).stripTrailingZeros().unscaledValue().toByteArray();
+        }else if (value instanceof Decimal128) {
+            bytes = ((Decimal128) value).bigDecimalValue().unscaledValue().toByteArray();
+        }
+        return getCRC32Checksum(bytes);
+    }
+
+    /**
+     * Nextworld Mod
+     * @param bytes the byte array for which to generate a checksum
+     * @return Long checksum
+     */
+    public static long getCRC32Checksum(byte[] bytes) {
+        Checksum crc32 = new CRC32();
+        crc32.update(bytes, 0, bytes.length);
+        return crc32.getValue();
+    }
+    /**
+     * --END-- NEXTWORLD MODS
+     */
 }
