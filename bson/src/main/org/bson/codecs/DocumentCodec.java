@@ -176,7 +176,9 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
             String fieldName = reader.readName();
             Object readValue = readValue(reader, decoderContext);
             document.put(fieldName, readValue);
-            //NextWorld customization
+            /**
+             * Nextworld Mod
+             */
             checkAndHandleNwCurrency(document, fieldName, readValue);
         }
 
@@ -185,7 +187,9 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
         return document;
     }
 
-    //NextWorld customization
+    /**
+     * Nextworld Mod
+     */
     public void checkAndHandleNwCurrency(Document document, String fieldName, Object readValue) {
         if (readValue instanceof Number &&
                 fieldName !=null &&
@@ -196,7 +200,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
             }
             //generate the checksum and add to the document
             long checksum = Document.generateCheckSum(readValue);
-            document.put(fieldName + "Checksum", checksum);
+            document.put("$" + fieldName + "Checksum", checksum);
         }
     }
 
@@ -240,8 +244,10 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
                 continue;
             }
             String key = entry.getKey();
+
+            //Nextworld Mod
             //Strip out the checksums so that they aren't persisted
-            if(!Objects.equals(key, "CurrencyValueChecksum") && !Objects.equals(key, "CurrencyBigDecimalValueChecksum")) {
+            if(!Objects.equals(key, "$CurrencyValueChecksum") && !Objects.equals(key, "$CurrencyBigDecimalValueChecksum")) {
                 writer.writeName(key);
                 writeValue(writer, encoderContext, entry.getValue());
             }
