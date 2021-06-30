@@ -145,6 +145,7 @@ public class JsonReader extends AbstractBsonReader {
                     setCurrentName(name);
                     if (name.equals("CurrencyBigDecimalValue")){
                         nextWorldIsCurrencyBigDecimal = true;
+                        scanner.setNextWorldIsCurrencyBigDecimal(true);
                     }
                     break;
                 case END_OBJECT:
@@ -159,128 +160,29 @@ public class JsonReader extends AbstractBsonReader {
                 throw new JsonParseException("JSON reader was expecting ':' but found '%s'.", colonToken.getValue());
             }
         }
+
         /*
          * NextWorld mod
          */
+        JsonToken token = popToken();
+        scanner.setNextWorldIsCurrencyBigDecimal(false);
+
+        BsonType endOfDocument = null;
         if (nextWorldIsCurrencyBigDecimal){
-            setCurrentBsonType(BsonType.DECIMAL128);
-            String decimal128AsString = scanner.nwGetNumberAsString().getValue(String.class);
             try {
-                currentValue = Decimal128.parse(decimal128AsString);
-            } catch (NumberFormatException e) {
-                throw new JsonParseException(format("Exception converting value '%s' to type %s", decimal128AsString,
-                        Decimal128.class.getName()), e);
+                currentValue = token.getValue(Decimal128.class);
+                setCurrentBsonType(BsonType.DECIMAL128);
+            } catch (JsonParseException e) {
+                //This should happen only if the value is not a number (or a string repping a num)
+                endOfDocument = readBsonType(token);
+                if (endOfDocument != null) {
+                    return endOfDocument;
+                }
             }
         }else {
-            JsonToken token = popToken();
-            if (getContext().getContextType() == BsonContextType.ARRAY && token.getType() == JsonTokenType.END_ARRAY) {
-                setState(State.END_OF_ARRAY);
-                return BsonType.END_OF_DOCUMENT;
-            }
-
-            boolean noValueFound = false;
-            switch (token.getType()) {
-                case BEGIN_ARRAY:
-                    setCurrentBsonType(BsonType.ARRAY);
-                    break;
-                case BEGIN_OBJECT:
-                    visitExtendedJSON();
-                    break;
-                case DOUBLE:
-                    setCurrentBsonType(BsonType.DOUBLE);
-                    currentValue = token.getValue();
-                    break;
-                case END_OF_FILE:
-                    setCurrentBsonType(BsonType.END_OF_DOCUMENT);
-                    break;
-                case INT32:
-                    setCurrentBsonType(BsonType.INT32);
-                    currentValue = token.getValue();
-                    break;
-                case INT64:
-                    setCurrentBsonType(BsonType.INT64);
-                    currentValue = token.getValue();
-                    break;
-                case REGULAR_EXPRESSION:
-                    setCurrentBsonType(BsonType.REGULAR_EXPRESSION);
-                    currentValue = token.getValue();
-                    break;
-                case STRING:
-                    setCurrentBsonType(BsonType.STRING);
-                    currentValue = token.getValue();
-                    break;
-                case UNQUOTED_STRING:
-                    String value = token.getValue(String.class);
-
-                    if ("false".equals(value) || "true".equals(value)) {
-                        setCurrentBsonType(BsonType.BOOLEAN);
-                        currentValue = Boolean.parseBoolean(value);
-                    } else if ("Infinity".equals(value)) {
-                        setCurrentBsonType(BsonType.DOUBLE);
-                        currentValue = Double.POSITIVE_INFINITY;
-                    } else if ("NaN".equals(value)) {
-                        setCurrentBsonType(BsonType.DOUBLE);
-                        currentValue = Double.NaN;
-                    } else if ("null".equals(value)) {
-                        setCurrentBsonType(BsonType.NULL);
-                    } else if ("undefined".equals(value)) {
-                        setCurrentBsonType(BsonType.UNDEFINED);
-                    } else if ("MinKey".equals(value)) {
-                        visitEmptyConstructor();
-                        setCurrentBsonType(BsonType.MIN_KEY);
-                        currentValue = new MinKey();
-                    } else if ("MaxKey".equals(value)) {
-                        visitEmptyConstructor();
-                        setCurrentBsonType(BsonType.MAX_KEY);
-                        currentValue = new MaxKey();
-                    } else if ("BinData".equals(value)) {
-                        setCurrentBsonType(BsonType.BINARY);
-                        currentValue = visitBinDataConstructor();
-                    } else if ("Date".equals(value)) {
-                        currentValue = visitDateTimeConstructorWithOutNew();
-                        setCurrentBsonType(BsonType.STRING);
-                    } else if ("HexData".equals(value)) {
-                        setCurrentBsonType(BsonType.BINARY);
-                        currentValue = visitHexDataConstructor();
-                    } else if ("ISODate".equals(value)) {
-                        setCurrentBsonType(BsonType.DATE_TIME);
-                        currentValue = visitISODateTimeConstructor();
-                    } else if ("NumberInt".equals(value)) {
-                        setCurrentBsonType(BsonType.INT32);
-                        currentValue = visitNumberIntConstructor();
-                    } else if ("NumberLong".equals(value)) {
-                        setCurrentBsonType(BsonType.INT64);
-                        currentValue = visitNumberLongConstructor();
-                    } else if ("NumberDecimal".equals(value)) {
-                        setCurrentBsonType(BsonType.DECIMAL128);
-                        currentValue = visitNumberDecimalConstructor();
-                    } else if ("ObjectId".equals(value)) {
-                        setCurrentBsonType(BsonType.OBJECT_ID);
-                        currentValue = visitObjectIdConstructor();
-                    } else if ("Timestamp".equals(value)) {
-                        setCurrentBsonType(BsonType.TIMESTAMP);
-                        currentValue = visitTimestampConstructor();
-                    } else if ("RegExp".equals(value)) {
-                        setCurrentBsonType(BsonType.REGULAR_EXPRESSION);
-                        currentValue = visitRegularExpressionConstructor();
-                    } else if ("DBPointer".equals(value)) {
-                        setCurrentBsonType(BsonType.DB_POINTER);
-                        currentValue = visitDBPointerConstructor();
-                    } else if ("UUID".equals(value)) {
-                        setCurrentBsonType(BsonType.BINARY);
-                        currentValue = visitUUIDConstructor();
-                    } else if ("new".equals(value)) {
-                        visitNew();
-                    } else {
-                        noValueFound = true;
-                    }
-                    break;
-                default:
-                    noValueFound = true;
-                    break;
-            }
-            if (noValueFound) {
-                throw new JsonParseException("JSON reader was expecting a value but found '%s'.", token.getValue());
+            endOfDocument = readBsonType(token);
+            if (endOfDocument != null) {
+                return endOfDocument;
             }
         }
 
@@ -305,6 +207,119 @@ public class JsonReader extends AbstractBsonReader {
                 break;
         }
         return getCurrentBsonType();
+    }
+
+    private BsonType readBsonType(JsonToken token) {
+        if (getContext().getContextType() == BsonContextType.ARRAY && token.getType() == JsonTokenType.END_ARRAY) {
+            setState(State.END_OF_ARRAY);
+            return BsonType.END_OF_DOCUMENT;
+        }
+
+        boolean noValueFound = false;
+        switch (token.getType()) {
+            case BEGIN_ARRAY:
+                setCurrentBsonType(BsonType.ARRAY);
+                break;
+            case BEGIN_OBJECT:
+                visitExtendedJSON();
+                break;
+            case DOUBLE:
+                setCurrentBsonType(BsonType.DOUBLE);
+                currentValue = token.getValue();
+                break;
+            case END_OF_FILE:
+                setCurrentBsonType(BsonType.END_OF_DOCUMENT);
+                break;
+            case INT32:
+                setCurrentBsonType(BsonType.INT32);
+                currentValue = token.getValue();
+                break;
+            case INT64:
+                setCurrentBsonType(BsonType.INT64);
+                currentValue = token.getValue();
+                break;
+            case REGULAR_EXPRESSION:
+                setCurrentBsonType(BsonType.REGULAR_EXPRESSION);
+                currentValue = token.getValue();
+                break;
+            case STRING:
+                setCurrentBsonType(BsonType.STRING);
+                currentValue = token.getValue();
+                break;
+            case UNQUOTED_STRING:
+                String value = token.getValue(String.class);
+
+                if ("false".equals(value) || "true".equals(value)) {
+                    setCurrentBsonType(BsonType.BOOLEAN);
+                    currentValue = Boolean.parseBoolean(value);
+                } else if ("Infinity".equals(value)) {
+                    setCurrentBsonType(BsonType.DOUBLE);
+                    currentValue = Double.POSITIVE_INFINITY;
+                } else if ("NaN".equals(value)) {
+                    setCurrentBsonType(BsonType.DOUBLE);
+                    currentValue = Double.NaN;
+                } else if ("null".equals(value)) {
+                    setCurrentBsonType(BsonType.NULL);
+                } else if ("undefined".equals(value)) {
+                    setCurrentBsonType(BsonType.UNDEFINED);
+                } else if ("MinKey".equals(value)) {
+                    visitEmptyConstructor();
+                    setCurrentBsonType(BsonType.MIN_KEY);
+                    currentValue = new MinKey();
+                } else if ("MaxKey".equals(value)) {
+                    visitEmptyConstructor();
+                    setCurrentBsonType(BsonType.MAX_KEY);
+                    currentValue = new MaxKey();
+                } else if ("BinData".equals(value)) {
+                    setCurrentBsonType(BsonType.BINARY);
+                    currentValue = visitBinDataConstructor();
+                } else if ("Date".equals(value)) {
+                    currentValue = visitDateTimeConstructorWithOutNew();
+                    setCurrentBsonType(BsonType.STRING);
+                } else if ("HexData".equals(value)) {
+                    setCurrentBsonType(BsonType.BINARY);
+                    currentValue = visitHexDataConstructor();
+                } else if ("ISODate".equals(value)) {
+                    setCurrentBsonType(BsonType.DATE_TIME);
+                    currentValue = visitISODateTimeConstructor();
+                } else if ("NumberInt".equals(value)) {
+                    setCurrentBsonType(BsonType.INT32);
+                    currentValue = visitNumberIntConstructor();
+                } else if ("NumberLong".equals(value)) {
+                    setCurrentBsonType(BsonType.INT64);
+                    currentValue = visitNumberLongConstructor();
+                } else if ("NumberDecimal".equals(value)) {
+                    setCurrentBsonType(BsonType.DECIMAL128);
+                    currentValue = visitNumberDecimalConstructor();
+                } else if ("ObjectId".equals(value)) {
+                    setCurrentBsonType(BsonType.OBJECT_ID);
+                    currentValue = visitObjectIdConstructor();
+                } else if ("Timestamp".equals(value)) {
+                    setCurrentBsonType(BsonType.TIMESTAMP);
+                    currentValue = visitTimestampConstructor();
+                } else if ("RegExp".equals(value)) {
+                    setCurrentBsonType(BsonType.REGULAR_EXPRESSION);
+                    currentValue = visitRegularExpressionConstructor();
+                } else if ("DBPointer".equals(value)) {
+                    setCurrentBsonType(BsonType.DB_POINTER);
+                    currentValue = visitDBPointerConstructor();
+                } else if ("UUID".equals(value)) {
+                    setCurrentBsonType(BsonType.BINARY);
+                    currentValue = visitUUIDConstructor();
+                } else if ("new".equals(value)) {
+                    visitNew();
+                } else {
+                    noValueFound = true;
+                }
+                break;
+            default:
+                noValueFound = true;
+                break;
+        }
+        if (noValueFound) {
+            throw new JsonParseException("JSON reader was expecting a value but found '%s'.", token.getValue());
+        }
+        return null;
     }
     //CHECKSTYLE:ON
 
