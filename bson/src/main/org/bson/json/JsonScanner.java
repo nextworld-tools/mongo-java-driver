@@ -29,6 +29,9 @@ class JsonScanner {
 
     private final JsonBuffer buffer;
 
+    /*Nextworld customization*/
+    private boolean nextWorldIsCurrencyBigDecimal = false;
+
     JsonScanner(final JsonBuffer buffer) {
         this.buffer = buffer;
     }
@@ -41,6 +44,11 @@ class JsonScanner {
         this(new JsonStreamBuffer(reader));
     }
 
+    /*Nextworld customization*/
+    public void setNextWorldIsCurrencyBigDecimal(boolean nextWorldIsCurrencyBigDecimal){
+        this.nextWorldIsCurrencyBigDecimal = nextWorldIsCurrencyBigDecimal;
+    }
+
     public void reset(final int markPos) {
         buffer.reset(markPos);
     }
@@ -51,20 +59,6 @@ class JsonScanner {
 
     public void discard(final int markPos) {
         buffer.discard(markPos);
-    }
-
-    /**
-     * NextWorld customization
-     */
-    public JsonToken nwGetNumberAsString() {
-        int c = buffer.read();
-        while (c != -1 && Character.isWhitespace(c)) {
-            c = buffer.read();
-        }
-        if (c == -1) {
-            return new JsonToken(JsonTokenType.END_OF_FILE, "<eof>");
-        }
-        return scanNumber((char)c, true);
     }
 
     /**
@@ -108,7 +102,9 @@ class JsonScanner {
                 return scanRegularExpression();
             default:
                 if (c == '-' || Character.isDigit(c)) {
-                    return scanNumber((char) c);
+                    //return scanNumber((char) c);
+                    /* Nextworld Customization */
+                    return scanNumber((char)c, nextWorldIsCurrencyBigDecimal);
                 } else if (c == '$' || c == '_' || Character.isLetter(c)) {
                     return scanUnquotedString((char) c);
                 } else {
