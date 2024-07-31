@@ -644,23 +644,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
 
     /**
      * Nextworld Mod
-     * @param Object value the value for which to generate a checksum
-     * @return Long checksum
-     */
-    public static long generateCheckSum(Object value){
-        byte[] bytes = new byte[0];
-        if(value instanceof Long || value instanceof Integer){
-            bytes = BigInteger.valueOf(((Number) value).longValue()).toByteArray();
-        }else if (value instanceof BigDecimal){
-            bytes = ((BigDecimal)value).stripTrailingZeros().unscaledValue().toByteArray();
-        }else if (value instanceof Decimal128) {
-            bytes = ((Decimal128) value).bigDecimalValue().unscaledValue().toByteArray();
-        }
-        return getCRC32Checksum(bytes);
-    }
-
-    /**
-     * Nextworld Mod
      * @param bytes the byte array for which to generate a checksum
      * @return Long checksum
      */
