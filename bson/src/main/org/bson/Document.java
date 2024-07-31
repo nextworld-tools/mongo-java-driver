@@ -641,17 +641,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
             return null;
         }
     }
-
-    /**
-     * Nextworld Mod
-     * @param bytes the byte array for which to generate a checksum
-     * @return Long checksum
-     */
-    public static long getCRC32Checksum(byte[] bytes) {
-        Checksum crc32 = new CRC32();
-        crc32.update(bytes, 0, bytes.length);
-        return crc32.getValue();
-    }
     /**
      * --END-- NEXTWORLD MODS
      */
