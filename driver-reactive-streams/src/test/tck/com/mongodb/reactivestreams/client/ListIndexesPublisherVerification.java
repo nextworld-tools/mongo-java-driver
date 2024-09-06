@@ -16,7 +16,7 @@
 
 package com.mongodb.reactivestreams.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -26,7 +26,7 @@ import static com.mongodb.reactivestreams.client.MongoFixture.PUBLISHER_REFERENC
 import static com.mongodb.reactivestreams.client.MongoFixture.run;
 import static java.lang.String.format;
 
-public class ListIndexesPublisherVerification extends PublisherVerification<Document> {
+public class ListIndexesPublisherVerification extends PublisherVerification<OldDocument> {
 
     public ListIndexesPublisherVerification() {
         super(new TestEnvironment(DEFAULT_TIMEOUT_MILLIS), PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS);
@@ -34,16 +34,16 @@ public class ListIndexesPublisherVerification extends PublisherVerification<Docu
 
 
     @Override
-    public Publisher<Document> createPublisher(final long elements) {
+    public Publisher<OldDocument> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
 
         MongoDatabase database = MongoFixture.getDefaultDatabase();
-        MongoCollection<Document> collection = database.getCollection("ListIndexesTest");
+        MongoCollection<OldDocument> collection = database.getCollection("ListIndexesTest");
         run(collection.drop());
         if (elements > 0) {
             run(database.createCollection("ListIndexesTest"));
             for (long i = 1; i < elements; i++) {
-                run(collection.createIndex(Document.parse(format("{ a%s: 1}", i))));
+                run(collection.createIndex(OldDocument.parse(format("{ a%s: 1}", i))));
             }
         }
 
@@ -51,7 +51,7 @@ public class ListIndexesPublisherVerification extends PublisherVerification<Docu
     }
 
     @Override
-    public Publisher<Document> createFailedPublisher() {
+    public Publisher<OldDocument> createFailedPublisher() {
         return null;
     }
 

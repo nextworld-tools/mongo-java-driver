@@ -28,7 +28,7 @@ import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -106,10 +106,10 @@ public class ClientSideEncryptionAutoEncryptionSettingsTour {
                 .build();
 
         MongoClient mongoClient = MongoClients.create(clientSettings);
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
         collection.drop(); // Clear old data
 
-        collection.insertOne(new Document("encryptedField", "123456789"));
+        collection.insertOne(new OldDocument("encryptedField", "123456789"));
 
         System.out.println(collection.find().first().toJson());
 

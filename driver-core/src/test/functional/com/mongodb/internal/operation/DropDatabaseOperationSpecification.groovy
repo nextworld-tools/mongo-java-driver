@@ -21,7 +21,7 @@ import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.WriteConcern
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
@@ -38,7 +38,7 @@ class DropDatabaseOperationSpecification extends OperationFunctionalSpecificatio
     @IgnoreIf({ isSharded() })
     def 'should drop a database that exists'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentTo', 'createTheCollection'))
         assert databaseNameExists(databaseName)
 
         when:
@@ -69,7 +69,7 @@ class DropDatabaseOperationSpecification extends OperationFunctionalSpecificatio
     @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentTo', 'createTheCollection'))
 
         // On servers older than 4.0 that don't support this failpoint, use a crazy w value instead
         def w = serverVersionAtLeast(4, 0) ? 2 : 5

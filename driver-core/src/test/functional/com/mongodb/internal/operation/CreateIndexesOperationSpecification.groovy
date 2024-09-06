@@ -30,7 +30,7 @@ import org.bson.BsonDocumentWrapper
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
@@ -41,7 +41,7 @@ import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static java.util.concurrent.TimeUnit.SECONDS
 
 class CreateIndexesOperationSpecification extends OperationFunctionalSpecification {
-    def x1 = ['x': 1] as Document
+    def x1 = ['x': 1] as OldDocument
     def field1Index = ['field': 1]
     def field2Index = ['field2': 1]
     def xyIndex = ['x.y': 1]
@@ -379,7 +379,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 0) })
     def 'should pass through storage engine options'() {
         given:
-        def storageEngineOptions = new Document('wiredTiger', new Document('configString', 'block_compressor=zlib'))
+        def storageEngineOptions = new OldDocument('wiredTiger', new OldDocument('configString', 'block_compressor=zlib'))
         def operation = createOperation([new IndexRequest(new BsonDocument('a', new BsonInt32(1)))
                                                  .storageEngine(new BsonDocumentWrapper(storageEngineOptions, new DocumentCodec()))])
 
@@ -396,7 +396,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should be able to create a partially filtered index'() {
         given:
-        def partialFilterExpression = new Document('a', new Document('$gte', 10))
+        def partialFilterExpression = new OldDocument('a', new OldDocument('$gte', 10))
         def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))
                                                  .partialFilterExpression(new BsonDocumentWrapper(partialFilterExpression,
                                                          new DocumentCodec()))])
@@ -436,7 +436,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         execute(operation, async)
-        def indexCollation = new BsonDocumentWrapper<Document>(getIndex('a_1').get('collation'), new DocumentCodec())
+        def indexCollation = new BsonDocumentWrapper<OldDocument>(getIndex('a_1').get('collation'), new DocumentCodec())
         indexCollation.remove('version')
 
         then:
@@ -504,13 +504,13 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    Document getIndex(final String indexName) {
+    OldDocument getIndex(final String indexName) {
         getIndexes().find {
             it -> it.getString('name') == indexName
         }
     }
 
-    List<Document> getIndexes() {
+    List<OldDocument> getIndexes() {
         def indexes = []
         def cursor = new ListIndexesOperation(getNamespace(), new DocumentCodec()).execute(getBinding())
         while (cursor.hasNext()) {
@@ -519,11 +519,11 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         indexes
     }
 
-    List<Document> getUserCreatedIndexes() {
+    List<OldDocument> getUserCreatedIndexes() {
         getIndexes().findAll { it.key != [_id: 1] }
     }
 
-    List<Document> getUserCreatedIndexes(String keyname) {
+    List<OldDocument> getUserCreatedIndexes(String keyname) {
         getUserCreatedIndexes()*.get(keyname).findAll { it != null }
     }
 

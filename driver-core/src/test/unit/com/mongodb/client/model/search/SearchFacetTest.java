@@ -22,7 +22,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -196,8 +196,8 @@ final class SearchFacetTest {
                 fieldPath("fieldName"));
     }
 
-    private static Document docExampleCustom() {
-        return new Document("facetName", new Document("type", "string")
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("facetName", new OldDocument("type", "string")
                 .append("path", fieldPath("fieldName").toValue()));
     }
 }

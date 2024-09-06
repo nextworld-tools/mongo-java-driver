@@ -18,7 +18,7 @@ package com.mongodb.client.model.search;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -69,7 +69,7 @@ final class SearchCountTest {
         return SearchCount.lowerBound();
     }
 
-    private static Document docExampleCustom() {
-        return new Document("type", "lowerBound");
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("type", "lowerBound");
     }
 }

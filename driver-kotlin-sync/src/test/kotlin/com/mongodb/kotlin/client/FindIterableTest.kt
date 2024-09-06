@@ -25,7 +25,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
@@ -40,7 +40,7 @@ class FindIterableTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JFindIterable<Document> = mock()
+        val wrapped: JFindIterable<OldDocument> = mock()
         val iterable = FindIterable(wrapped)
 
         val batchSize = 10
@@ -49,12 +49,12 @@ class FindIterableTest {
         val collation = Collation.builder().locale("en").build()
         val comment = "comment"
         val filter = BsonDocument()
-        val hint = Document("h", 1)
+        val hint = OldDocument("h", 1)
         val hintString = "hintString"
         val verbosity = ExplainVerbosity.QUERY_PLANNER
 
-        whenever(wrapped.explain(Document::class.java)).doReturn(mock())
-        whenever(wrapped.explain(Document::class.java, verbosity)).doReturn(mock())
+        whenever(wrapped.explain(OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.explain(OldDocument::class.java, verbosity)).doReturn(mock())
         whenever(wrapped.explain(BsonDocument::class.java, verbosity)).doReturn(mock())
 
         iterable.allowDiskUse(true)
@@ -65,9 +65,9 @@ class FindIterableTest {
         iterable.cursorType(CursorType.NonTailable)
         iterable.explain()
         iterable.explain(verbosity)
-        iterable.explain(Document::class.java)
+        iterable.explain(OldDocument::class.java)
         iterable.explain(BsonDocument::class.java, verbosity)
-        iterable.explain<Document>()
+        iterable.explain<OldDocument>()
         iterable.explain<BsonDocument>(verbosity)
         iterable.filter(filter)
         iterable.hint(hint)
@@ -95,8 +95,8 @@ class FindIterableTest {
         verify(wrapped).comment(bsonComment)
         verify(wrapped).comment(comment)
         verify(wrapped).cursorType(CursorType.NonTailable)
-        verify(wrapped, times(3)).explain(Document::class.java)
-        verify(wrapped, times(1)).explain(Document::class.java, verbosity)
+        verify(wrapped, times(3)).explain(OldDocument::class.java)
+        verify(wrapped, times(1)).explain(OldDocument::class.java, verbosity)
         verify(wrapped, times(2)).explain(BsonDocument::class.java, verbosity)
         verify(wrapped).filter(filter)
         verify(wrapped).hint(hint)

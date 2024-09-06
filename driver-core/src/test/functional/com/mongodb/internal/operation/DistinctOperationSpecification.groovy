@@ -40,7 +40,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInvalidOperationException
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.Decoder
@@ -94,9 +94,9 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should be able to distinct by name'() {
         given:
-        Document pete = new Document('name', 'Pete').append('age', 38)
-        Document sam = new Document('name', 'Sam').append('age', 21)
-        Document pete2 = new Document('name', 'Pete').append('age', 25)
+        OldDocument pete = new OldDocument('name', 'Pete').append('age', 38)
+        OldDocument sam = new OldDocument('name', 'Sam').append('age', 21)
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('age', 25)
         getCollectionHelper().insertDocuments(new DocumentCodec(), pete, sam, pete2)
         DistinctOperation operation = new DistinctOperation(getNamespace(), 'name', stringDecoder)
 
@@ -112,9 +112,9 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should be able to distinct by name with find'() {
         given:
-        Document pete = new Document('name', 'Pete').append('age', 38)
-        Document sam = new Document('name', 'Sam').append('age', 21)
-        Document pete2 = new Document('name', 'Pete').append('age', 25)
+        OldDocument pete = new OldDocument('name', 'Pete').append('age', 38)
+        OldDocument sam = new OldDocument('name', 'Sam').append('age', 21)
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('age', 25)
         getCollectionHelper().insertDocuments(new DocumentCodec(), pete, sam, pete2)
         def operation = new DistinctOperation(getNamespace(), 'name', stringDecoder)
                 .filter(new BsonDocument('age', new BsonInt32(25)))
@@ -134,19 +134,19 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
         Worker pete = new Worker(new ObjectId(), 'Pete', 'handyman', new Date(), 3)
         Worker sam = new Worker(new ObjectId(), 'Sam', 'plumber', new Date(), 7)
 
-        Document peteDocument = new Document('_id', pete.id)
+        OldDocument peteDocument = new OldDocument('_id', pete.id)
                 .append('name', pete.name)
                 .append('jobTitle', pete.jobTitle)
                 .append('dateStarted', pete.dateStarted)
                 .append('numberOfJobs', pete.numberOfJobs)
 
-        Document samDocument = new Document('_id', sam.id)
+        OldDocument samDocument = new OldDocument('_id', sam.id)
                 .append('name', sam.name)
                 .append('jobTitle', sam.jobTitle)
                 .append('dateStarted', sam.dateStarted)
                 .append('numberOfJobs', sam.numberOfJobs)
 
-        getCollectionHelper().insertDocuments(new Document('worker', peteDocument), new Document('worker', samDocument))
+        getCollectionHelper().insertDocuments(new OldDocument('worker', peteDocument), new OldDocument('worker', samDocument))
         DistinctOperation operation = new DistinctOperation(getNamespace(), 'worker', new WorkerCodec())
 
         when:
@@ -162,9 +162,9 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should throw if invalid decoder passed to distinct'() {
         given:
-        Document pete = new Document('name', 'Pete')
-        Document sam = new Document('name', 1)
-        Document pete2 = new Document('name', new Document('earle', 'Jones'))
+        OldDocument pete = new OldDocument('name', 'Pete')
+        OldDocument sam = new OldDocument('name', 1)
+        OldDocument pete2 = new OldDocument('name', new OldDocument('earle', 'Jones'))
         getCollectionHelper().insertDocuments(new DocumentCodec(), pete, sam, pete2)
         DistinctOperation operation = new DistinctOperation(getNamespace(), 'name', stringDecoder)
 
@@ -210,7 +210,7 @@ class DistinctOperationSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         given:
-        def document = Document.parse('{str: "foo"}')
+        def document = OldDocument.parse('{str: "foo"}')
         getCollectionHelper().insertDocuments(document)
         def operation = new DistinctOperation(namespace, 'str', stringDecoder)
                 .filter(BsonDocument.parse('{str: "FOO"}}'))

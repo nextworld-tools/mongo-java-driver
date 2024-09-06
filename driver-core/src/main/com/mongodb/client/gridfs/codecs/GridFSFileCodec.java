@@ -28,7 +28,7 @@ import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
@@ -45,7 +45,7 @@ import static com.mongodb.assertions.Assertions.notNull;
  * @since 3.3
  */
 public final class GridFSFileCodec implements Codec<GridFSFile> {
-    private final Codec<Document> documentCodec;
+    private final Codec<OldDocument>  documentCodec;
     private final Codec<BsonDocument> bsonDocumentCodec;
 
     /**
@@ -54,7 +54,7 @@ public final class GridFSFileCodec implements Codec<GridFSFile> {
      * @param registry the codec registry
      */
     public GridFSFileCodec(final CodecRegistry registry) {
-        this.documentCodec = notNull("DocumentCodec", notNull("registry", registry).get(Document.class));
+        this.documentCodec = notNull("DocumentCodec", notNull("registry", registry).get(OldDocument.class));
         this.bsonDocumentCodec = notNull("BsonDocumentCodec", registry.get(BsonDocument.class));
     }
 
@@ -69,7 +69,7 @@ public final class GridFSFileCodec implements Codec<GridFSFile> {
         Date uploadDate = new Date(bsonDocument.getDateTime("uploadDate").getValue());
         BsonDocument metadataBsonDocument = bsonDocument.getDocument("metadata", new BsonDocument());
 
-        Document optionalMetadata = asDocumentOrNull(metadataBsonDocument);
+        OldDocument optionalMetadata = asDocumentOrNull(metadataBsonDocument);
 
         return new GridFSFile(id, filename, length, chunkSize, uploadDate, optionalMetadata);
     }
@@ -83,7 +83,7 @@ public final class GridFSFileCodec implements Codec<GridFSFile> {
         bsonDocument.put("chunkSize", new BsonInt32(value.getChunkSize()));
         bsonDocument.put("uploadDate", new BsonDateTime(value.getUploadDate().getTime()));
 
-        Document metadata = value.getMetadata();
+        OldDocument metadata = value.getMetadata();
         if (metadata != null) {
             bsonDocument.put("metadata", new BsonDocumentWrapper<>(metadata, documentCodec));
         }
@@ -96,7 +96,7 @@ public final class GridFSFileCodec implements Codec<GridFSFile> {
     }
 
     @Nullable
-    private Document asDocumentOrNull(final BsonDocument bsonDocument) {
+    private OldDocument asDocumentOrNull(final BsonDocument bsonDocument) {
         if (bsonDocument.isEmpty()) {
             return null;
         } else {

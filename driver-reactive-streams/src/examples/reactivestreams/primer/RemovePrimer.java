@@ -20,7 +20,7 @@ package reactivestreams.primer;
 // @import: start
 
 import com.mongodb.client.result.DeleteResult;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.OperationSubscriber;
@@ -33,7 +33,7 @@ public class RemovePrimer extends PrimerTestCase {
     public void removeMatchingDocuments() {
         // @begin: remove-matching-documents
         ObservableSubscriber<DeleteResult> deleteSubscriber = new PrintSubscriber<>("Update complete: %s");
-        db.getCollection("restaurants").deleteMany(new Document("borough", "Manhattan"))
+        db.getCollection("restaurants").deleteMany(new OldDocument("borough", "Manhattan"))
                 .subscribe(deleteSubscriber);
         deleteSubscriber.await();
 
@@ -50,7 +50,7 @@ public class RemovePrimer extends PrimerTestCase {
     public void removeAllDocuments() {
         // @begin: remove-all-documents
         ObservableSubscriber<DeleteResult> deleteSubscriber = new PrintSubscriber<>("Update complete: %s");
-        db.getCollection("restaurants").deleteMany(new Document())
+        db.getCollection("restaurants").deleteMany(new OldDocument())
                 .subscribe(deleteSubscriber);
         deleteSubscriber.await();
 

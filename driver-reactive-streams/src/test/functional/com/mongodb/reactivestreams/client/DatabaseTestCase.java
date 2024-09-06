@@ -16,7 +16,7 @@
 
 package com.mongodb.reactivestreams.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -28,8 +28,8 @@ public class DatabaseTestCase {
     //For ease of use and readability, in this specific case we'll allow protected variables
     //CHECKSTYLE:OFF
     protected MongoClient client;
-    protected MongoDatabase database;
-    protected MongoCollection<Document> collection;
+    protected MongoDatabase                database;
+    protected MongoCollection<OldDocument> collection;
     //CHECKSTYLE:ON
 
     @BeforeEach

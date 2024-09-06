@@ -27,7 +27,7 @@ import com.mongodb.internal.operation.BatchCursor
 import com.mongodb.internal.operation.DistinctOperation
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.DocumentCodecProvider
@@ -55,28 +55,28 @@ class DistinctIterableSpecification extends Specification {
     def 'should build the expected DistinctOperation'() {
         given:
         def executor = new TestOperationExecutor([null, null])
-        def distinctIterable = new DistinctIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
+        def distinctIterable = new DistinctIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
                 executor, 'field', new BsonDocument(), true, TIMEOUT_SETTINGS)
 
         when: 'default input should be as expected'
         distinctIterable.iterator()
 
-        def operation = executor.getReadOperation() as DistinctOperation<Document>
+        def operation = executor.getReadOperation() as DistinctOperation<OldDocument>
         def readPreference = executor.getReadPreference()
 
         then:
-        expect operation, isTheSameAs(new DistinctOperation<Document>(namespace, 'field', new DocumentCodec())
+        expect operation, isTheSameAs(new DistinctOperation<OldDocument>(namespace, 'field', new DocumentCodec())
                 .filter(new BsonDocument()).retryReads(true))
         readPreference == secondary()
 
         when: 'overriding initial options'
-        distinctIterable.filter(new Document('field', 1)).maxTime(100, MILLISECONDS).batchSize(99).collation(collation).iterator()
+        distinctIterable.filter(new OldDocument('field', 1)).maxTime(100, MILLISECONDS).batchSize(99).collation(collation).iterator()
 
-        operation = executor.getReadOperation() as DistinctOperation<Document>
+        operation = executor.getReadOperation() as DistinctOperation<OldDocument>
 
         then: 'should use the overrides'
         expect operation, isTheSameAs(
-                new DistinctOperation<Document>(namespace, 'field', new DocumentCodec())
+                new DistinctOperation<OldDocument>(namespace, 'field', new DocumentCodec())
                         .filter(new BsonDocument('field', new BsonInt32(1))).collation(collation).retryReads(true))
     }
 
@@ -86,7 +86,7 @@ class DistinctIterableSpecification extends Specification {
             _ * hasNext() >> { false }
         }
         def executor = new TestOperationExecutor([batchCursor, batchCursor])
-        def distinctIterable = new DistinctIterableImpl(clientSession, namespace, Document, Document, codecRegistry, readPreference,
+        def distinctIterable = new DistinctIterableImpl(clientSession, namespace, OldDocument, OldDocument, codecRegistry, readPreference,
                 readConcern, executor, 'field', new BsonDocument(), true, TIMEOUT_SETTINGS)
 
         when:
@@ -109,7 +109,7 @@ class DistinctIterableSpecification extends Specification {
         given:
         def codecRegistry = fromProviders([new ValueCodecProvider(), new BsonValueCodecProvider()])
         def executor = new TestOperationExecutor([new MongoException('failure')])
-        def distinctIterable = new DistinctIterableImpl(null, namespace, Document, BsonDocument, codecRegistry, readPreference,
+        def distinctIterable = new DistinctIterableImpl(null, namespace, OldDocument, BsonDocument, codecRegistry, readPreference,
                 readConcern, executor, 'field', new BsonDocument(), true, TIMEOUT_SETTINGS)
 
         when: 'The operation fails with an exception'
@@ -119,14 +119,14 @@ class DistinctIterableSpecification extends Specification {
         thrown(MongoException)
 
         when: 'a codec is missing'
-        distinctIterable.filter(new Document('field', 1)).iterator()
+        distinctIterable.filter(new OldDocument('field', 1)).iterator()
         then:
         thrown(CodecConfigurationException)
     }
 
     def 'should follow the MongoIterable interface as expected'() {
         given:
-        def cannedResults = [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3)]
+        def cannedResults = [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3)]
         def cursor = {
             Stub(BatchCursor) {
                 def count = 0
@@ -145,7 +145,7 @@ class DistinctIterableSpecification extends Specification {
             }
         }
         def executor = new TestOperationExecutor([cursor(), cursor(), cursor(), cursor()])
-        def mongoIterable = new DistinctIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, ReadConcern.LOCAL,
+        def mongoIterable = new DistinctIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, ReadConcern.LOCAL,
                 executor, 'field', new BsonDocument(), true, TIMEOUT_SETTINGS)
 
         when:
@@ -156,9 +156,9 @@ class DistinctIterableSpecification extends Specification {
 
         when:
         def count = 0
-        mongoIterable.forEach(new Consumer<Document>() {
+        mongoIterable.forEach(new Consumer<OldDocument>() {
             @Override
-            void accept(Document document) {
+            void accept(OldDocument document) {
                 count++
             }
         })
@@ -175,9 +175,9 @@ class DistinctIterableSpecification extends Specification {
 
         when:
         target = []
-        mongoIterable.map(new Function<Document, Integer>() {
+        mongoIterable.map(new Function<OldDocument, Integer>() {
             @Override
-            Integer apply(Document document) {
+            Integer apply(OldDocument document) {
                 document.getInteger('_id')
             }
         }).into(target)
@@ -189,7 +189,7 @@ class DistinctIterableSpecification extends Specification {
     def 'should get and set batchSize as expected'() {
         when:
         def batchSize = 5
-        def mongoIterable = new DistinctIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
+        def mongoIterable = new DistinctIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
                 Stub(OperationExecutor), 'field', new BsonDocument(), true, TIMEOUT_SETTINGS)
 
         then:

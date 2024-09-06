@@ -23,7 +23,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -41,7 +41,7 @@ class DistinctIterableTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JDistinctIterable<Document> = mock()
+        val wrapped: JDistinctIterable<OldDocument> = mock()
         val iterable = DistinctIterable(wrapped)
 
         val batchSize = 10

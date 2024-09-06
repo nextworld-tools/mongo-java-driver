@@ -37,7 +37,7 @@ import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
 import com.mongodb.internal.operation.SyncOperations;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -154,8 +154,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public MongoCollection<Document> getCollection(final String collectionName) {
-        return getCollection(collectionName, Document.class);
+    public MongoCollection<OldDocument> getCollection(final String collectionName) {
+        return getCollection(collectionName, OldDocument.class);
     }
 
     @Override
@@ -165,13 +165,13 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public Document runCommand(final Bson command) {
-        return runCommand(command, Document.class);
+    public OldDocument runCommand(final Bson command) {
+        return runCommand(command, OldDocument.class);
     }
 
     @Override
-    public Document runCommand(final Bson command, final ReadPreference readPreference) {
-        return runCommand(command, readPreference, Document.class);
+    public OldDocument runCommand(final Bson command, final ReadPreference readPreference) {
+        return runCommand(command, readPreference, OldDocument.class);
     }
 
     @Override
@@ -185,13 +185,13 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public Document runCommand(final ClientSession clientSession, final Bson command) {
-        return runCommand(clientSession, command, ReadPreference.primary(), Document.class);
+    public OldDocument runCommand(final ClientSession clientSession, final Bson command) {
+        return runCommand(clientSession, command, ReadPreference.primary(), OldDocument.class);
     }
 
     @Override
-    public Document runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
-        return runCommand(clientSession, command, readPreference, Document.class);
+    public OldDocument runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
+        return runCommand(clientSession, command, readPreference, OldDocument.class);
     }
 
     @Override
@@ -246,8 +246,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsIterable<Document> listCollections() {
-        return listCollections(Document.class);
+    public ListCollectionsIterable<OldDocument> listCollections() {
+        return listCollections(OldDocument.class);
     }
 
     @Override
@@ -256,8 +256,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsIterable<Document> listCollections(final ClientSession clientSession) {
-        return listCollections(clientSession, Document.class);
+    public ListCollectionsIterable<OldDocument> listCollections(final ClientSession clientSession) {
+        return listCollections(clientSession, OldDocument.class);
     }
 
     @Override
@@ -326,7 +326,7 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return watch(Collections.emptyList());
     }
 
@@ -336,8 +336,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
+        return watch(pipeline, OldDocument.class);
     }
 
     @Override
@@ -346,8 +346,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
-        return watch(clientSession, Collections.emptyList(), Document.class);
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
+        return watch(clientSession, Collections.emptyList(), OldDocument.class);
     }
 
     @Override
@@ -356,8 +356,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return watch(clientSession, pipeline, OldDocument.class);
     }
 
     @Override
@@ -368,8 +368,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public AggregateIterable<Document> aggregate(final List<? extends Bson> pipeline) {
-        return aggregate(pipeline, Document.class);
+    public AggregateIterable<OldDocument> aggregate(final List<? extends Bson> pipeline) {
+        return aggregate(pipeline, OldDocument.class);
     }
 
     @Override
@@ -378,8 +378,8 @@ public class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public AggregateIterable<Document> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return aggregate(clientSession, pipeline, Document.class);
+    public AggregateIterable<OldDocument> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return aggregate(clientSession, pipeline, OldDocument.class);
     }
 
     @Override
@@ -392,7 +392,7 @@ public class MongoDatabaseImpl implements MongoDatabase {
     private <TResult> AggregateIterable<TResult> createAggregateIterable(@Nullable final ClientSession clientSession,
                                                                          final List<? extends Bson> pipeline,
                                                                          final Class<TResult> resultClass) {
-        return new AggregateIterableImpl<>(clientSession, name, Document.class, resultClass, codecRegistry,
+        return new AggregateIterableImpl<>(clientSession, name, OldDocument.class, resultClass, codecRegistry,
                 readPreference, readConcern, writeConcern, executor, pipeline, AggregationLevel.DATABASE, retryReads, timeoutSettings);
     }
 

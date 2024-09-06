@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -182,7 +182,7 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @return the list databases iterable interface
      */
     @JvmName("listDatabasesAsDocument")
-    public fun listDatabases(): ListDatabasesFlow<Document> = listDatabases<Document>()
+    public fun listDatabases(): ListDatabasesFlow<OldDocument> = listDatabases<OldDocument>()
 
     /**
      * Gets the list of databases
@@ -191,8 +191,8 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @return the list databases iterable interface
      */
     @JvmName("listDatabasesAsDocumentWithSession")
-    public fun listDatabases(clientSession: ClientSession): ListDatabasesFlow<Document> =
-        listDatabases<Document>(clientSession)
+    public fun listDatabases(clientSession: ClientSession): ListDatabasesFlow<OldDocument> =
+        listDatabases<OldDocument>(clientSession)
 
     /**
      * Gets the list of databases
@@ -241,7 +241,7 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocument")
-    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamFlow<Document> = watch<Document>(pipeline)
+    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamFlow<OldDocument> = watch<OldDocument>(pipeline)
 
     /**
      * Creates a change stream for this client.
@@ -252,8 +252,8 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocumentWithSession")
-    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamFlow<Document> =
-        watch<Document>(clientSession, pipeline)
+    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamFlow<OldDocument> =
+        watch<OldDocument>(clientSession, pipeline)
 
     /**
      * Creates a change stream for this client.

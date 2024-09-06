@@ -34,7 +34,7 @@ import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
@@ -55,9 +55,9 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
 
     def setup() {
         CollectionHelper.drop(aggregateCollectionNamespace)
-        Document pete = new Document('name', 'Pete').append('job', 'handyman')
-        Document sam = new Document('name', 'Sam').append('job', 'plumber')
-        Document pete2 = new Document('name', 'Pete').append('job', 'electrician')
+        OldDocument pete = new OldDocument('name', 'Pete').append('job', 'handyman')
+        OldDocument sam = new OldDocument('name', 'Sam').append('job', 'plumber')
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('job', 'electrician')
         getCollectionHelper().insertDocuments(new DocumentCodec(), pete, sam, pete2)
     }
 
@@ -290,8 +290,8 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         execute(operation, async)
 
         then:
-        Document profileDocument = profileCollectionHelper.find(Filters.exists('command.aggregate')).get(0)
-        ((Document) profileDocument.get('command')).get('comment') == expectedComment
+        OldDocument profileDocument = profileCollectionHelper.find(Filters.exists('command.aggregate')).get(0)
+        ((OldDocument) profileDocument.get('command')).get('comment') == expectedComment
 
         cleanup:
         new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(0)),

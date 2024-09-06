@@ -23,7 +23,7 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,27 +71,27 @@ public class QuickTour {
 
 
         // get a handle to the "test" collection
-        MongoCollection<Document> collection = database.getCollection("test");
+        MongoCollection<OldDocument> collection = database.getCollection("test");
 
         // drop all the data in it
         collection.drop();
 
         // make a document and insert it
-        Document doc = new Document("name", "MongoDB")
+        OldDocument doc = new OldDocument("name", "MongoDB")
                        .append("type", "database")
                        .append("count", 1)
-                       .append("info", new Document("x", 203).append("y", 102));
+                       .append("info", new OldDocument("x", 203).append("y", 102));
 
         collection.insertOne(doc);
 
         // get it (since it's the only one in there since we dropped the rest earlier on)
-        Document myDoc = collection.find().first();
+        OldDocument myDoc = collection.find().first();
         System.out.println(myDoc.toJson());
 
         // now, lets add lots of little documents to the collection so we can explore queries and cursors
-        List<Document> documents = new ArrayList<>();
+        List<OldDocument> documents = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
-            documents.add(new Document("i", i));
+            documents.add(new OldDocument("i", i));
         }
         collection.insertMany(documents);
         System.out.println("total # of documents after inserting 100 small ones (should be 101) " + collection.countDocuments());
@@ -101,7 +101,7 @@ public class QuickTour {
         System.out.println(myDoc.toJson());
 
         // lets get all the documents in the collection and print them out
-        MongoCursor<Document> cursor = collection.find().iterator();
+        MongoCursor<OldDocument> cursor = collection.find().iterator();
         try {
             while (cursor.hasNext()) {
                 System.out.println(cursor.next().toJson());
@@ -110,7 +110,7 @@ public class QuickTour {
             cursor.close();
         }
 
-        for (Document cur : collection.find()) {
+        for (OldDocument cur : collection.find()) {
             System.out.println(cur.toJson());
         }
 
@@ -145,7 +145,7 @@ public class QuickTour {
         System.out.println(myDoc.toJson());
 
         // now use a range query to get a larger subset
-        Consumer<Document> printBlock = document -> System.out.println(document.toJson());
+        Consumer<OldDocument> printBlock = document -> System.out.println(document.toJson());
         collection.find(gt("i", 50)).forEach(printBlock);
 
         // filter where; 50 < i <= 100
@@ -162,7 +162,7 @@ public class QuickTour {
         // Aggregation
         collection.aggregate(asList(
                 match(gt("i", 0)),
-                project(Document.parse("{ITimes10: {$multiply: ['$i', 10]}}")))
+                project(OldDocument.parse("{ITimes10: {$multiply: ['$i', 10]}}")))
         ).forEach(printBlock);
 
         myDoc = collection.aggregate(singletonList(group(null, sum("total", "$i")))).first();
@@ -183,7 +183,7 @@ public class QuickTour {
         System.out.println(deleteResult.getDeletedCount());
 
         // Create Index
-        collection.createIndex(new Document("i", 1));
+        collection.createIndex(new OldDocument("i", 1));
 
         // Clean up
         database.drop();

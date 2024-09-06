@@ -17,7 +17,7 @@
 package com.mongodb.reactivestreams.client;
 
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ChangeStreamsCancellationTest {
 
-    private MongoCollection<Document> collection;
+    private MongoCollection<OldDocument> collection;
 
     @BeforeEach
     public void setup() {
@@ -49,9 +49,9 @@ public class ChangeStreamsCancellationTest {
 
     @Test
     public void testCancelReleasesSessions() {
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
 
-        TestSubscriber<ChangeStreamDocument<Document>> subscriber = new TestSubscriber<>();
+        TestSubscriber<ChangeStreamDocument<OldDocument>> subscriber = new TestSubscriber<>();
         subscriber.doOnSubscribe(sub -> {
             sub.request(Integer.MAX_VALUE);
             new Thread(() -> {

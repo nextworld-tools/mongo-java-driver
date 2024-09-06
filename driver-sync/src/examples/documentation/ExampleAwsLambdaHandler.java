@@ -20,7 +20,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 // Start AWS Lambda Example 1
 public class ExampleAwsLambdaHandler implements RequestHandler<String, String> {
@@ -32,7 +32,7 @@ public class ExampleAwsLambdaHandler implements RequestHandler<String, String> {
 
     @Override
     public String handleRequest(final String input, final Context context) {
-        return client.getDatabase("admin").runCommand(new Document("ping", 1)).toJson();
+        return client.getDatabase("admin").runCommand(new OldDocument("ping", 1)).toJson();
     }
 }
 // End AWS Lambda Example 1

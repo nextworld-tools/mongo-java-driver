@@ -48,7 +48,7 @@ import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -1810,7 +1810,7 @@ public interface MongoCollection<TDocument> {
      * @since 4.11
      * @mongodb.server.release 6.0
      */
-    ListSearchIndexesIterable<Document> listSearchIndexes();
+    ListSearchIndexesIterable<OldDocument> listSearchIndexes();
 
     /**
      * Get all Atlas Search indexes in this collection.
@@ -1918,7 +1918,7 @@ public interface MongoCollection<TDocument> {
      * @return the list indexes iterable interface
      * @mongodb.driver.manual reference/command/listIndexes/ List indexes
      */
-    ListIndexesIterable<Document> listIndexes();
+    ListIndexesIterable<OldDocument> listIndexes();
 
     /**
      * Get all the indexes in this collection.
@@ -1939,7 +1939,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual reference/command/listIndexes/ List indexes
      */
-    ListIndexesIterable<Document> listIndexes(ClientSession clientSession);
+    ListIndexesIterable<OldDocument> listIndexes(ClientSession clientSession);
 
     /**
      * Get all the indexes in this collection.

@@ -38,7 +38,7 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.Specification
 
@@ -65,7 +65,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def reply =  getMoreResponse([], 0)
 
         when:
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, batchSize, maxTimeMS, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, batchSize, maxTimeMS, CODEC,
                 null, connectionSource, initialConnection)
         then:
         1 * timeoutContext.setMaxTimeOverride(*_)
@@ -103,7 +103,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def serverVersion = new ServerVersion([3, 6, 0])
         def connection = referenceCountedAsyncConnection(serverVersion)
         def connectionSource = getAsyncConnectionSource(connection)
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
 
         when:
@@ -133,7 +133,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
 
         when:
         def firstBatch = createCommandResult(FIRST_BATCH, 0)
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
 
         then:
@@ -163,7 +163,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
 
         when:
         def firstBatch = createCommandResult([], CURSOR_ID)
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
         def batch = nextBatch(cursor)
 
@@ -209,7 +209,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def firstBatch = createCommandResult()
 
         when:
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
         def batch = nextBatch(cursor)
 
@@ -263,7 +263,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def connectionSource = getAsyncConnectionSource(connectionA, connectionB)
 
         when:
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, createCommandResult(FIRST_BATCH, 42), 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, createCommandResult(FIRST_BATCH, 42), 0, 0, CODEC,
                 null, connectionSource, initialConnection)
         def batch = nextBatch(cursor)
 
@@ -299,7 +299,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def firstBatch = createCommandResult()
 
         when:
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
         def batch = nextBatch(cursor)
 
@@ -339,7 +339,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         def initialConnection = referenceCountedAsyncConnection()
         def connectionSource = getAsyncConnectionSourceWithResult(ServerType.STANDALONE) { [null, MONGO_EXCEPTION] }
         def firstBatch = createCommandResult()
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
 
         when:
@@ -359,7 +359,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
 
         when:
         def firstBatch = createCommandResult()
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
 
         then:
@@ -386,7 +386,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
 
         when:
         def firstBatch = createCommandResult()
-        def cursor = new AsyncCommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
+        def cursor = new AsyncCommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
 
         then:
@@ -429,7 +429,7 @@ class AsyncCommandBatchCursorSpecification extends Specification {
         exception << [COMMAND_EXCEPTION, MONGO_EXCEPTION]
     }
 
-    List<Document> nextBatch(AsyncCommandBatchCursor cursor) {
+    List<OldDocument> nextBatch(AsyncCommandBatchCursor cursor) {
         def futureResultCallback = new FutureResultCallback()
         cursor.next(futureResultCallback)
         futureResultCallback.get()
@@ -438,8 +438,8 @@ class AsyncCommandBatchCursorSpecification extends Specification {
     private static final MongoNamespace NAMESPACE = new MongoNamespace('db', 'coll')
     private static final ServerAddress SERVER_ADDRESS = new ServerAddress()
     private static final CURSOR_ID = 42
-    private static final FIRST_BATCH = [new Document('_id', 1), new Document('_id', 2)]
-    private static final SECOND_BATCH = [new Document('_id', 3), new Document('_id', 4)]
+    private static final FIRST_BATCH = [new OldDocument('_id', 1), new OldDocument('_id', 2)]
+    private static final SECOND_BATCH = [new OldDocument('_id', 3), new OldDocument('_id', 4)]
     private static final CODEC = new DocumentCodec()
     private static final MONGO_EXCEPTION = new MongoException('error')
     private static final COMMAND_EXCEPTION = new MongoCommandException(BsonDocument.parse('{"ok": false, "errmsg": "error"}'),

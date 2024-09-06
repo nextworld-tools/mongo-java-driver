@@ -17,7 +17,7 @@
 package org.bson.codecs;
 
 import org.bson.BsonInvalidOperationException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,36 +29,36 @@ public final class AtomicIntegerCodecTest extends CodecTestCase {
 
     @Test
     public void shouldRoundTripAtomicIntegerValues() {
-        Document original = new Document("a", new AtomicInteger(Integer.MAX_VALUE));
+        OldDocument original = new OldDocument("a", new AtomicInteger(Integer.MAX_VALUE));
         roundTrip(original, new AtomicIntegerComparator(original));
 
-        original = new Document("a", new AtomicInteger(Integer.MIN_VALUE));
+        original = new OldDocument("a", new AtomicInteger(Integer.MIN_VALUE));
         roundTrip(original, new AtomicIntegerComparator(original));
     }
 
     @Test
     public void shouldHandleAlternativeNumberValues() {
-        Document expected = new Document("a", new AtomicInteger(10));
-        roundTrip(new Document("a", 10), new AtomicIntegerComparator(expected));
-        roundTrip(new Document("a", 10L), new AtomicIntegerComparator(expected));
-        roundTrip(new Document("a", 10.00), new AtomicIntegerComparator(expected));
-        roundTrip(new Document("a", 9.9999999999999992), new AtomicIntegerComparator(expected));
+        OldDocument expected = new OldDocument("a", new AtomicInteger(10));
+        roundTrip(new OldDocument("a", 10), new AtomicIntegerComparator(expected));
+        roundTrip(new OldDocument("a", 10L), new AtomicIntegerComparator(expected));
+        roundTrip(new OldDocument("a", 10.00), new AtomicIntegerComparator(expected));
+        roundTrip(new OldDocument("a", 9.9999999999999992), new AtomicIntegerComparator(expected));
     }
 
     @Test
     public void shouldThrowWhenHandlingLossyDoubleValues() {
-        Document original = new Document("a", 9.9999999999999991);
+        OldDocument original = new OldDocument("a", 9.9999999999999991);
         assertThrows(BsonInvalidOperationException.class, () ->roundTrip(original, new AtomicIntegerComparator(original)));
     }
 
     @Test
     public void shouldErrorDecodingOutsideMinRange() {
-        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new Document("a", Long.MIN_VALUE)));
+        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new OldDocument("a", Long.MIN_VALUE)));
     }
 
     @Test
     public void shouldErrorDecodingOutsideMaxRange() {
-        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new Document("a", Long.MAX_VALUE)));
+        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new OldDocument("a", Long.MAX_VALUE)));
     }
 
     @Override
@@ -66,15 +66,15 @@ public final class AtomicIntegerCodecTest extends CodecTestCase {
         return getSpecificNumberDocumentCodecProvider(AtomicInteger.class);
     }
 
-    private class AtomicIntegerComparator implements Comparator<Document> {
-        private final Document expected;
+    private class AtomicIntegerComparator implements Comparator<OldDocument> {
+        private final OldDocument expected;
 
-        AtomicIntegerComparator(final Document expected) {
+        AtomicIntegerComparator(final OldDocument expected) {
             this.expected = expected;
         }
 
         @Override
-        public void apply(final Document result) {
+        public void apply(final OldDocument result) {
             assertEquals(
                     expected.get("a", AtomicInteger.class).get(),
                     result.get("a", AtomicInteger.class).get());

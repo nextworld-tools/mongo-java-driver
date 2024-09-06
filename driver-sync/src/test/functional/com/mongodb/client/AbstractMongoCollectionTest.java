@@ -24,7 +24,7 @@ import com.mongodb.client.result.InsertManyResult;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.RawBsonDocument;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.Codec;
@@ -66,7 +66,7 @@ public abstract class AbstractMongoCollectionTest {
 
     protected abstract MongoDatabase getDatabase(String databaseName);
 
-    MongoCollection<Document> getCollection() {
+    MongoCollection<OldDocument> getCollection() {
         return getDatabase(getDefaultDatabaseName()).getCollection("MongoCollectionTest");
     }
 
@@ -93,8 +93,8 @@ public abstract class AbstractMongoCollectionTest {
         Concrete doc = new Concrete(new ObjectId(), "str", 5, 10L, 4.0, 3290482390480L);
         collection.insertOne(doc);
 
-        Concrete newDoc = collection.findOneAndUpdate(new Document("i", 5),
-                                                      new Document("$set", new Document("i", 6)));
+        Concrete newDoc = collection.findOneAndUpdate(new OldDocument("i", 5),
+                                                      new OldDocument("$set", new OldDocument("i", 6)));
 
         assertNotNull(newDoc);
         assertEquals(doc, newDoc);
@@ -103,10 +103,10 @@ public abstract class AbstractMongoCollectionTest {
     @Test
     public void testFindOneAndUpdateEmpty() {
         boolean exceptionFound = false;
-        getCollection().insertOne(new Document().append("_id", "fakeId").append("one", 1).append("foo", "bar"));
+        getCollection().insertOne(new OldDocument().append("_id", "fakeId").append("one", 1).append("foo", "bar"));
 
         try {
-            getCollection().findOneAndUpdate(new Document(), new Document());
+            getCollection().findOneAndUpdate(new OldDocument(), new OldDocument());
         } catch (IllegalArgumentException e) {
             assertEquals("Invalid BSON document for an update. The document may not be empty.", e.getMessage());
             exceptionFound = true;
@@ -132,7 +132,7 @@ public abstract class AbstractMongoCollectionTest {
         collection.insertOne(secondItem);
 
         // when
-        List<String> listOfStringObjectIds = collection.find(new Document("i", 1))
+        List<String> listOfStringObjectIds = collection.find(new OldDocument("i", 1))
                                                        .map(Concrete::getId)
                                                        .map(ObjectId::toString).into(new ArrayList<>());
 
@@ -141,7 +141,7 @@ public abstract class AbstractMongoCollectionTest {
         assertThat(listOfStringObjectIds.get(0), is(firstItem.getId().toString()));
 
         // when
-        List<ObjectId> listOfObjectIds = collection.find(new Document("i", 1))
+        List<ObjectId> listOfObjectIds = collection.find(new OldDocument("i", 1))
                                                    .map(Concrete::getId)
                                                    .into(new ArrayList<>());
 
@@ -157,13 +157,13 @@ public abstract class AbstractMongoCollectionTest {
 
         // given
         CodecRegistry codecRegistry = fromProviders(asList(new DocumentCodecProvider(), new NameCodecProvider()));
-        getCollection().insertMany(asList(new Document("name", "Pete").append("job", "handyman"),
-                                              new Document("name", "Sam").append("job", "Plumber"),
-                                              new Document("name", "Pete").append("job", "'electrician'")));
+        getCollection().insertMany(asList(new OldDocument("name", "Pete").append("job", "handyman"),
+                                              new OldDocument("name", "Sam").append("job", "Plumber"),
+                                              new OldDocument("name", "Pete").append("job", "'electrician'")));
 
         String mapFunction  = "function(){ emit( this.name , 1 ); }";
         String reduceFunction = "function(key, values){ return values.length; }";
-        MongoCollection<Document> collection = getCollection()
+        MongoCollection<OldDocument> collection = getCollection()
                 .withCodecRegistry(codecRegistry)
                 .withReadPreference(ReadPreference.primary())
                 .withWriteConcern(WriteConcern.ACKNOWLEDGED);
@@ -181,12 +181,12 @@ public abstract class AbstractMongoCollectionTest {
         assumeFalse(isServerlessTest());
 
         // given
-        List<Document> documents = asList(new Document("_id", 1), new Document("_id", 2));
+        List<OldDocument> documents = asList(new OldDocument("_id", 1), new OldDocument("_id", 2));
         getCollection().insertMany(documents);
 
 
         // when
-        List<Document> result = getCollection().aggregate(Collections.singletonList(new Document("$out", "outCollection")))
+        List<OldDocument> result = getCollection().aggregate(Collections.singletonList(new OldDocument("$out", "outCollection")))
                 .into(new ArrayList<>());
 
         // then
@@ -213,7 +213,7 @@ public abstract class AbstractMongoCollectionTest {
     @Test
     public void testDBRefEncodingAndDecoding() {
         // given
-        Document doc = new Document("_id", 1)
+        OldDocument doc = new OldDocument("_id", 1)
                                .append("ref", new DBRef("foo", 5))
                                .append("refWithDB", new DBRef("db", "foo", 5));
 

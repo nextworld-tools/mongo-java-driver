@@ -22,7 +22,7 @@ import com.mongodb.MongoException;
 import com.mongodb.TransactionOptions;
 import com.mongodb.client.internal.ClientSessionClock;
 import com.mongodb.client.model.Sorts;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,7 +52,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
         super.setUp();
 
         // create the collection before starting transactions
-        collection.insertOne(Document.parse("{ _id : 0 }"));
+        collection.insertOne(OldDocument.parse("{ _id : 0 }"));
     }
 
     //
@@ -83,7 +83,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
         try (ClientSession session = client.startSession()) {
             final String msg = "Inserted document";
             String returnValueFromCallback = session.withTransaction(() -> {
-                collection.insertOne(Document.parse("{ _id : 1 }"));
+                collection.insertOne(OldDocument.parse("{ _id : 1 }"));
                 return msg;
             });
             assertEquals(msg, returnValueFromCallback);
@@ -121,14 +121,14 @@ public class WithTransactionProseTest extends DatabaseTestCase {
     public void testRetryTimeoutEnforcedUnknownTransactionCommit() {
         MongoDatabase failPointAdminDb = client.getDatabase("admin");
         failPointAdminDb.runCommand(
-                Document.parse("{'configureFailPoint': 'failCommand', 'mode': {'times': 2}, "
+                OldDocument.parse("{'configureFailPoint': 'failCommand', 'mode': {'times': 2}, "
                         + "'data': {'failCommands': ['commitTransaction'], 'errorCode': 91, 'closeConnection': false}}"));
 
         try (ClientSession session = client.startSession()) {
             ClientSessionClock.INSTANCE.setTime(START_TIME_MS);
             session.withTransaction((TransactionBody<Void>) () -> {
                 ClientSessionClock.INSTANCE.setTime(ERROR_GENERATING_INTERVAL);
-                collection.insertOne(session, new Document("_id", 2));
+                collection.insertOne(session, new OldDocument("_id", 2));
                 return null;
             });
             fail("Test should have thrown an exception.");
@@ -136,7 +136,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
             assertEquals(91, ((MongoException) e).getCode());
             assertTrue(((MongoException) e).getErrorLabels().contains(MongoException.UNKNOWN_TRANSACTION_COMMIT_RESULT_LABEL));
         } finally {
-            failPointAdminDb.runCommand(Document.parse("{'configureFailPoint': 'failCommand', 'mode': 'off'}"));
+            failPointAdminDb.runCommand(OldDocument.parse("{'configureFailPoint': 'failCommand', 'mode': 'off'}"));
         }
     }
 
@@ -150,7 +150,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
         assumeFalse(isServerlessTest());
         MongoDatabase failPointAdminDb = client.getDatabase("admin");
         failPointAdminDb.runCommand(
-                Document.parse("{'configureFailPoint': 'failCommand', 'mode': {'times': 2}, "
+                OldDocument.parse("{'configureFailPoint': 'failCommand', 'mode': {'times': 2}, "
                         + "'data': {'failCommands': ['commitTransaction'], 'errorCode': 251, 'codeName': 'NoSuchTransaction', "
                         + "'errmsg': 'Transaction 0 has been aborted', 'closeConnection': false}}"));
 
@@ -158,7 +158,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
             ClientSessionClock.INSTANCE.setTime(START_TIME_MS);
             session.withTransaction((TransactionBody<Void>) () -> {
                 ClientSessionClock.INSTANCE.setTime(ERROR_GENERATING_INTERVAL);
-                collection.insertOne(session, Document.parse("{ _id : 1 }"));
+                collection.insertOne(session, OldDocument.parse("{ _id : 1 }"));
                 return null;
             });
             fail("Test should have thrown an exception.");
@@ -166,7 +166,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
             assertEquals(251, ((MongoException) e).getCode());
             assertTrue(((MongoException) e).getErrorLabels().contains(MongoException.TRANSIENT_TRANSACTION_ERROR_LABEL));
         } finally {
-            failPointAdminDb.runCommand(Document.parse("{'configureFailPoint': 'failCommand', 'mode': 'off'}"));
+            failPointAdminDb.runCommand(OldDocument.parse("{'configureFailPoint': 'failCommand', 'mode': 'off'}"));
         }
     }
 
@@ -179,7 +179,7 @@ public class WithTransactionProseTest extends DatabaseTestCase {
                 .defaultTransactionOptions(TransactionOptions.builder().timeout(TIMEOUT, TimeUnit.SECONDS).build())
                 .build())) {
             assertThrows(MongoClientException.class, () -> session.withTransaction(() -> {
-                collection.insertOne(session, Document.parse("{ _id : 1 }"));
+                collection.insertOne(session, OldDocument.parse("{ _id : 1 }"));
                 collection.withTimeout(2, TimeUnit.MINUTES).find(session).first();
                 return -1;
             }));
@@ -194,14 +194,14 @@ public class WithTransactionProseTest extends DatabaseTestCase {
         try (ClientSession session = client.startSession(ClientSessionOptions.builder()
                 .defaultTransactionOptions(TransactionOptions.builder().timeout(TIMEOUT, TimeUnit.SECONDS).build())
                 .build())) {
-            Document document = Document.parse("{ _id : 1 }");
-            Document returnValueFromCallback = session.withTransaction(() -> {
+            OldDocument document = OldDocument.parse("{ _id : 1 }");
+            OldDocument returnValueFromCallback = session.withTransaction(() -> {
                 collection.insertOne(session, document);
-                Document found = collection.find(session)
+                OldDocument found = collection.find(session)
                         .maxAwaitTime(1, TimeUnit.MINUTES)
                         .sort(Sorts.descending("_id"))
                         .first();
-                return found != null ? found : new Document();
+                return found != null ? found : new OldDocument();
             });
             assertEquals(document, returnValueFromCallback);
         }

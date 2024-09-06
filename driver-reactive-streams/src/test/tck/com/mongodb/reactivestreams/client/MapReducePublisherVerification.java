@@ -16,7 +16,7 @@
 
 package com.mongodb.reactivestreams.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -29,7 +29,7 @@ import static com.mongodb.reactivestreams.client.MongoFixture.DEFAULT_TIMEOUT_MI
 import static com.mongodb.reactivestreams.client.MongoFixture.PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS;
 import static com.mongodb.reactivestreams.client.MongoFixture.run;
 
-public class MapReducePublisherVerification extends PublisherVerification<Document> {
+public class MapReducePublisherVerification extends PublisherVerification<OldDocument> {
 
     public MapReducePublisherVerification() {
         super(new TestEnvironment(DEFAULT_TIMEOUT_MILLIS), PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS);
@@ -37,14 +37,14 @@ public class MapReducePublisherVerification extends PublisherVerification<Docume
 
     @SuppressWarnings("deprecation")
     @Override
-    public Publisher<Document> createPublisher(final long elements) {
+    public Publisher<OldDocument> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
 
-        MongoCollection<Document> collection = MongoFixture.getDefaultDatabase().getCollection("MapReduceTest");
+        MongoCollection<OldDocument> collection = MongoFixture.getDefaultDatabase().getCollection("MapReduceTest");
         run(collection.drop());
         if (elements > 0) {
-            List<Document> documentList = LongStream.rangeClosed(1, elements).boxed()
-                    .map(i -> new Document("a", i)).collect(Collectors.toList());
+            List<OldDocument> documentList = LongStream.rangeClosed(1, elements).boxed()
+                    .map(i -> new OldDocument("a", i)).collect(Collectors.toList());
 
             run(collection.insertMany(documentList));
         }
@@ -53,7 +53,7 @@ public class MapReducePublisherVerification extends PublisherVerification<Docume
     }
 
     @Override
-    public Publisher<Document> createFailedPublisher() {
+    public Publisher<OldDocument> createFailedPublisher() {
         return null;
     }
 

@@ -16,7 +16,7 @@
 
 package com.mongodb.client.model.mql;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -65,8 +65,8 @@ class ControlMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression("A", of("").passStringTo(test));
         assertExpression("A", of(Instant.ofEpochMilli(123)).passDateTo(test));
         assertExpression("A", ofIntegerArray(1, 2).passArrayTo(test));
-        assertExpression("A", of(Document.parse("{_id: 'a'}")).passDocumentTo(test));
-        assertExpression("A", ofMap(Document.parse("{_id: 'a'}")).passMapTo(test));
+        assertExpression("A", of(OldDocument.parse("{_id: 'a'}")).passDocumentTo(test));
+        assertExpression("A", ofMap(OldDocument.parse("{_id: 'a'}")).passMapTo(test));
     }
 
     @Test
@@ -132,14 +132,14 @@ class ControlMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression("abc - string", of("abc").passStringTo(label));
         assertExpression("1970-01-01t00:00:00.123z - date", of(Instant.ofEpochMilli(123)).passDateTo(label));
         assertExpression("3 - array", ofIntegerArray(1, 2).passArrayTo(label));
-        assertExpression("a - document", of(Document.parse("{_id: 'a'}")).passDocumentTo(label));
+        assertExpression("a - document", of(OldDocument.parse("{_id: 'a'}")).passDocumentTo(label));
         // maps are considered documents
-        assertExpression("a - document", ofMap(Document.parse("{_id: 'a'}")).passMapTo(label));
+        assertExpression("a - document", ofMap(OldDocument.parse("{_id: 'a'}")).passMapTo(label));
         assertExpression("null - null", ofNull().passTo(label));
         // maps via isMap:
         assertExpression(
                 "12 - map",
-                ofMap(Document.parse("{a: '1', b: '2'}")).switchOn(on -> on
+                ofMap(OldDocument.parse("{a: '1', b: '2'}")).switchOn(on -> on
                         .isMap((MqlMap<MqlString> v) -> v.entries()
                                 .joinStrings(e -> e.getValue()).append(of(" - map")))));
         // arrays via isArray, and tests signature:
@@ -163,8 +163,8 @@ class ControlMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression("A", of("").switchStringOn(this::branches));
         assertExpression("A", of(Instant.ofEpochMilli(123)).switchDateOn(this::branches));
         assertExpression("A", ofIntegerArray(1, 2).switchArrayOn(this::branches));
-        assertExpression("A", of(Document.parse("{_id: 'a'}")).switchDocumentOn(this::branches));
-        assertExpression("A", ofMap(Document.parse("{_id: 'a'}")).switchMapOn(this::branches));
+        assertExpression("A", of(OldDocument.parse("{_id: 'a'}")).switchDocumentOn(this::branches));
+        assertExpression("A", ofMap(OldDocument.parse("{_id: 'a'}")).switchMapOn(this::branches));
     }
 
     @Test
@@ -197,11 +197,11 @@ class ControlMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
                 ofIntegerArray(0).switchOn(on -> on.isArray(v -> of("A"))),
                 "{'$switch': {'branches': [{'case': {'$isArray': [[0]]}, 'then': 'A'}]}}");
         assertExpression("A",
-                of(Document.parse("{}")).switchOn(on -> on.isDocument(v -> of("A"))),
+                of(OldDocument.parse("{}")).switchOn(on -> on.isDocument(v -> of("A"))),
                 "{'$switch': {'branches': [{'case': {'$eq': [{'$type': "
                         + "[{'$literal': {}}]}, 'object']}, 'then': 'A'}]}}");
         assertExpression("A",
-                ofMap(Document.parse("{}")).switchOn(on -> on.isMap(v -> of("A"))),
+                ofMap(OldDocument.parse("{}")).switchOn(on -> on.isMap(v -> of("A"))),
                 "{'$switch': {'branches': [{'case': {'$eq': [{'$type': "
                         + "[{'$literal': {}}]}, 'object']}, 'then': 'A'}]}}");
         assertExpression("A",
@@ -281,11 +281,11 @@ class ControlMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
                 "{'$switch': {'branches': [{'case': {'$eq': [[0], null]}, 'then': 'X'}, "
                         + "{'case': {'$isArray': [[0]]}, 'then': 'A'}]}}");
         assertExpression("A",
-                of(Document.parse("{}")).switchOn(on -> on.isNull(v -> of("X")).isDocument(v -> of("A"))),
+                of(OldDocument.parse("{}")).switchOn(on -> on.isNull(v -> of("X")).isDocument(v -> of("A"))),
                 "{'$switch': {'branches': [{'case': {'$eq': [{'$literal': {}}, null]}, 'then': 'X'}, "
                         + "{'case': {'$eq': [{'$type': [{'$literal': {}}]}, 'object']}, 'then': 'A'}]}}");
         assertExpression("A",
-                ofMap(Document.parse("{}")).switchOn(on -> on.isNull(v -> of("X")).isMap(v -> of("A"))),
+                ofMap(OldDocument.parse("{}")).switchOn(on -> on.isNull(v -> of("X")).isMap(v -> of("A"))),
                 "{'$switch': {'branches': [{'case': {'$eq': [{'$literal': {}}, null]}, 'then': 'X'}, "
                         + "{'case': {'$eq': [{'$type': [{'$literal': {}}]}, 'object']}, 'then': 'A'}]}}");
     }

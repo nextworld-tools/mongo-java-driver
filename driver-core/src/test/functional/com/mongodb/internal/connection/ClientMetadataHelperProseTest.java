@@ -24,7 +24,7 @@ import com.mongodb.internal.build.MongoDriverVersion;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -323,7 +323,7 @@ public class ClientMetadataHelperProseTest {
     }
 
     private void performHello() {
-        CollectionHelper<Document> collectionHelper = new CollectionHelper<>(
+        CollectionHelper<OldDocument> collectionHelper = new CollectionHelper<>(
                 new DocumentCodec(),
                 new MongoNamespace(ClusterFixture.getDefaultDatabaseName(), "test"));
         collectionHelper.hello();

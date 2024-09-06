@@ -20,7 +20,7 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import java.util.List;
@@ -539,18 +539,18 @@ public final class Accumulators {
 
     private static <InExpression, NExpression> BsonField pickNAccumulator(
             final String fieldName, final String accumulatorName, final InExpression inExpression, final NExpression nExpression) {
-        return new BsonField(fieldName, new Document(accumulatorName, new Document("input", inExpression).append("n", nExpression)));
+        return new BsonField(fieldName, new OldDocument(accumulatorName, new OldDocument("input", inExpression).append("n", nExpression)));
     }
 
     private static <OutExpression> BsonField sortingPickAccumulator(
             final String fieldName, final String accumulatorName, final Bson sort, final OutExpression outExpression) {
-        return new BsonField(fieldName, new Document(accumulatorName, new Document("sortBy", sort).append("output", outExpression)));
+        return new BsonField(fieldName, new OldDocument(accumulatorName, new OldDocument("sortBy", sort).append("output", outExpression)));
     }
 
     private static <OutExpression, NExpression> BsonField sortingPickNAccumulator(
             final String fieldName, final String accumulatorName,
             final Bson sort, final OutExpression outExpression, final NExpression nExpression) {
-        return new BsonField(fieldName, new Document(accumulatorName, new Document("sortBy", sort)
+        return new BsonField(fieldName, new OldDocument(accumulatorName, new OldDocument("sortBy", sort)
                 .append("output", outExpression)
                 .append("n", nExpression)));
     }
@@ -558,7 +558,7 @@ public final class Accumulators {
     private static <InExpression, PExpression> BsonField quantileAccumulator(final String quantileAccumulatorName,
                                                                              final String fieldName, final InExpression inExpression,
                                                                              @Nullable final PExpression pExpression, final QuantileMethod method) {
-        Document document = new Document("input", inExpression)
+        OldDocument document = new OldDocument("input", inExpression)
                 .append("method", method.toBsonValue());
         if (pExpression != null) {
             document.append("p", pExpression);

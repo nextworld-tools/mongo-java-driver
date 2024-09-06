@@ -25,7 +25,7 @@ import com.mongodb.MongoTimeoutException;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerVersion;
 import com.mongodb.reactivestreams.client.internal.MongoClientImpl;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Mono;
 
@@ -82,10 +82,10 @@ public final class Fixture {
         return getMongoClient().getDatabase(getDefaultDatabaseName());
     }
 
-    public static MongoCollection<Document> initializeCollection(final MongoNamespace namespace) {
+    public static MongoCollection<OldDocument> initializeCollection(final MongoNamespace namespace) {
         MongoDatabase database = getMongoClient().getDatabase(namespace.getDatabaseName());
         try {
-            Mono.from(database.runCommand(new Document("drop", namespace.getCollectionName()))).block(TIMEOUT_DURATION);
+            Mono.from(database.runCommand(new OldDocument("drop", namespace.getCollectionName()))).block(TIMEOUT_DURATION);
         } catch (MongoCommandException e) {
             if (!e.getErrorMessage().contains("ns not found")) {
                 throw e;
@@ -101,7 +101,7 @@ public final class Fixture {
             return;
         }
         try {
-            Mono.from(getMongoClient().getDatabase(name).runCommand(new Document("dropDatabase", 1))).block(TIMEOUT_DURATION);
+            Mono.from(getMongoClient().getDatabase(name).runCommand(new OldDocument("dropDatabase", 1))).block(TIMEOUT_DURATION);
         } catch (MongoCommandException e) {
             if (!e.getErrorMessage().contains("ns not found")) {
                 throw e;
@@ -114,7 +114,7 @@ public final class Fixture {
     public static void drop(final MongoNamespace namespace) {
         try {
             Mono.from(getMongoClient().getDatabase(namespace.getDatabaseName())
-                              .runCommand(new Document("drop", namespace.getCollectionName()))).block(TIMEOUT_DURATION);
+                              .runCommand(new OldDocument("drop", namespace.getCollectionName()))).block(TIMEOUT_DURATION);
         } catch (MongoCommandException e) {
             if (!e.getErrorMessage().contains("ns not found")) {
                 throw e;
@@ -172,13 +172,13 @@ public final class Fixture {
 
     @SuppressWarnings("unchecked")
     private static ServerVersion getServerVersion() {
-        Document response = runAdminCommand(new Document("buildInfo", 1));
+        OldDocument response = runAdminCommand(new OldDocument("buildInfo", 1));
         List<Integer> versionArray = (List<Integer>) response.get("versionArray");
         return new ServerVersion(versionArray.subList(0, 3));
     }
 
     private static ClusterType getClusterType() {
-        Document response = runAdminCommand(new Document("ismaster", 1));
+        OldDocument response = runAdminCommand(new OldDocument("ismaster", 1));
         if (response.containsKey("setName")) {
             return ClusterType.REPLICA_SET;
         } else if ("isdbgrid".equals(response.getString("msg"))) {
@@ -188,7 +188,7 @@ public final class Fixture {
         }
     }
 
-    private static Document runAdminCommand(final Bson command) {
+    private static OldDocument runAdminCommand(final Bson command) {
         return Mono.from(getMongoClient().getDatabase("admin")
                 .runCommand(command)).block(TIMEOUT_DURATION);
     }

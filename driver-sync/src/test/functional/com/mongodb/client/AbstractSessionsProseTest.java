@@ -26,7 +26,7 @@ import com.mongodb.client.model.Updates;
 import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -80,7 +80,7 @@ public abstract class AbstractSessionsProseTest {
     @Test
     public void shouldCreateServerSessionOnlyAfterConnectionCheckout() throws InterruptedException {
         Set<BsonDocument> lsidSet = ConcurrentHashMap.newKeySet();
-        MongoCollection<Document> collection;
+        MongoCollection<OldDocument> collection;
         try (MongoClient client = getMongoClient(
                 getMongoClientSettingsBuilder()
                         .applyToConnectionPoolSettings(builder -> builder.maxSize(1))
@@ -94,13 +94,13 @@ public abstract class AbstractSessionsProseTest {
             collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
 
             List<Runnable> operations = asList(
-                    () -> collection.insertOne(new Document()),
+                    () -> collection.insertOne(new OldDocument()),
                     () -> collection.deleteOne(Filters.eq("_id", 1)),
                     () -> collection.updateOne(Filters.eq("_id", 1), Updates.set("x", 1)),
                     () -> collection.bulkWrite(singletonList(new UpdateOneModel<>(Filters.eq("_id", 1), Updates.set("x", 1)))),
                     () -> collection.findOneAndDelete(Filters.eq("_id", 1)),
                     () -> collection.findOneAndUpdate(Filters.eq("_id", 1), Updates.set("x", 1)),
-                    () -> collection.findOneAndReplace(Filters.eq("_id", 1), new Document("_id", 1)),
+                    () -> collection.findOneAndReplace(Filters.eq("_id", 1), new OldDocument("_id", 1)),
                     () -> collection.find().first()
             );
 
@@ -148,10 +148,10 @@ public abstract class AbstractSessionsProseTest {
                         })
                         .build())) {
 
-            Document helloResponse = client.getDatabase("admin").runCommand(new Document("hello", 1));
+            OldDocument helloResponse = client.getDatabase("admin").runCommand(new OldDocument("hello", 1));
             assertFalse((helloResponse.containsKey("logicalSessionTimeoutMinutes")));
 
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
             try {
                 collection.find().first();
             } catch (MongoCommandException e) {
@@ -163,7 +163,7 @@ public abstract class AbstractSessionsProseTest {
             containsLsid.set(true);
 
             try {
-                collection.insertOne(new Document());
+                collection.insertOne(new OldDocument());
             } catch (MongoCommandException e) {
                 // ignore command errors from mongocryptd
             }
@@ -176,9 +176,9 @@ public abstract class AbstractSessionsProseTest {
     public void shouldThrowOnExplicitSessionIfConnectionDoesNotSupportSessions() throws IOException {
         assumeTrue(serverVersionAtLeast(4, 2));
         try (MongoClient client = getMongoClient(getMongocryptdMongoClientSettingsBuilder().build())) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
 
-            Document helloResponse = client.getDatabase("admin").runCommand(new Document("hello", 1));
+            OldDocument helloResponse = client.getDatabase("admin").runCommand(new OldDocument("hello", 1));
             assertFalse((helloResponse.containsKey("logicalSessionTimeoutMinutes")));
 
             try (ClientSession session = client.startSession()) {
@@ -192,7 +192,7 @@ public abstract class AbstractSessionsProseTest {
                 }
 
                 try {
-                    collection.insertOne(session, new Document());
+                    collection.insertOne(session, new OldDocument());
                     fail("Expected MongoClientException");
                 } catch (MongoClientException e) {
                     assertEquals(expectedClientExceptionMessage, e.getMessage());

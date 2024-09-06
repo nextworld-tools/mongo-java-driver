@@ -21,7 +21,7 @@ import com.mongodb.internal.operation.ListCollectionsOperation;
 import com.mongodb.reactivestreams.client.ListCollectionsPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -55,7 +55,7 @@ public class ListCollectionsPublisherImplTest extends TestHelper {
 
         // Should apply settings
         publisher
-                .filter(new Document("filter", 1))
+                .filter(new OldDocument("filter", 1))
                 .maxTime(100, MILLISECONDS)
                 .batchSize(100);
 

@@ -79,7 +79,7 @@ import com.mongodb.internal.operation.MixedBulkWriteOperation
 import com.mongodb.internal.operation.RenameCollectionOperation
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
@@ -122,7 +122,7 @@ class MongoCollectionSpecification extends Specification {
 
     def 'should return the correct name from getName'() {
         given:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED, true,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED, true,
                 true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, new TestOperationExecutor([null]))
 
         expect:
@@ -135,7 +135,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([])
 
         when:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor).withDocumentClass(newClass)
 
         then:
@@ -150,12 +150,12 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([])
 
         when:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, C_SHARP_LEGACY, null, TIMEOUT_SETTINGS, executor).withCodecRegistry(newCodecRegistry)
 
         then:
         (collection.getCodecRegistry().get(UUID) as UuidCodec).getUuidRepresentation() == C_SHARP_LEGACY
-        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, Document, collection.getCodecRegistry(), readPreference,
+        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, OldDocument, collection.getCodecRegistry(), readPreference,
                 ACKNOWLEDGED, true, true, readConcern, C_SHARP_LEGACY, null, TIMEOUT_SETTINGS, executor))
     }
 
@@ -165,12 +165,12 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([])
 
         when:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor).withReadPreference(newReadPreference)
 
         then:
         collection.getReadPreference() == newReadPreference
-        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, Document, codecRegistry, newReadPreference, ACKNOWLEDGED,
+        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, OldDocument, codecRegistry, newReadPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor))
     }
 
@@ -180,12 +180,12 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([])
 
         when:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor).withWriteConcern(newWriteConcern)
 
         then:
         collection.getWriteConcern() == newWriteConcern
-        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, newWriteConcern,
+        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, newWriteConcern,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor))
     }
 
@@ -195,19 +195,19 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([])
 
         when:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor).withReadConcern(newReadConcern)
 
         then:
         collection.getReadConcern() == newReadConcern
-        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        expect collection, isTheSameAs(new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, newReadConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor))
     }
 
     def 'should behave correctly when using withTimeout'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
@@ -215,7 +215,7 @@ class MongoCollectionSpecification extends Specification {
 
         then:
         newCollection.getTimeout(MILLISECONDS) == 10_000
-        expect newCollection, isTheSameAs(new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        expect newCollection, isTheSameAs(new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS.withTimeout(10_000, MILLISECONDS), executor))
 
         when:
@@ -229,7 +229,7 @@ class MongoCollectionSpecification extends Specification {
         given:
         def executor = new TestOperationExecutor([1L, 2L, 3L, 4L])
         def filter = new BsonDocument()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED, true,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED, true,
                 true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new CountDocumentsOperation(namespace)
                 .filter(filter).retryReads(true)
@@ -270,7 +270,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use CountOperation correctly with estimatedDocumentCount'() {
         given:
         def executor = new TestOperationExecutor([1L, 2L])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED, true,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED, true,
                 true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new EstimatedDocumentCountOperation(namespace)
                 .retryReads(true)
@@ -301,23 +301,23 @@ class MongoCollectionSpecification extends Specification {
     def 'should create DistinctIterable correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
-        def filter = new Document('a', 1)
+        def filter = new OldDocument('a', 1)
         def distinctMethod = collection.&distinct
 
         when:
         def distinctIterable = execute(distinctMethod, session, 'field', String)
 
         then:
-        expect distinctIterable, isTheSameAs(new DistinctIterableImpl<>(session, namespace, Document, String,
+        expect distinctIterable, isTheSameAs(new DistinctIterableImpl<>(session, namespace, OldDocument, String,
                 codecRegistry, readPreference, readConcern, executor, 'field', new BsonDocument(), true, TIMEOUT_SETTINGS))
 
         when:
         distinctIterable = execute(distinctMethod, session, 'field', String).filter(filter)
 
         then:
-        expect distinctIterable, isTheSameAs(new DistinctIterableImpl<>(session, namespace, Document, String,
+        expect distinctIterable, isTheSameAs(new DistinctIterableImpl<>(session, namespace, OldDocument, String,
                 codecRegistry, readPreference, readConcern, executor, 'field', filter, true, TIMEOUT_SETTINGS))
 
         where:
@@ -327,7 +327,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should create FindIterable correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def findMethod = collection.&find
 
@@ -335,29 +335,29 @@ class MongoCollectionSpecification extends Specification {
         def findIterable = execute(findMethod, session)
 
         then:
-        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, Document, Document, codecRegistry,
+        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, OldDocument, OldDocument, codecRegistry,
                 readPreference, readConcern, executor, new BsonDocument(), true, TIMEOUT_SETTINGS))
 
         when:
         findIterable = execute(findMethod, session, BsonDocument)
 
         then:
-        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, Document, BsonDocument,
+        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, OldDocument, BsonDocument,
                 codecRegistry, readPreference, readConcern, executor, new BsonDocument(), true, TIMEOUT_SETTINGS))
 
         when:
-        findIterable = execute(findMethod, session, new Document())
+        findIterable = execute(findMethod, session, new OldDocument())
 
         then:
-        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, Document, Document,
-                codecRegistry, readPreference, readConcern, executor, new Document(), true, TIMEOUT_SETTINGS))
+        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, OldDocument, OldDocument,
+                codecRegistry, readPreference, readConcern, executor, new OldDocument(), true, TIMEOUT_SETTINGS))
 
         when:
-        findIterable = execute(findMethod, session, new Document(), BsonDocument)
+        findIterable = execute(findMethod, session, new OldDocument(), BsonDocument)
 
         then:
-        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, Document, BsonDocument,
-                codecRegistry, readPreference, readConcern, executor, new Document(), true, TIMEOUT_SETTINGS))
+        expect findIterable, isTheSameAs(new FindIterableImpl<>(session, namespace, OldDocument, BsonDocument,
+                codecRegistry, readPreference, readConcern, executor, new OldDocument(), true, TIMEOUT_SETTINGS))
 
         where:
         session << [null, Stub(ClientSession)]
@@ -366,24 +366,24 @@ class MongoCollectionSpecification extends Specification {
     def 'should create AggregateIterable correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def aggregateMethod = collection.&aggregate
 
         when:
-        def aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)])
+        def aggregateIterable = execute(aggregateMethod, session, [new OldDocument('$match', 1)])
 
         then:
-        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, namespace, Document, Document,
-                codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, [new Document('$match', 1)],
+        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, namespace, OldDocument, OldDocument,
+                codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, [new OldDocument('$match', 1)],
                 AggregationLevel.COLLECTION, true, TIMEOUT_SETTINGS))
 
         when:
-        aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)], BsonDocument)
+        aggregateIterable = execute(aggregateMethod, session, [new OldDocument('$match', 1)], BsonDocument)
 
         then:
-        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, namespace, Document, BsonDocument,
-                codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, [new Document('$match', 1)],
+        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, namespace, OldDocument, BsonDocument,
+                codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, [new OldDocument('$match', 1)],
                 AggregationLevel.COLLECTION, true, TIMEOUT_SETTINGS))
 
         where:
@@ -393,7 +393,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should validate the aggregation pipeline data correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
@@ -412,7 +412,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should create ChangeStreamIterable correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def watchMethod = collection.&watch
 
@@ -421,23 +421,23 @@ class MongoCollectionSpecification extends Specification {
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [], Document, ChangeStreamLevel.COLLECTION, true, TIMEOUT_SETTINGS),
+                readPreference, readConcern, executor, [], OldDocument, ChangeStreamLevel.COLLECTION, true, TIMEOUT_SETTINGS),
                 ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)])
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)])
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], Document,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], OldDocument,
                 ChangeStreamLevel.COLLECTION, true, TIMEOUT_SETTINGS), ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)], BsonDocument)
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)], BsonDocument)
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], BsonDocument,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], BsonDocument,
                 ChangeStreamLevel.COLLECTION, true, TIMEOUT_SETTINGS), ['codec'])
 
         where:
@@ -447,7 +447,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should validate the ChangeStreamIterable pipeline data correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
@@ -466,7 +466,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should create MapReduceIterable correctly'() {
         given:
         def executor = new TestOperationExecutor([])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def mapReduceMethod = collection.&mapReduce
 
@@ -474,14 +474,14 @@ class MongoCollectionSpecification extends Specification {
         def mapReduceIterable = execute(mapReduceMethod, session, 'map', 'reduce')
 
         then:
-        expect mapReduceIterable, isTheSameAs(new MapReduceIterableImpl<>(session, namespace, Document, Document,
+        expect mapReduceIterable, isTheSameAs(new MapReduceIterableImpl<>(session, namespace, OldDocument, OldDocument,
                 codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, 'map', 'reduce', TIMEOUT_SETTINGS))
 
         when:
         mapReduceIterable = execute(mapReduceMethod, session, 'map', 'reduce', BsonDocument)
 
         then:
-        expect mapReduceIterable, isTheSameAs(new MapReduceIterableImpl<>(session, namespace, Document, BsonDocument,
+        expect mapReduceIterable, isTheSameAs(new MapReduceIterableImpl<>(session, namespace, OldDocument, BsonDocument,
                 codecRegistry, readPreference, readConcern, ACKNOWLEDGED, executor, 'map', 'reduce', TIMEOUT_SETTINGS))
 
         where:
@@ -560,7 +560,7 @@ class MongoCollectionSpecification extends Specification {
         given:
         def codecRegistry = fromProviders([new ValueCodecProvider(), new BsonValueCodecProvider()])
         def executor = new TestOperationExecutor([new MongoException('failure')])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
@@ -576,7 +576,7 @@ class MongoCollectionSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when: 'a codec is missing its acceptable to immediately throw'
-        collection.bulkWrite([new InsertOneModel(new Document('_id', 1))])
+        collection.bulkWrite([new InsertOneModel(new OldDocument('_id', 1))])
 
         then:
         thrown(CodecConfigurationException)
@@ -587,7 +587,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor((1..3).collect {
             writeConcern.isAcknowledged() ? acknowledged(INSERT, 0, 0, [], []) : unacknowledged()
         })
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = { WriteConcern wc, Boolean bypassDocumentValidation ->
             new MixedBulkWriteOperation(namespace, [new InsertRequest(new BsonDocument('_id', new BsonInt32(1)))],
@@ -596,7 +596,7 @@ class MongoCollectionSpecification extends Specification {
         def insertOneMethod = collection.&insertOne
 
         when:
-        execute(insertOneMethod, session, new Document('_id', 1))
+        execute(insertOneMethod, session, new OldDocument('_id', 1))
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -604,7 +604,7 @@ class MongoCollectionSpecification extends Specification {
         executor.getClientSession() == session
 
         when:
-        execute(insertOneMethod, session, new Document('_id', 1), new InsertOneOptions().bypassDocumentValidation(true))
+        execute(insertOneMethod, session, new OldDocument('_id', 1), new InsertOneOptions().bypassDocumentValidation(true))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -612,7 +612,7 @@ class MongoCollectionSpecification extends Specification {
         executor.getClientSession() == session
 
         when:
-        execute(insertOneMethod, session, new Document('_id', 1), new InsertOneOptions().bypassDocumentValidation(false))
+        execute(insertOneMethod, session, new OldDocument('_id', 1), new InsertOneOptions().bypassDocumentValidation(false))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -632,7 +632,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor((1..3).collect {
             writeConcern.isAcknowledged() ? acknowledged(INSERT, 0, 0, [], []) : unacknowledged()
         })
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = { boolean ordered, WriteConcern wc, Boolean bypassDocumentValidation ->
             new MixedBulkWriteOperation(namespace,
@@ -643,7 +643,7 @@ class MongoCollectionSpecification extends Specification {
         def insertManyMethod = collection.&insertMany
 
         when:
-        execute(insertManyMethod, session, [new Document('_id', 1), new Document('_id', 2)])
+        execute(insertManyMethod, session, [new OldDocument('_id', 1), new OldDocument('_id', 2)])
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -651,7 +651,7 @@ class MongoCollectionSpecification extends Specification {
         executor.getClientSession() == session
 
         when:
-        execute(insertManyMethod, session, [new Document('_id', 1), new Document('_id', 2)],
+        execute(insertManyMethod, session, [new OldDocument('_id', 1), new OldDocument('_id', 2)],
                 new InsertManyOptions().ordered(true).bypassDocumentValidation(true))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
@@ -660,7 +660,7 @@ class MongoCollectionSpecification extends Specification {
         executor.getClientSession() == session
 
         when:
-        execute(insertManyMethod, session, [new Document('_id', 1), new Document('_id', 2)],
+        execute(insertManyMethod, session, [new OldDocument('_id', 1), new OldDocument('_id', 2)],
                 new InsertManyOptions().ordered(false).bypassDocumentValidation(false))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
@@ -678,7 +678,7 @@ class MongoCollectionSpecification extends Specification {
 
     def 'should validate the insertMany data correctly'() {
         given:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, Stub(OperationExecutor))
 
         when:
@@ -700,12 +700,12 @@ class MongoCollectionSpecification extends Specification {
             writeConcern.isAcknowledged() ? acknowledged(DELETE, 1, 0, [], []) : unacknowledged()
         })
         def expectedResult = writeConcern.isAcknowledged() ? DeleteResult.acknowledged(1) : DeleteResult.unacknowledged()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def deleteOneMethod = collection.&deleteOne
 
         when:
-        def result = execute(deleteOneMethod, session, new Document('_id', 1))
+        def result = execute(deleteOneMethod, session, new OldDocument('_id', 1))
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -717,7 +717,7 @@ class MongoCollectionSpecification extends Specification {
         executor.getClientSession() == session
 
         when:
-        result = execute(deleteOneMethod, session, new Document('_id', 1), new DeleteOptions().collation(collation))
+        result = execute(deleteOneMethod, session, new OldDocument('_id', 1), new DeleteOptions().collation(collation))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -742,11 +742,11 @@ class MongoCollectionSpecification extends Specification {
                 [], new WriteConcernError(100, 'codeName', 'Message', new BsonDocument()), new ServerAddress(), [] as Set)
 
         def executor = new TestOperationExecutor([bulkWriteException])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
-        collection.deleteOne(new Document('_id', 1))
+        collection.deleteOne(new OldDocument('_id', 1))
 
         then:
         def ex = thrown(MongoWriteConcernException)
@@ -763,12 +763,12 @@ class MongoCollectionSpecification extends Specification {
             writeConcern.isAcknowledged() ? acknowledged(DELETE, 1, 0, [], []) : unacknowledged()
         })
         def expectedResult = writeConcern.isAcknowledged() ? DeleteResult.acknowledged(1) : DeleteResult.unacknowledged()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def deleteManyMethod = collection.&deleteMany
 
         when:
-        def result = execute(deleteManyMethod, session, new Document('_id', 1))
+        def result = execute(deleteManyMethod, session, new OldDocument('_id', 1))
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -779,7 +779,7 @@ class MongoCollectionSpecification extends Specification {
         result == expectedResult
 
         when:
-        result = execute(deleteManyMethod, session, new Document('_id', 1), new DeleteOptions().collation(collation))
+        result = execute(deleteManyMethod, session, new OldDocument('_id', 1), new DeleteOptions().collation(collation))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -807,7 +807,7 @@ class MongoCollectionSpecification extends Specification {
         })
         def expectedResult = writeConcern.isAcknowledged() ?
                 UpdateResult.acknowledged(1, modifiedCount, upsertedId) : UpdateResult.unacknowledged()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassValidation, Collation collation ->
@@ -819,7 +819,7 @@ class MongoCollectionSpecification extends Specification {
         def replaceOneMethod = collection.&replaceOne
 
         when:
-        def result = execute(replaceOneMethod, session, new Document('a', 1), new Document('a', 10),
+        def result = execute(replaceOneMethod, session, new OldDocument('a', 1), new OldDocument('a', 10),
                 new ReplaceOptions().upsert(true).bypassDocumentValidation(bypassDocumentValidation).collation(collation)
                         .hint(hint).hintString(hintString))
         executor.getClientSession() == session
@@ -849,11 +849,11 @@ class MongoCollectionSpecification extends Specification {
                                                              new ServerAddress(), [] as Set)
 
         def executor = new TestOperationExecutor([bulkWriteException])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
-        collection.replaceOne(new Document('_id', 1), new Document('_id', 1))
+        collection.replaceOne(new OldDocument('_id', 1), new OldDocument('_id', 1))
 
         then:
         def ex = thrown(MongoWriteConcernException)
@@ -877,7 +877,7 @@ class MongoCollectionSpecification extends Specification {
             writeConcern.isAcknowledged() ? acknowledged(UPDATE, 1, 0, [], []) : unacknowledged()
         })
         def expectedResult = writeConcern.isAcknowledged() ? UpdateResult.acknowledged(1, 0, null) : UpdateResult.unacknowledged()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassDocumentValidation, Collation collation,
                                   List<Bson> filters, BsonDocument hintDoc, String hintStr ->
@@ -890,7 +890,7 @@ class MongoCollectionSpecification extends Specification {
         def updateOneMethod = collection.&updateOne
 
         when:
-        def result = execute(updateOneMethod, session, new Document('a', 1), new Document('a', 10))
+        def result = execute(updateOneMethod, session, new OldDocument('a', 1), new OldDocument('a', 10))
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -899,7 +899,7 @@ class MongoCollectionSpecification extends Specification {
         result == expectedResult
 
         when:
-        result = execute(updateOneMethod, session, new Document('a', 1), new Document('a', 10),
+        result = execute(updateOneMethod, session, new OldDocument('a', 1), new OldDocument('a', 10),
                 new UpdateOptions().upsert(true).bypassDocumentValidation(true).collation(collation)
                         .arrayFilters(arrayFilters).hint(hint).hintString(hintString))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
@@ -926,7 +926,7 @@ class MongoCollectionSpecification extends Specification {
             writeConcern.isAcknowledged() ? acknowledged(UPDATE, 5, 3, [], []) : unacknowledged()
         })
         def expectedResult = writeConcern.isAcknowledged() ? UpdateResult.acknowledged(5, 3, null) : UpdateResult.unacknowledged()
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = { boolean upsert, WriteConcern wc, Boolean bypassDocumentValidation, Collation collation,
                                   List<Bson> filters, BsonDocument hintDoc, String hintStr ->
@@ -939,7 +939,7 @@ class MongoCollectionSpecification extends Specification {
         def updateManyMethod = collection.&updateMany
 
         when:
-        def result = execute(updateManyMethod, session, new Document('a', 1), new Document('a', 10))
+        def result = execute(updateManyMethod, session, new OldDocument('a', 1), new OldDocument('a', 10))
         def operation = executor.getWriteOperation() as MixedBulkWriteOperation
 
         then:
@@ -947,7 +947,7 @@ class MongoCollectionSpecification extends Specification {
         result == expectedResult
 
         when:
-        result = execute(updateManyMethod, session, new Document('a', 1), new Document('a', 10),
+        result = execute(updateManyMethod, session, new OldDocument('a', 1), new OldDocument('a', 10),
                 new UpdateOptions().upsert(true).bypassDocumentValidation(true).collation(collation)
                         .arrayFilters(arrayFilters).hint(hint).hintString(hintString))
         operation = executor.getWriteOperation() as MixedBulkWriteOperation
@@ -970,11 +970,11 @@ class MongoCollectionSpecification extends Specification {
 
     def 'should translate MongoBulkWriteException to MongoWriteException'() {
         given:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
-        collection.insertOne(new Document('_id', 1))
+        collection.insertOne(new OldDocument('_id', 1))
 
         then:
         def e = thrown(MongoWriteException)
@@ -992,11 +992,11 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor([new MongoBulkWriteException(acknowledged(INSERT, 1, 0, [], []), [],
                 new WriteConcernError(42, 'codeName', 'Message', new BsonDocument()),
                 new ServerAddress(), [] as Set)])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
 
         when:
-        collection.insertOne(new Document('_id', 1))
+        collection.insertOne(new OldDocument('_id', 1))
 
         then:
         def e = thrown(MongoWriteConcernException)
@@ -1008,7 +1008,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor((1..4).collect {
             writeConcern.isAcknowledged() ? WriteConcernResult.acknowledged(1, true, null) : unacknowledged()
         })
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, ACKNOWLEDGED,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new FindAndDeleteOperation(namespace, ACKNOWLEDGED, retryWrites,
                 new DocumentCodec())
@@ -1016,7 +1016,7 @@ class MongoCollectionSpecification extends Specification {
         def findOneAndDeleteMethod = collection.&findOneAndDelete
 
         when:
-        execute(findOneAndDeleteMethod, session, new Document('a', 1))
+        execute(findOneAndDeleteMethod, session, new OldDocument('a', 1))
         def operation = executor.getWriteOperation() as FindAndDeleteOperation
 
         then:
@@ -1028,9 +1028,9 @@ class MongoCollectionSpecification extends Specification {
                         .filter(new BsonDocument('a', new BsonInt32(1)))
                         .projection(new BsonDocument('projection', new BsonInt32(1)))
                         .collation(collation)
-        execute(findOneAndDeleteMethod, session, new Document('a', 1),
+        execute(findOneAndDeleteMethod, session, new OldDocument('a', 1),
                 new FindOneAndDeleteOptions()
-                        .projection(new Document('projection', 1))
+                        .projection(new OldDocument('projection', 1))
                         .maxTime(100, MILLISECONDS)
                         .collation(collation))
         operation = executor.getWriteOperation() as FindAndDeleteOperation
@@ -1051,7 +1051,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor((1..3).collect {
             writeConcern.isAcknowledged() ? WriteConcernResult.acknowledged(1, true, null) : WriteConcernResult.unacknowledged()
         })
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new FindAndReplaceOperation(namespace, writeConcern,
                 retryWrites, new DocumentCodec(), new BsonDocument('a', new BsonInt32(10)))
@@ -1059,7 +1059,7 @@ class MongoCollectionSpecification extends Specification {
         def findOneAndReplaceMethod = collection.&findOneAndReplace
 
         when:
-        execute(findOneAndReplaceMethod, session, new Document('a', 1), new Document('a', 10))
+        execute(findOneAndReplaceMethod, session, new OldDocument('a', 1), new OldDocument('a', 10))
         def operation = executor.getWriteOperation() as FindAndReplaceOperation
 
         then:
@@ -1072,9 +1072,9 @@ class MongoCollectionSpecification extends Specification {
                 .projection(new BsonDocument('projection', new BsonInt32(1)))
                 .bypassDocumentValidation(false)
                 .collation(collation)
-        execute(findOneAndReplaceMethod, session, new Document('a', 1), new Document('a', 10),
+        execute(findOneAndReplaceMethod, session, new OldDocument('a', 1), new OldDocument('a', 10),
                 new FindOneAndReplaceOptions()
-                        .projection(new Document('projection', 1))
+                        .projection(new OldDocument('projection', 1))
                         .maxTime(100, MILLISECONDS)
                         .bypassDocumentValidation(false)
                         .collation(collation))
@@ -1096,7 +1096,7 @@ class MongoCollectionSpecification extends Specification {
         def executor = new TestOperationExecutor((1..3).collect {
             writeConcern.isAcknowledged() ? WriteConcernResult.acknowledged(1, true, null) : unacknowledged()
         })
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry,  readPreference, writeConcern,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry,  readPreference, writeConcern,
                 retryWrites, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new FindAndUpdateOperation(namespace, writeConcern, retryWrites,
                 new DocumentCodec(), new BsonDocument('a', new BsonInt32(10)))
@@ -1104,7 +1104,7 @@ class MongoCollectionSpecification extends Specification {
         def findOneAndUpdateMethod = collection.&findOneAndUpdate
 
         when:
-        execute(findOneAndUpdateMethod, session, new Document('a', 1), new Document('a', 10))
+        execute(findOneAndUpdateMethod, session, new OldDocument('a', 1), new OldDocument('a', 10))
         def operation = executor.getWriteOperation() as FindAndUpdateOperation
 
         then:
@@ -1119,9 +1119,9 @@ class MongoCollectionSpecification extends Specification {
                 .collation(collation)
                 .arrayFilters(arrayFilters)
 
-        execute(findOneAndUpdateMethod, session, new Document('a', 1), new Document('a', 10),
+        execute(findOneAndUpdateMethod, session, new OldDocument('a', 1), new OldDocument('a', 10),
                 new FindOneAndUpdateOptions()
-                        .projection(new Document('projection', 1))
+                        .projection(new OldDocument('projection', 1))
                         .maxTime(100, MILLISECONDS)
                         .bypassDocumentValidation(bypassDocumentValidation)
                         .collation(collation)
@@ -1144,7 +1144,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use DropCollectionOperation correctly'() {
         given:
         def executor = new TestOperationExecutor([null])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new DropCollectionOperation(namespace, ACKNOWLEDGED)
         def dropMethod = collection.&drop
@@ -1164,7 +1164,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use CreateIndexOperations correctly'() {
         given:
         def executor = new TestOperationExecutor([null, null, null, null, null])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def createIndexMethod = collection.&createIndex
         def createIndexesMethod = collection.&createIndexes
@@ -1172,7 +1172,7 @@ class MongoCollectionSpecification extends Specification {
         when:
         def expectedOperation = new CreateIndexesOperation(namespace,
                 [new IndexRequest(new BsonDocument('key', new BsonInt32(1)))], ACKNOWLEDGED)
-        def indexName = execute(createIndexMethod, session, new Document('key', 1))
+        def indexName = execute(createIndexMethod, session, new OldDocument('key', 1))
         def operation = executor.getWriteOperation() as CreateIndexesOperation
 
         then:
@@ -1183,8 +1183,8 @@ class MongoCollectionSpecification extends Specification {
         expectedOperation = new CreateIndexesOperation(namespace,
                 [new IndexRequest(new BsonDocument('key', new BsonInt32(1))),
                  new IndexRequest(new BsonDocument('key1', new BsonInt32(1)))], ACKNOWLEDGED)
-        def indexNames = execute(createIndexesMethod, session, [new IndexModel(new Document('key', 1)),
-                                                                                       new IndexModel(new Document('key1', 1))])
+        def indexNames = execute(createIndexesMethod, session, [new IndexModel(new OldDocument('key', 1)),
+                                                                new IndexModel(new OldDocument('key1', 1))])
         operation = executor.getWriteOperation() as CreateIndexesOperation
 
         then:
@@ -1197,7 +1197,7 @@ class MongoCollectionSpecification extends Specification {
                 [new IndexRequest(new BsonDocument('key', new BsonInt32(1))),
                  new IndexRequest(new BsonDocument('key1', new BsonInt32(1)))], ACKNOWLEDGED)
         indexNames = execute(createIndexesMethod, session,
-                [new IndexModel(new Document('key', 1)), new IndexModel(new Document('key1', 1))],
+                [new IndexModel(new OldDocument('key', 1)), new IndexModel(new OldDocument('key1', 1))],
                 new CreateIndexOptions().maxTime(100, MILLISECONDS))
         operation = executor.getWriteOperation() as CreateIndexesOperation
 
@@ -1212,7 +1212,7 @@ class MongoCollectionSpecification extends Specification {
                  new IndexRequest(new BsonDocument('key1', new BsonInt32(1)))], ACKNOWLEDGED)
                 .commitQuorum(CreateIndexCommitQuorum.VOTING_MEMBERS)
         indexNames = execute(createIndexesMethod, session,
-                [new IndexModel(new Document('key', 1)), new IndexModel(new Document('key1', 1))],
+                [new IndexModel(new OldDocument('key', 1)), new IndexModel(new OldDocument('key1', 1))],
                 new CreateIndexOptions().commitQuorum(CreateIndexCommitQuorum.VOTING_MEMBERS))
         operation = executor.getWriteOperation() as CreateIndexesOperation
 
@@ -1244,7 +1244,7 @@ class MongoCollectionSpecification extends Specification {
                          .wildcardProjection(new BsonDocument('a', new BsonInt32(1)))
                          .hidden(true)
                 ], ACKNOWLEDGED)
-        indexName = execute(createIndexMethod, session, new Document('key', 1), new IndexOptions()
+        indexName = execute(createIndexMethod, session, new OldDocument('key', 1), new IndexOptions()
                 .background(true)
                 .unique(true)
                 .sparse(true)
@@ -1277,7 +1277,7 @@ class MongoCollectionSpecification extends Specification {
 
     def 'should validate the createIndexes data correctly'() {
         given:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, Stub(OperationExecutor))
 
         when:
@@ -1297,7 +1297,7 @@ class MongoCollectionSpecification extends Specification {
         given:
         def batchCursor = Stub(BatchCursor)
         def executor = new TestOperationExecutor([batchCursor, batchCursor, batchCursor])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def listIndexesMethod = collection.&listIndexes
 
@@ -1334,7 +1334,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use DropIndexOperation correctly for dropIndex'() {
         given:
         def executor = new TestOperationExecutor([null, null, null])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def dropIndexMethod = collection.&dropIndex
 
@@ -1373,7 +1373,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use DropIndexOperation correctly for dropIndexes'() {
         given:
         def executor = new TestOperationExecutor([null, null])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def expectedOperation = new DropIndexOperation(namespace, '*', ACKNOWLEDGED)
         def dropIndexesMethod = collection.&dropIndexes
@@ -1402,7 +1402,7 @@ class MongoCollectionSpecification extends Specification {
     def 'should use RenameCollectionOperation correctly'() {
         given:
         def executor = new TestOperationExecutor([null, null])
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS, executor)
         def newNamespace = new MongoNamespace(namespace.getDatabaseName(), 'newName')
         def renameCollectionOptions = new RenameCollectionOptions().dropTarget(dropTarget)
@@ -1475,22 +1475,22 @@ class MongoCollectionSpecification extends Specification {
 
     def 'should validate the client session correctly'() {
         given:
-        def collection = new MongoCollectionImpl(namespace, Document, codecRegistry, readPreference, ACKNOWLEDGED,
+        def collection = new MongoCollectionImpl(namespace, OldDocument, codecRegistry, readPreference, ACKNOWLEDGED,
                 true, true, readConcern, JAVA_LEGACY, null, TIMEOUT_SETTINGS,
                 Stub(OperationExecutor))
 
         when:
-        collection.aggregate(null, [Document.parse('{$match:{}}')])
+        collection.aggregate(null, [OldDocument.parse('{$match:{}}')])
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.bulkWrite(null, [new InsertOneModel(new Document())])
+        collection.bulkWrite(null, [new InsertOneModel(new OldDocument())])
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.createIndex(null, new Document())
+        collection.createIndex(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
@@ -1500,22 +1500,22 @@ class MongoCollectionSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        collection.deleteMany(null, new Document())
+        collection.deleteMany(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.deleteOne(null, new Document())
+        collection.deleteOne(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.distinct(null, 'field', Document)
+        collection.distinct(null, 'field', OldDocument)
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.distinct(null, new Document(), Document)
+        collection.distinct(null, new OldDocument(), OldDocument)
         then:
         thrown(IllegalArgumentException)
 
@@ -1530,7 +1530,7 @@ class MongoCollectionSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        collection.dropIndex(null, new Document())
+        collection.dropIndex(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
@@ -1545,27 +1545,27 @@ class MongoCollectionSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        collection.findOneAndDelete(null, new Document())
+        collection.findOneAndDelete(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.findOneAndReplace(null, new Document(), new Document())
+        collection.findOneAndReplace(null, new OldDocument(), new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.findOneAndUpdate(null, new Document(), new Document())
+        collection.findOneAndUpdate(null, new OldDocument(), new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.insertMany(null, [new Document()])
+        collection.insertMany(null, [new OldDocument()])
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.insertOne(null, new Document())
+        collection.insertOne(null, new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
@@ -1585,17 +1585,17 @@ class MongoCollectionSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        collection.replaceOne(null, new Document(), new Document())
+        collection.replaceOne(null, new OldDocument(), new OldDocument())
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.updateMany(null, new Document(), Document.parse('{$set: {a: 1}}'))
+        collection.updateMany(null, new OldDocument(), OldDocument.parse('{$set: {a: 1}}'))
         then:
         thrown(IllegalArgumentException)
 
         when:
-        collection.updateOne(null, new Document(), Document.parse('{$set: {a: 1}}'))
+        collection.updateOne(null, new OldDocument(), OldDocument.parse('{$set: {a: 1}}'))
         then:
         thrown(IllegalArgumentException)
 

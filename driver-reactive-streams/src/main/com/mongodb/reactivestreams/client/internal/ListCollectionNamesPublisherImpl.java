@@ -20,7 +20,7 @@ import com.mongodb.internal.VisibleForTesting;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -33,10 +33,10 @@ import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.internal.VisibleForTesting.AccessModifier.PRIVATE;
 
 public final class ListCollectionNamesPublisherImpl implements ListCollectionNamesPublisher {
-    private final ListCollectionsPublisherImpl<Document> wrapped;
-    private final Flux<String> wrappedWithMapping;
+    private final ListCollectionsPublisherImpl<OldDocument> wrapped;
+    private final Flux<String>                              wrappedWithMapping;
 
-    ListCollectionNamesPublisherImpl(final ListCollectionsPublisherImpl<Document> wrapped) {
+    ListCollectionNamesPublisherImpl(final ListCollectionsPublisherImpl<OldDocument> wrapped) {
         this.wrapped = wrapped;
         wrappedWithMapping = Flux.from(wrapped).map(ListCollectionNamesPublisherImpl::name);
     }
@@ -89,11 +89,11 @@ public final class ListCollectionNamesPublisherImpl implements ListCollectionNam
     }
 
     @VisibleForTesting(otherwise = PRIVATE)
-    public BatchCursorPublisher<Document> getWrapped() {
+    public BatchCursorPublisher<OldDocument> getWrapped() {
         return wrapped;
     }
 
-    private static String name(final Document collectionDoc) {
+    private static String name(final OldDocument collectionDoc) {
         return collectionDoc.getString("name");
     }
 }

@@ -24,7 +24,7 @@ import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -68,10 +68,10 @@ public class ContextProviderTest {
                 .build())) {
 
             // given
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("ContextProviderTest");
             collection.drop();
-            collection.insertMany(asList(new Document(), new Document(), new Document(), new Document()));
+            collection.insertMany(asList(new OldDocument(), new OldDocument(), new OldDocument(), new OldDocument()));
             commandListener.reset();
 
             // when
@@ -94,10 +94,10 @@ public class ContextProviderTest {
                 .build())) {
 
             // given
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("ContextProviderTest");
             collection.drop();
-            collection.insertMany(asList(new Document(), new Document(), new Document(), new Document()));
+            collection.insertMany(asList(new OldDocument(), new OldDocument(), new OldDocument(), new OldDocument()));
             commandListener.reset();
 
             // when
@@ -109,7 +109,7 @@ public class ContextProviderTest {
 
             // given
             commandListener.reset();
-            Document document = new Document();
+            OldDocument document = new OldDocument();
 
             // when
             collection.insertOne(document);
@@ -130,7 +130,7 @@ public class ContextProviderTest {
 
             // given
             commandListener.reset();
-            Document documentTwo = new Document();
+            OldDocument documentTwo = new OldDocument();
 
             // when
             collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(documentTwo);
@@ -163,7 +163,7 @@ public class ContextProviderTest {
             commandListener.reset();
 
             // when
-            MongoCursor<Document> cursor = collection.find().batchSize(2).cursor();
+            MongoCursor<OldDocument> cursor = collection.find().batchSize(2).cursor();
             cursor.next();
 
             // then
@@ -196,7 +196,7 @@ public class ContextProviderTest {
 
             // when
             try {
-                client.getDatabase("admin").runCommand(new Document("notRealCommand", 1));
+                client.getDatabase("admin").runCommand(new OldDocument("notRealCommand", 1));
                 fail();
             } catch (Exception e) {
                 // then

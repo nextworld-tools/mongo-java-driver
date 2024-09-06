@@ -31,7 +31,7 @@ import org.bson.BsonDouble
 import org.bson.BsonInt32
 import org.bson.BsonJavaScript
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -54,10 +54,10 @@ class MapReduceToCollectionOperationSpecification extends OperationFunctionalSpe
     def helper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), mapReduceOutputNamespace)
 
     def setup() {
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(new DocumentCodec(), mapReduceInputNamespace)
-        Document pete = new Document('name', 'Pete').append('job', 'handyman')
-        Document sam = new Document('name', 'Sam').append('job', 'plumber')
-        Document pete2 = new Document('name', 'Pete').append('job', 'electrician')
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(new DocumentCodec(), mapReduceInputNamespace)
+        OldDocument pete = new OldDocument('name', 'Pete').append('job', 'handyman')
+        OldDocument sam = new OldDocument('name', 'Sam').append('job', 'plumber')
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('job', 'electrician')
         helper.insertDocuments(new DocumentCodec(), pete, sam, pete2)
     }
 
@@ -302,7 +302,7 @@ class MapReduceToCollectionOperationSpecification extends OperationFunctionalSpe
         def outCollectionHelper = getCollectionHelper(new MongoNamespace(mapReduceInputNamespace.getDatabaseName(), 'collectionOut'))
         outCollectionHelper.drop()
 
-        def document = Document.parse('{_id: 1, str: "foo"}')
+        def document = OldDocument.parse('{_id: 1, str: "foo"}')
         getCollectionHelper(mapReduceInputNamespace).insertDocuments(document)
         def operation = new MapReduceToCollectionOperation(mapReduceInputNamespace,
                 new BsonJavaScript('function(){ emit( this._id, this.str ); }'),

@@ -16,12 +16,13 @@
 
 package com.mongodb.client
 
-import org.bson.Document
+
+import org.bson.OldDocument
 import spock.lang.Specification
 
 class FunctionalSpecification extends Specification {
     protected MongoDatabase database
-    protected MongoCollection<Document> collection
+    protected MongoCollection<OldDocument> collection
 
     def setup() {
         database = Fixture.getMongoClient().getDatabase(Fixture.getDefaultDatabaseName())

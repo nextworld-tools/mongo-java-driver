@@ -23,7 +23,7 @@ import org.bson.BsonObjectId
 import org.bson.BsonString
 import org.bson.BsonType
 import org.bson.ByteBufNIO
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonTypeClassMap
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.Codec
@@ -53,7 +53,7 @@ class GridFSFileCodecSpecification extends Specification {
     static final LENGTH = 100L
     static final CHUNKSIZE = 255
     static final UPLOADDATE = new Date()
-    static final METADATA = new Document('field', 'value')
+    static final METADATA = new OldDocument('field', 'value')
 
     def 'should encode and decode all default types with all readers and writers'() {
         expect:
@@ -69,7 +69,7 @@ class GridFSFileCodecSpecification extends Specification {
     def 'it should use the users codec for metadata / extra elements'() {
         when:
         def gridFSFileFromDocument = toGridFSFile(['_id': ID, 'filename': FILENAME, 'length': LENGTH, 'chunkSize': CHUNKSIZE,
-                                                   'uploadDate': UPLOADDATE, 'metadata': METADATA] as Document,
+                                                   'uploadDate': UPLOADDATE, 'metadata': METADATA] as OldDocument,
                 BSONTYPESREGISTRY)
         then:
         gridFSFileFromDocument.metadata.get('field') == new BsonString('value')
@@ -81,13 +81,13 @@ class GridFSFileCodecSpecification extends Specification {
         decode(writer, CODEC)
     }
 
-    GridFSFile toGridFSFile(Document document) {
+    GridFSFile toGridFSFile(OldDocument document) {
         toGridFSFile(document, REGISTRY)
     }
 
-    GridFSFile toGridFSFile(Document document, CodecRegistry registry) {
+    GridFSFile toGridFSFile(OldDocument document, CodecRegistry registry) {
         def writer = new BsonBinaryWriter(new BasicOutputBuffer())
-        registry.get(Document).encode(writer, document, EncoderContext.builder().build())
+        registry.get(OldDocument).encode(writer, document, EncoderContext.builder().build())
         decode(writer, new GridFSFileCodec(registry))
     }
 

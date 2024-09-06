@@ -41,7 +41,7 @@ import com.mongodb.reactivestreams.client.ReactiveContextProvider;
 import com.mongodb.reactivestreams.client.internal.crypt.Crypt;
 import com.mongodb.reactivestreams.client.internal.crypt.Crypts;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -98,7 +98,7 @@ public final class MongoClientImpl implements MongoClient {
         }
         OperationExecutor operationExecutor = executor != null ? executor
                 : new OperationExecutorImpl(this, clientSessionHelper, timeoutSettings, (ReactiveContextProvider) contextProvider);
-        MongoOperationPublisher<Document> mongoOperationPublisher = new MongoOperationPublisher<>(Document.class,
+        MongoOperationPublisher<OldDocument> mongoOperationPublisher = new MongoOperationPublisher<>(OldDocument.class,
                 withUuidRepresentation(settings.getCodecRegistry(),
                         settings.getUuidRepresentation()),
                 settings.getReadPreference(),
@@ -126,7 +126,7 @@ public final class MongoClientImpl implements MongoClient {
         return delegate.getServerSessionPool();
     }
 
-    MongoOperationPublisher<Document> getMongoOperationPublisher() {
+    MongoOperationPublisher<OldDocument> getMongoOperationPublisher() {
         return delegate.getMongoOperationPublisher();
     }
 
@@ -169,7 +169,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ListDatabasesPublisher<Document> listDatabases() {
+    public ListDatabasesPublisher<OldDocument> listDatabases() {
         return delegate.listDatabases();
     }
 
@@ -179,7 +179,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ListDatabasesPublisher<Document> listDatabases(final ClientSession clientSession) {
+    public ListDatabasesPublisher<OldDocument> listDatabases(final ClientSession clientSession) {
         return delegate.listDatabases(clientSession);
     }
 
@@ -189,7 +189,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch() {
+    public ChangeStreamPublisher<OldDocument> watch() {
         return delegate.watch();
     }
 
@@ -199,7 +199,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final List<? extends Bson> pipeline) {
+    public ChangeStreamPublisher<OldDocument> watch(final List<? extends Bson> pipeline) {
         return delegate.watch(pipeline);
     }
 
@@ -209,7 +209,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession) {
         return delegate.watch(clientSession);
     }
 
@@ -219,7 +219,7 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return delegate.watch(clientSession, pipeline);
     }
 

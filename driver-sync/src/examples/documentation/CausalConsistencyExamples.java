@@ -28,7 +28,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.BsonNull;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -56,14 +56,14 @@ public final class CausalConsistencyExamples {
         // Example 1: Use a causally consistent session to ensure that the update occurs before the insert.
         ClientSession session1 = client.startSession(ClientSessionOptions.builder().causallyConsistent(true).build());
         Date currentDate = new Date();
-        MongoCollection<Document> items = client.getDatabase("test")
+        MongoCollection<OldDocument> items = client.getDatabase("test")
                 .withReadConcern(ReadConcern.MAJORITY)
                 .withWriteConcern(WriteConcern.MAJORITY.withWTimeout(1000, TimeUnit.MILLISECONDS))
                 .getCollection("test");
 
         items.updateOne(session1, eq("sku", "111"), set("end", currentDate));
 
-        Document document = new Document("sku", "nuts-111")
+        OldDocument document = new OldDocument("sku", "nuts-111")
                 .append("name", "Pecans")
                 .append("start", currentDate);
         items.insertOne(session1, document);
@@ -82,7 +82,7 @@ public final class CausalConsistencyExamples {
                 .withWriteConcern(WriteConcern.MAJORITY.withWTimeout(1000, TimeUnit.MILLISECONDS))
                 .getCollection("items");
 
-        for (Document item: items.find(session2, eq("end", BsonNull.VALUE))) {
+        for (OldDocument item: items.find(session2, eq("end", BsonNull.VALUE))) {
             System.out.println(item);
         }
         // End Causal Consistency Example 2
@@ -94,9 +94,9 @@ public final class CausalConsistencyExamples {
 
         MongoDatabase database = client.getDatabase("test");
         database.getCollection("items").drop();
-        MongoCollection<Document> items = database.getCollection("items");
+        MongoCollection<OldDocument> items = database.getCollection("items");
 
-        Document document = new Document("sku", "111")
+        OldDocument document = new OldDocument("sku", "111")
                 .append("name", "Peanuts")
                 .append("start", new Date());
         items.insertOne(document);

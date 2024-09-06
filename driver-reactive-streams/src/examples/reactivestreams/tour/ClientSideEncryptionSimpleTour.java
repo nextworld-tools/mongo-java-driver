@@ -24,7 +24,7 @@ import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.reactivestreams.client.MongoClient;
 import com.mongodb.reactivestreams.client.MongoClients;
 import com.mongodb.reactivestreams.client.MongoCollection;
-import org.bson.Document;
+import org.bson.OldDocument;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.OperationSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintDocumentSubscriber;
@@ -73,17 +73,17 @@ public class ClientSideEncryptionSimpleTour {
                 .build();
 
         MongoClient mongoClient = MongoClients.create(clientSettings);
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
 
         ObservableSubscriber<Void> successSubscriber = new OperationSubscriber<>();
         collection.drop().subscribe(successSubscriber);
         successSubscriber.await();
 
         ObservableSubscriber<InsertOneResult> insertOneSubscriber = new OperationSubscriber<>();
-        collection.insertOne(new Document("encryptedField", "123456789")).subscribe(insertOneSubscriber);
+        collection.insertOne(new OldDocument("encryptedField", "123456789")).subscribe(insertOneSubscriber);
         insertOneSubscriber.await();
 
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         collection.find().first().subscribe(documentSubscriber);
         documentSubscriber.await();
 

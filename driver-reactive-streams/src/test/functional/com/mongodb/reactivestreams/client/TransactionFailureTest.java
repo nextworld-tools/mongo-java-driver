@@ -18,7 +18,7 @@ package com.mongodb.reactivestreams.client;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
@@ -44,7 +44,7 @@ public class TransactionFailureTest extends DatabaseTestCase {
         try (ClientSession clientSession = createSession()) {
             clientSession.startTransaction();
             assertThrows(MongoClientException.class, () ->
-                    Mono.from(collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"))).block(TIMEOUT_DURATION));
+                    Mono.from(collection.insertOne(clientSession, OldDocument.parse("{_id: 1, a: 1}"))).block(TIMEOUT_DURATION));
         }
     }
 

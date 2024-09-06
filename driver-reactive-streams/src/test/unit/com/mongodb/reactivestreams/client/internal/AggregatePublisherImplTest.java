@@ -29,7 +29,7 @@ import com.mongodb.reactivestreams.client.AggregatePublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,11 +55,11 @@ public class AggregatePublisherImplTest extends TestHelper {
         List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
-        AggregateOperation<Document> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
-                                                                                  getDefaultCodecRegistry().get(Document.class))
+        AggregateOperation<OldDocument> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                                                                                  getDefaultCodecRegistry().get(OldDocument.class))
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true);
 
@@ -81,7 +81,7 @@ public class AggregatePublisherImplTest extends TestHelper {
                 .maxTime(101, MILLISECONDS);
 
         expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
-                getDefaultCodecRegistry().get(Document.class))
+                getDefaultCodecRegistry().get(OldDocument.class))
                 .retryReads(true)
                 .allowDiskUse(true)
                 .batchSize(100)
@@ -100,11 +100,11 @@ public class AggregatePublisherImplTest extends TestHelper {
         List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
-        AggregateOperation<Document> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
-                                                                                  getDefaultCodecRegistry().get(Document.class))
+        AggregateOperation<OldDocument> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                                                                                  getDefaultCodecRegistry().get(OldDocument.class))
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true);
 
@@ -124,16 +124,16 @@ public class AggregatePublisherImplTest extends TestHelper {
         List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
-        AggregateOperation<Document> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
-                                                                                  getDefaultCodecRegistry().get(Document.class))
+        AggregateOperation<OldDocument> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                                                                                  getDefaultCodecRegistry().get(OldDocument.class))
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true);
 
         publisher
-                .hint(new Document("x", 1))
+                .hint(new OldDocument("x", 1))
                 .hintString("x_1");
 
         expectedOperation
@@ -152,7 +152,7 @@ public class AggregatePublisherImplTest extends TestHelper {
         MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
@@ -189,8 +189,8 @@ public class AggregatePublisherImplTest extends TestHelper {
         operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
-        FindOperation<Document> expectedFindOperation =
-                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
+        FindOperation<OldDocument> expectedFindOperation =
+                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(OldDocument.class))
                         .batchSize(100)
                         .collation(COLLATION)
                         .filter(new BsonDocument())
@@ -230,7 +230,7 @@ public class AggregatePublisherImplTest extends TestHelper {
         MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
@@ -257,14 +257,14 @@ public class AggregatePublisherImplTest extends TestHelper {
         MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
                                                                                               ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
 
         publisher
-                .hint(new Document("x", 1))
+                .hint(new OldDocument("x", 1))
                 .hintString("x_1");
 
         expectedOperation
@@ -282,7 +282,7 @@ public class AggregatePublisherImplTest extends TestHelper {
         List<BsonDocument> pipeline = asList(BsonDocument.parse("{'$match': 1}"), BsonDocument.parse("{'$out': {s3: true}}"));
 
         TestOperationExecutor executor = createOperationExecutor(asList(null, null, null, null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         // default input should be as expected
@@ -330,7 +330,7 @@ public class AggregatePublisherImplTest extends TestHelper {
         MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
@@ -367,8 +367,8 @@ public class AggregatePublisherImplTest extends TestHelper {
         operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
-        FindOperation<Document> expectedFindOperation =
-                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
+        FindOperation<OldDocument> expectedFindOperation =
+                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(OldDocument.class))
                         .batchSize(100)
                         .collation(COLLATION)
                         .filter(new BsonDocument())
@@ -408,7 +408,7 @@ public class AggregatePublisherImplTest extends TestHelper {
                 BsonDocument.parse(format("{'$merge': '%s'}", collectionName)));
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
-        AggregatePublisher<Document> publisher =
+        AggregatePublisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
@@ -421,8 +421,8 @@ public class AggregatePublisherImplTest extends TestHelper {
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
         assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
-        FindOperation<Document> expectedFindOperation =
-                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
+        FindOperation<OldDocument> expectedFindOperation =
+                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(OldDocument.class))
                 .filter(new BsonDocument())
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true);
@@ -437,18 +437,18 @@ public class AggregatePublisherImplTest extends TestHelper {
         TestOperationExecutor executor = createOperationExecutor(asList(new MongoException("Failure"), null, null));
 
         // Operation fails
-        Publisher<Document> publisher =
+        Publisher<OldDocument> publisher =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
         assertThrows(MongoException.class, () -> Flux.from(publisher).blockFirst());
 
         // Missing Codec
-        Publisher<Document> publisherMissingCodec =
+        Publisher<OldDocument> publisherMissingCodec =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor)
                         .withCodecRegistry(BSON_CODEC_REGISTRY), pipeline, AggregationLevel.COLLECTION);
         assertThrows(CodecConfigurationException.class, () -> Flux.from(publisherMissingCodec).blockFirst());
 
         // Pipeline contains null
-        Publisher<Document> publisherPipelineNull =
+        Publisher<OldDocument> publisherPipelineNull =
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), singletonList(null),
                                              AggregationLevel.COLLECTION);
         assertThrows(IllegalArgumentException.class, () -> Flux.from(publisherPipelineNull).blockFirst());

@@ -28,7 +28,7 @@ import org.bson.BsonBinarySubType
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.Assert
 import reactor.core.publisher.Mono
 import spock.lang.IgnoreIf
@@ -271,7 +271,7 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
         when:
         Mono.from(getMongoClient().getDatabase(getDatabaseName()).getCollection(getCollectionName())
                 .withWriteConcern(WriteConcern.UNACKNOWLEDGED)
-                .insertOne(session, new Document()))
+                .insertOne(session, new OldDocument()))
                 .block(TIMEOUT_DURATION)
 
         then:
@@ -286,13 +286,13 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
     def 'should ignore unacknowledged write concern when in a transaction'() {
         given:
         def collection = getMongoClient().getDatabase(getDatabaseName()).getCollection(getCollectionName())
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION)
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION)
 
         def session = Mono.from(getMongoClient().startSession()).block(TIMEOUT_DURATION)
         session.startTransaction()
 
         when:
-        Mono.from(collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(session, new Document())).block(TIMEOUT_DURATION)
+        Mono.from(collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(session, new OldDocument())).block(TIMEOUT_DURATION)
 
         then:
         noExceptionThrown()
@@ -318,9 +318,9 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
         def clientSession = startSession(ClientSessionOptions.builder().causallyConsistent(true).build())
         try {
             for (int i = 0; i < 16; i++) {
-                Document document = new Document('_id', i)
+                OldDocument document = new OldDocument('_id', i)
                 Mono.from(collection.insertOne(clientSession, document)).block(TIMEOUT_DURATION)
-                Document foundDocument = Mono.from(collection
+                OldDocument foundDocument = Mono.from(collection
                         .withReadPreference(ReadPreference.secondaryPreferred()) // read from secondary if available
                         .withReadConcern(readConcern)
                         .find(clientSession, document)

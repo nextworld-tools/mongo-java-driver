@@ -20,7 +20,7 @@ import com.mongodb.MongoClientSettings
 import com.mongodb.connection.TransportSettings
 import io.netty.channel.oio.OioEventLoopGroup
 import io.netty.channel.socket.oio.OioSocketChannel
-import org.bson.Document
+import org.bson.OldDocument
 import reactor.core.publisher.Mono
 
 import static Fixture.getMongoClientBuilderFromConnectionString
@@ -40,7 +40,7 @@ class NettySettingsSmokeTestSpecification extends FunctionalSpecification {
                 .build()
         MongoClientSettings settings = getMongoClientBuilderFromConnectionString()
                 .transportSettings(nettySettings).build()
-        def document = new Document('a', 1)
+        def document = new OldDocument('a', 1)
 
         when:
         mongoClient = MongoClients.create(settings)

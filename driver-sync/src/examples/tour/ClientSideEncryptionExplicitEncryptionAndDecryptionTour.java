@@ -32,7 +32,7 @@ import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
 import org.bson.BsonBinary;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Binary;
 
 import java.security.SecureRandom;
@@ -70,7 +70,7 @@ public class ClientSideEncryptionExplicitEncryptionAndDecryptionTour {
         // Set up the key vault for this example
         MongoNamespace keyVaultNamespace = new MongoNamespace("encryption.testKeyVault");
 
-        MongoCollection<Document> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
+        MongoCollection<OldDocument> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
                 .getCollection(keyVaultNamespace.getCollectionName());
         keyVaultCollection.drop();
 
@@ -79,7 +79,7 @@ public class ClientSideEncryptionExplicitEncryptionAndDecryptionTour {
                 new IndexOptions().unique(true)
                         .partialFilterExpression(Filters.exists("keyAltNames")));
 
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
         collection.drop(); // Clear old data
 
         // Create the ClientEncryption instance
@@ -97,9 +97,9 @@ public class ClientSideEncryptionExplicitEncryptionAndDecryptionTour {
         BsonBinary encryptedFieldValue = clientEncryption.encrypt(new BsonString("123456789"),
                 new EncryptOptions("AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic").keyId(dataKeyId));
 
-        collection.insertOne(new Document("encryptedField", encryptedFieldValue));
+        collection.insertOne(new OldDocument("encryptedField", encryptedFieldValue));
 
-        Document doc = collection.find().first();
+        OldDocument doc = collection.find().first();
         System.out.println(doc.toJson());
 
         // Explicitly decrypt the field

@@ -38,7 +38,7 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.Specification
 
@@ -210,7 +210,7 @@ class CommandBatchCursorSpecification extends Specification {
         when:
         def cursor = new CommandBatchCursor<>(TimeoutMode.CURSOR_LIFETIME, firstBatch, 0, 0, CODEC,
                 null, connectionSource, initialConnection)
-        List<Document> batch = cursor.next()
+        List<OldDocument> batch = cursor.next()
 
         then:
         batch == FIRST_BATCH
@@ -260,7 +260,7 @@ class CommandBatchCursorSpecification extends Specification {
         def connectionSource = getConnectionSource(connectionA, connectionB)
 
         when:
-        def cursor = new CommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, createCommandResult(FIRST_BATCH, 42), 0, 0, CODEC,
+        def cursor = new CommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, createCommandResult(FIRST_BATCH, 42), 0, 0, CODEC,
                 null, connectionSource, initialConnection)
         def batch = cursor.next()
 
@@ -443,7 +443,7 @@ class CommandBatchCursorSpecification extends Specification {
         connectionSource.retain() >> connectionSource
 
         def initialResults = createCommandResult([])
-        def cursor = new CommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, initialResults, 2, 100, CODEC,
+        def cursor = new CommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, initialResults, 2, 100, CODEC,
                 null, connectionSource, initialConnection)
 
         when:
@@ -469,7 +469,7 @@ class CommandBatchCursorSpecification extends Specification {
         connectionSource.retain() >> connectionSource
 
         def initialResults = createCommandResult([])
-        def cursor = new CommandBatchCursor<Document>(TimeoutMode.CURSOR_LIFETIME, initialResults, 2, 100, CODEC,
+        def cursor = new CommandBatchCursor<OldDocument>(TimeoutMode.CURSOR_LIFETIME, initialResults, 2, 100, CODEC,
                 null, connectionSource, initialConnection)
 
         when:
@@ -488,8 +488,8 @@ class CommandBatchCursorSpecification extends Specification {
     private static final MongoNamespace NAMESPACE = new MongoNamespace('db', 'coll')
     private static final ServerAddress SERVER_ADDRESS = new ServerAddress()
     private static final CURSOR_ID = 42
-    private static final FIRST_BATCH = [new Document('_id', 1), new Document('_id', 2)]
-    private static final SECOND_BATCH = [new Document('_id', 3), new Document('_id', 4)]
+    private static final FIRST_BATCH = [new OldDocument('_id', 1), new OldDocument('_id', 2)]
+    private static final SECOND_BATCH = [new OldDocument('_id', 3), new OldDocument('_id', 4)]
     private static final CODEC = new DocumentCodec()
     private static final MONGO_EXCEPTION = new MongoException('error')
     private static final COMMAND_EXCEPTION = new MongoCommandException(BsonDocument.parse('{"ok": false, "errmsg": "error"}'),

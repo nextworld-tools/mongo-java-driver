@@ -37,22 +37,22 @@ import java.util.Set;
 
 class NwDocumentTests {
 
-    private Document document;
+    private OldDocument document;
 
     @BeforeEach
     void setUp() {
-        document = new Document();
+        document = new OldDocument();
     }
 
     @Test
     void testConstructors() {
-        Document doc1 = new Document("key", "value");
+        OldDocument doc1 = new OldDocument("key", "value");
         Assertions.assertEquals("value", doc1.get("key"));
 
         Map<String, Object> map = new HashMap<>();
         map.put("key1", "value1");
         map.put("key2", 2);
-        Document doc2 = new Document(map);
+        OldDocument doc2 = new OldDocument(map);
         Assertions.assertEquals("value1", doc2.get("key1"));
         Assertions.assertEquals(2, doc2.get("key2"));
     }
@@ -73,7 +73,7 @@ class NwDocumentTests {
 
     @Test
     void testGetEmbedded() {
-        Document nestedDoc = new Document("nestedKey", "nestedValue");
+        OldDocument nestedDoc = new OldDocument("nestedKey", "nestedValue");
         document.put("key", nestedDoc);
         Assertions.assertEquals("nestedValue", document.getEmbedded(Arrays.asList("key", "nestedKey"), String.class));
         Assertions.assertEquals("default", document.getEmbedded(Arrays.asList("nonexistent", "key"), "default"));
@@ -160,16 +160,16 @@ class NwDocumentTests {
 
     @Test
     void testGetDocument() {
-        Document nestedDoc = new Document("nestedKey", "nestedValue");
+        OldDocument nestedDoc = new OldDocument("nestedKey", "nestedValue");
         document.put("key", nestedDoc);
         Assertions.assertEquals(nestedDoc, document.getDocument("key"));
     }
 
     @Test
     void testGetDocumentList() {
-        List<Document> docList = Arrays.asList(
-                new Document("key1", "value1"),
-                new Document("key2", "value2")
+        List<OldDocument> docList = Arrays.asList(
+                new OldDocument("key1", "value1"),
+                new OldDocument("key2", "value2")
         );
         document.put("key", docList);
         Assertions.assertEquals(docList, document.getDocumentList("key"));
@@ -188,19 +188,19 @@ class NwDocumentTests {
 
     @Test
     void testGenerateCheckSum() {
-        long checksum1 = Document.generateCheckSum(42L);
-        long checksum2 = Document.generateCheckSum(42);
+        long checksum1 = OldDocument.generateCheckSum(42L);
+        long checksum2 = OldDocument.generateCheckSum(42);
         Assertions.assertEquals(checksum1, checksum2);
 
-        long checksum3 = Document.generateCheckSum(new BigDecimal("42.00"));
-        long checksum4 = Document.generateCheckSum(new Decimal128(new BigDecimal("42.00")));
+        long checksum3 = OldDocument.generateCheckSum(new BigDecimal("42.00"));
+        long checksum4 = OldDocument.generateCheckSum(new Decimal128(new BigDecimal("42.00")));
         Assertions.assertEquals(checksum3, checksum4);
     }
 
     @Test
     void testGetCRC32Checksum() {
         byte[] bytes = "test".getBytes();
-        long checksum = Document.getCRC32Checksum(bytes);
+        long checksum = OldDocument.getCRC32Checksum(bytes);
         Assertions.assertTrue(checksum != 0);
     }
 
@@ -242,9 +242,9 @@ class NwDocumentTests {
 
     @Test
     void testEqualsAndHashCode() {
-        Document doc1 = new Document("key", "value");
-        Document doc2 = new Document("key", "value");
-        Document doc3 = new Document("key", "different");
+        OldDocument doc1 = new OldDocument("key", "value");
+        OldDocument doc2 = new OldDocument("key", "value");
+        OldDocument doc3 = new OldDocument("key", "different");
 
         Assertions.assertEquals(doc1, doc2);
         Assertions.assertNotEquals(doc1, doc3);

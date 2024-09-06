@@ -25,7 +25,7 @@ import com.mongodb.annotations.ThreadSafe;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.CreateViewOptions;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -172,7 +172,7 @@ public interface MongoDatabase {
      * @param collectionName the name of the collection to return
      * @return the collection
      */
-    MongoCollection<Document> getCollection(String collectionName);
+    MongoCollection<OldDocument> getCollection(String collectionName);
 
     /**
      * Gets a collection, with a specific default document class.
@@ -193,7 +193,7 @@ public interface MongoDatabase {
      * @param command the command to be run
      * @return a publisher containing the command result
      */
-    Publisher<Document> runCommand(Bson command);
+    Publisher<OldDocument> runCommand(Bson command);
 
     /**
      * Executes command in the context of the current database.
@@ -205,7 +205,7 @@ public interface MongoDatabase {
      * @param readPreference the {@link com.mongodb.ReadPreference} to be used when executing the command
      * @return a publisher containing the command result
      */
-    Publisher<Document> runCommand(Bson command, ReadPreference readPreference);
+    Publisher<OldDocument> runCommand(Bson command, ReadPreference readPreference);
 
     /**
      * Executes command in the context of the current database.
@@ -246,7 +246,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    Publisher<Document> runCommand(ClientSession clientSession, Bson command);
+    Publisher<OldDocument> runCommand(ClientSession clientSession, Bson command);
 
     /**
      * Executes command in the context of the current database.
@@ -261,7 +261,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    Publisher<Document> runCommand(ClientSession clientSession, Bson command, ReadPreference readPreference);
+    Publisher<OldDocument> runCommand(ClientSession clientSession, Bson command, ReadPreference readPreference);
 
     /**
      * Executes command in the context of the current database.
@@ -340,7 +340,7 @@ public interface MongoDatabase {
      * @return the fluent list collections interface
      * @mongodb.driver.manual reference/command/listCollections listCollections
      */
-    ListCollectionsPublisher<Document> listCollections();
+    ListCollectionsPublisher<OldDocument> listCollections();
 
     /**
      * Finds all the collections in this database.
@@ -361,7 +361,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    ListCollectionsPublisher<Document> listCollections(ClientSession clientSession);
+    ListCollectionsPublisher<OldDocument> listCollections(ClientSession clientSession);
 
     /**
      * Finds all the collections in this database.
@@ -485,7 +485,7 @@ public interface MongoDatabase {
      * @since 1.9
      * @mongodb.server.release 4.0
      */
-    ChangeStreamPublisher<Document> watch();
+    ChangeStreamPublisher<OldDocument> watch();
 
     /**
      * Creates a change stream for this database.
@@ -508,7 +508,7 @@ public interface MongoDatabase {
      * @since 1.9
      * @mongodb.server.release 4.0
      */
-    ChangeStreamPublisher<Document> watch(List<? extends Bson> pipeline);
+    ChangeStreamPublisher<OldDocument> watch(List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this database.
@@ -532,7 +532,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamPublisher<Document> watch(ClientSession clientSession);
+    ChangeStreamPublisher<OldDocument> watch(ClientSession clientSession);
 
     /**
      * Creates a change stream for this database.
@@ -557,7 +557,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamPublisher<Document> watch(ClientSession clientSession, List<? extends Bson> pipeline);
+    ChangeStreamPublisher<OldDocument> watch(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this database.
@@ -583,7 +583,7 @@ public interface MongoDatabase {
      * @mongodb.driver.manual reference/command/aggregate/#dbcmd.aggregate Aggregate Command
      * @mongodb.server.release 3.6
      */
-    AggregatePublisher<Document> aggregate(List<? extends Bson> pipeline);
+    AggregatePublisher<OldDocument> aggregate(List<? extends Bson> pipeline);
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages
@@ -610,7 +610,7 @@ public interface MongoDatabase {
      * @mongodb.driver.manual reference/command/aggregate/#dbcmd.aggregate Aggregate Command
      * @mongodb.server.release 3.6
      */
-    AggregatePublisher<Document> aggregate(ClientSession clientSession, List<? extends Bson> pipeline);
+    AggregatePublisher<OldDocument> aggregate(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages

@@ -25,7 +25,7 @@ import com.mongodb.reactivestreams.client.MongoCollection
 import com.mongodb.reactivestreams.client.MongoDatabase
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.UuidRepresentation
 import org.bson.codecs.UuidCodec
 import org.bson.types.ObjectId
@@ -56,7 +56,7 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries
 class GridFSPublisherSpecification extends FunctionalSpecification {
     protected MongoDatabase mongoDatabase
     protected MongoCollection<GridFSFile> filesCollection
-    protected MongoCollection<Document> chunksCollection
+    protected MongoCollection<OldDocument> chunksCollection
     protected GridFSBucket gridFSBucket
     def singleChunkString = 'GridFS'
     def multiChunkString = singleChunkString.padLeft(1024 * 255 * 5)
@@ -291,7 +291,7 @@ class GridFSPublisherSpecification extends FunctionalSpecification {
     def 'should use custom uploadOptions when uploading'() {
         given:
         def chunkSize = 20
-        def metadata = new Document('archived', false)
+        def metadata = new OldDocument('archived', false)
         def options = new GridFSUploadOptions()
                 .chunkSizeBytes(chunkSize)
                 .metadata(metadata)
@@ -350,8 +350,8 @@ class GridFSPublisherSpecification extends FunctionalSpecification {
 
     def 'should create the indexes as expected'() {
         when:
-        def filesIndexKey = Document.parse('{ filename: 1, uploadDate: 1 }')
-        def chunksIndexKey = Document.parse('{ files_id: 1, n: 1 }')
+        def filesIndexKey = OldDocument.parse('{ filename: 1, uploadDate: 1 }')
+        def chunksIndexKey = OldDocument.parse('{ files_id: 1, n: 1 }')
 
         then:
         !runAndCollect(filesCollection.&listIndexes)*.get('key').contains(filesIndexKey)
@@ -361,13 +361,13 @@ class GridFSPublisherSpecification extends FunctionalSpecification {
         run(gridFSBucket.&uploadFromPublisher, 'myFile', createPublisher(ByteBuffer.wrap(multiChunkString.getBytes())))
 
         then:
-        runAndCollect(filesCollection.&listIndexes)*.get('key').contains(Document.parse('{ filename: 1, uploadDate: 1 }'))
-        runAndCollect(chunksCollection.&listIndexes)*.get('key').contains(Document.parse('{ files_id: 1, n: 1 }'))
+        runAndCollect(filesCollection.&listIndexes)*.get('key').contains(OldDocument.parse('{ filename: 1, uploadDate: 1 }'))
+        runAndCollect(chunksCollection.&listIndexes)*.get('key').contains(OldDocument.parse('{ files_id: 1, n: 1 }'))
     }
 
     def 'should not create indexes if the files collection is not empty'() {
         when:
-        run(filesCollection.withDocumentClass(Document).&insertOne, new Document('filename', 'bad file'))
+        run(filesCollection.withDocumentClass(OldDocument).&insertOne, new OldDocument('filename', 'bad file'))
         def contentBytes = 'Hello GridFS' as byte[]
 
         then:
@@ -391,14 +391,14 @@ class GridFSPublisherSpecification extends FunctionalSpecification {
         def database = client.getDatabase(getDefaultDatabaseName())
 
         def uuid = UUID.randomUUID()
-        def fileMeta = new Document('uuid', uuid)
+        def fileMeta = new OldDocument('uuid', uuid)
         def gridFSBucket = GridFSBuckets.create(database)
 
         when:
         def fileId = run(gridFSBucket.&uploadFromPublisher, 'myFile', createPublisher(ByteBuffer.wrap(multiChunkString.getBytes())),
                 new GridFSUploadOptions().metadata(fileMeta))
 
-        def file = run(gridFSBucket.find(new Document('_id', fileId)).&first)
+        def file = run(gridFSBucket.find(new OldDocument('_id', fileId)).&first)
 
         then:
         file.getMetadata() == fileMeta

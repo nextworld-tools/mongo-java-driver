@@ -24,7 +24,7 @@ import com.mongodb.kotlin.client.coroutine.FindFlow
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 data class SyncFindIterable<T : Any>(val wrapped: FindFlow<T>) : JFindIterable<T>, SyncMongoIterable<T>(wrapped) {
@@ -79,9 +79,9 @@ data class SyncFindIterable<T : Any>(val wrapped: FindFlow<T>) : JFindIterable<T
     override fun showRecordId(showRecordId: Boolean): SyncFindIterable<T> = apply { wrapped.showRecordId(showRecordId) }
     override fun timeoutMode(timeoutMode: TimeoutMode): SyncFindIterable<T> = apply { wrapped.timeoutMode(timeoutMode) }
 
-    override fun explain(): Document = runBlocking { wrapped.explain() }
+    override fun explain(): OldDocument = runBlocking { wrapped.explain() }
 
-    override fun explain(verbosity: ExplainVerbosity): Document = runBlocking { wrapped.explain(verbosity) }
+    override fun explain(verbosity: ExplainVerbosity): OldDocument = runBlocking { wrapped.explain(verbosity) }
 
     override fun <E : Any> explain(explainResultClass: Class<E>): E = runBlocking {
         wrapped.explain(explainResultClass)

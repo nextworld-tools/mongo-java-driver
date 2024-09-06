@@ -25,7 +25,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -586,8 +586,8 @@ final class SearchOperatorTest {
                 fieldPath("fieldName"));
     }
 
-    private static Document docExampleCustom() {
-        return new Document("exists",
-                new Document("path", fieldPath("fieldName").toValue()));
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("exists",
+                new OldDocument("path", fieldPath("fieldName").toValue()));
     }
 }

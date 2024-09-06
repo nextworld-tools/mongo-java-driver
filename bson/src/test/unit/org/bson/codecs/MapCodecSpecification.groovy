@@ -31,7 +31,7 @@ import org.bson.BsonTimestamp
 import org.bson.BsonUndefined
 import org.bson.BsonWriter
 import org.bson.ByteBufNIO
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.jsr310.Jsr310CodecProvider
 import org.bson.io.BasicOutputBuffer
 import org.bson.io.ByteBufferBsonInput
@@ -90,7 +90,7 @@ class MapCodecSpecification extends Specification {
             put('minKey', new MinKey())
             put('maxKey', new MaxKey())
             put('code', new Code('int i = 0;'))
-            put('codeWithScope', new CodeWithScope('int x = y', new Document('y', 1)))
+            put('codeWithScope', new CodeWithScope('int x = y', new OldDocument('y', 1)))
             put('objectId', new ObjectId())
             put('regex', new BsonRegularExpression('^test.*regex.*xyz$', 'i'))
             put('string', 'the fox ...')
@@ -98,8 +98,8 @@ class MapCodecSpecification extends Specification {
             put('timestamp', new BsonTimestamp(0x12345678, 5))
             put('undefined', new BsonUndefined())
             put('binary', new Binary((byte) 0x80, [5, 4, 3, 2, 1] as byte[]))
-            put('array', asList(1, 1L, true, [1, 2, 3], new Document('a', 1), null))
-            put('document', new Document('a', 2))
+            put('array', asList(1, 1L, true, [1, 2, 3], new OldDocument('a', 1), null))
+            put('document', new OldDocument('a', 2))
             put('map', [a:1, b:2])
             put('atomicLong', new AtomicLong(1))
             put('atomicInteger', new AtomicInteger(1))

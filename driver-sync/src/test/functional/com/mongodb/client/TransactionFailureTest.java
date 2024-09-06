@@ -17,7 +17,7 @@
 package com.mongodb.client;
 
 import com.mongodb.MongoClientException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +40,7 @@ public class TransactionFailureTest extends DatabaseTestCase {
     public void testTransactionFails() {
         try (ClientSession clientSession = client.startSession()) {
             clientSession.startTransaction();
-            assertThrows(MongoClientException.class, () -> collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}")));
+            assertThrows(MongoClientException.class, () -> collection.insertOne(clientSession, OldDocument.parse("{_id: 1, a: 1}")));
         }
     }
 

@@ -87,7 +87,7 @@ class RawBsonDocumentSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        new RawBsonDocument(new Document(), null)
+        new RawBsonDocument(new OldDocument(), null)
 
         then:
         thrown(IllegalArgumentException)

@@ -23,7 +23,7 @@ import com.mongodb.kotlin.client.coroutine.ListSearchIndexesFlow
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.runBlocking
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 
 internal class SyncListSearchIndexesIterable<T : Any>(val wrapped: ListSearchIndexesFlow<T>) :
     JListSearchIndexesIterable<T>, SyncMongoIterable<T>(wrapped) {
@@ -49,9 +49,9 @@ internal class SyncListSearchIndexesIterable<T : Any>(val wrapped: ListSearchInd
     override fun timeoutMode(timeoutMode: TimeoutMode): SyncListSearchIndexesIterable<T> = apply {
         wrapped.timeoutMode(timeoutMode)
     }
-    override fun explain(): Document = runBlocking { wrapped.explain() }
+    override fun explain(): OldDocument = runBlocking { wrapped.explain() }
 
-    override fun explain(verbosity: ExplainVerbosity): Document = runBlocking { wrapped.explain(verbosity) }
+    override fun explain(verbosity: ExplainVerbosity): OldDocument = runBlocking { wrapped.explain(verbosity) }
 
     override fun <E : Any> explain(explainResultClass: Class<E>): E = runBlocking {
         wrapped.explain(explainResultClass)

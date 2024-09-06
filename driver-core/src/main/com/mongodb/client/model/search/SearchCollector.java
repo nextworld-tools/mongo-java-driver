@@ -20,7 +20,7 @@ import com.mongodb.annotations.Reason;
 import com.mongodb.annotations.Sealed;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Projections;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.client.model.search.SearchFacet.combineToBson;
@@ -50,7 +50,7 @@ public interface SearchCollector extends Bson {
     static FacetSearchCollector facet(final SearchOperator operator, final Iterable<? extends SearchFacet> facets) {
         notNull("operator", operator);
         notNull("facets", facets);
-        return new SearchConstructibleBsonElement("facet", new Document("operator", operator)
+        return new SearchConstructibleBsonElement("facet", new OldDocument("operator", operator)
                 .append("facets", combineToBson(facets)));
     }
 

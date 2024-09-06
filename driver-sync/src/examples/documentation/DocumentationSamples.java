@@ -30,7 +30,7 @@ import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
 import org.bson.BsonDocument;
 import org.bson.BsonType;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -90,18 +90,18 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public final class DocumentationSamples extends DatabaseTestCase {
 
-    private final MongoDatabase database = getMongoClient().getDatabase(getDefaultDatabaseName());
-    private final MongoCollection<Document> collection = database.getCollection("inventory");
+    private final MongoDatabase                database   = getMongoClient().getDatabase(getDefaultDatabaseName());
+    private final MongoCollection<OldDocument> collection = database.getCollection("inventory");
 
     @Test
     public void testInsert() {
 
         // Start Example 1
-        Document canvas = new Document("item", "canvas")
+        OldDocument canvas = new OldDocument("item", "canvas")
                 .append("qty", 100)
                 .append("tags", singletonList("cotton"));
 
-        Document size = new Document("h", 28)
+        OldDocument size = new OldDocument("h", 28)
                 .append("w", 35.5)
                 .append("uom", "cm");
         canvas.put("size", size);
@@ -110,35 +110,35 @@ public final class DocumentationSamples extends DatabaseTestCase {
         // End Example 1
 
         // Start Example 2
-        FindIterable<Document> findIterable = collection.find(eq("item", "canvas"));
+        FindIterable<OldDocument> findIterable = collection.find(eq("item", "canvas"));
         // End Example 2
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
 
         // Start Example 3
-        Document journal = new Document("item", "journal")
+        OldDocument journal = new OldDocument("item", "journal")
                 .append("qty", 25)
                 .append("tags", asList("blank", "red"));
 
-        Document journalSize = new Document("h", 14)
+        OldDocument journalSize = new OldDocument("h", 14)
                 .append("w", 21)
                 .append("uom", "cm");
         journal.put("size", journalSize);
 
-        Document mat = new Document("item", "mat")
+        OldDocument mat = new OldDocument("item", "mat")
                 .append("qty", 85)
                 .append("tags", singletonList("gray"));
 
-        Document matSize = new Document("h", 27.9)
+        OldDocument matSize = new OldDocument("h", 27.9)
                 .append("w", 35.5)
                 .append("uom", "cm");
         mat.put("size", matSize);
 
-        Document mousePad = new Document("item", "mousePad")
+        OldDocument mousePad = new OldDocument("item", "mousePad")
                 .append("qty", 25)
                 .append("tags", asList("gel", "blue"));
 
-        Document mousePadSize = new Document("h", 19)
+        OldDocument mousePadSize = new OldDocument("h", 19)
                 .append("w", 22.85)
                 .append("uom", "cm");
         mousePad.put("size", mousePadSize);
@@ -153,18 +153,18 @@ public final class DocumentationSamples extends DatabaseTestCase {
     public void testQueryingAtTheTopLevel() {
         // Start Example 6
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
         ));
         // End Example 6
 
         assertEquals(5, collection.countDocuments());
 
         // Start Example 7
-        FindIterable<Document> findIterable = collection.find(new Document());
+        FindIterable<OldDocument> findIterable = collection.find(new OldDocument());
         // End Example 7
 
         assertEquals(5, findIterable.into(new ArrayList<>()).size());
@@ -213,24 +213,24 @@ public final class DocumentationSamples extends DatabaseTestCase {
     public void testQueryingEmbeddedDocuments() {
         // Start Example 14
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
         ));
         // End Example 14
 
         assertEquals(5, collection.countDocuments());
 
         // Start Example 15
-        FindIterable<Document> findIterable = collection.find(eq("size", Document.parse("{ h: 14, w: 21, uom: 'cm' }")));
+        FindIterable<OldDocument> findIterable = collection.find(eq("size", OldDocument.parse("{ h: 14, w: 21, uom: 'cm' }")));
         // End Example 15
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
 
         // Start Example 16
-        findIterable = collection.find(eq("size", Document.parse("{ w: 21, h: 14, uom: 'cm' }")));
+        findIterable = collection.find(eq("size", OldDocument.parse("{ w: 21, h: 14, uom: 'cm' }")));
         // End Example 16
 
         assertEquals(0, findIterable.into(new ArrayList<>()).size());
@@ -263,18 +263,18 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         //Start Example 20
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, tags: ['blank', 'red'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'notebook', qty: 50, tags: ['red', 'blank'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'paper', qty: 100, tags: ['red', 'blank', 'plain'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'planner', qty: 75, tags: ['blank', 'red'], dim_cm: [ 22.85, 30 ] }"),
-                Document.parse("{ item: 'postcard', qty: 45, tags: ['blue'], dim_cm: [ 10, 15.25 ] }")
+                OldDocument.parse("{ item: 'journal', qty: 25, tags: ['blank', 'red'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, tags: ['red', 'blank'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, tags: ['red', 'blank', 'plain'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, tags: ['blank', 'red'], dim_cm: [ 22.85, 30 ] }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, tags: ['blue'], dim_cm: [ 10, 15.25 ] }")
         ));
         //End Example 20
 
         assertEquals(5, collection.countDocuments());
 
         //Start Example 21
-        FindIterable<Document> findIterable = collection.find(eq("tags", asList("red", "blank")));
+        FindIterable<OldDocument> findIterable = collection.find(eq("tags", asList("red", "blank")));
         //End Example 21
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
@@ -304,7 +304,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         assertEquals(4, findIterable.into(new ArrayList<>()).size());
 
         //Start Example 26
-        findIterable = collection.find(elemMatch("dim_cm", Document.parse("{ $gt: 22, $lt: 30 }")));
+        findIterable = collection.find(elemMatch("dim_cm", OldDocument.parse("{ $gt: 22, $lt: 30 }")));
         //End Example 26
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
@@ -327,24 +327,24 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         //Start Example 29
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', instock: [ { warehouse: 'A', qty: 5 }, { warehouse: 'C', qty: 15 } ] }"),
-                Document.parse("{ item: 'notebook', instock: [ { warehouse: 'C', qty: 5 } ] }"),
-                Document.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 15 } ] }"),
-                Document.parse("{ item: 'planner', instock: [ { warehouse: 'A', qty: 40 }, { warehouse: 'B', qty: 5 } ] }"),
-                Document.parse("{ item: 'postcard', instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }")
+                OldDocument.parse("{ item: 'journal', instock: [ { warehouse: 'A', qty: 5 }, { warehouse: 'C', qty: 15 } ] }"),
+                OldDocument.parse("{ item: 'notebook', instock: [ { warehouse: 'C', qty: 5 } ] }"),
+                OldDocument.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 15 } ] }"),
+                OldDocument.parse("{ item: 'planner', instock: [ { warehouse: 'A', qty: 40 }, { warehouse: 'B', qty: 5 } ] }"),
+                OldDocument.parse("{ item: 'postcard', instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }")
         ));
         //End Example 29
 
         assertEquals(5, collection.countDocuments());
 
         //Start Example 30
-        FindIterable<Document> findIterable = collection.find(eq("instock", Document.parse("{ warehouse: 'A', qty: 5 }")));
+        FindIterable<OldDocument> findIterable = collection.find(eq("instock", OldDocument.parse("{ warehouse: 'A', qty: 5 }")));
         //End Example 30
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
 
         //Start Example 31
-        findIterable = collection.find(eq("instock", Document.parse("{ qty: 5, warehouse: 'A' }")));
+        findIterable = collection.find(eq("instock", OldDocument.parse("{ qty: 5, warehouse: 'A' }")));
         //End Example 31
 
         assertEquals(0, findIterable.into(new ArrayList<>()).size());
@@ -362,13 +362,13 @@ public final class DocumentationSamples extends DatabaseTestCase {
         assertEquals(5, findIterable.into(new ArrayList<>()).size());
 
         //Start Example 34
-        findIterable = collection.find(elemMatch("instock", Document.parse("{ qty: 5, warehouse: 'A' }")));
+        findIterable = collection.find(elemMatch("instock", OldDocument.parse("{ qty: 5, warehouse: 'A' }")));
         //End Example 34
 
         assertEquals(1, findIterable.into(new ArrayList<>()).size());
 
         //Start Example 35
-        findIterable = collection.find(elemMatch("instock", Document.parse("{ qty: { $gt: 10, $lte: 20 } }")));
+        findIterable = collection.find(elemMatch("instock", OldDocument.parse("{ qty: { $gt: 10, $lte: 20 } }")));
         //End Example 35
 
         assertEquals(3, findIterable.into(new ArrayList<>()).size());
@@ -391,15 +391,15 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         //Start Example 38
         collection.insertMany(asList(
-                Document.parse("{'_id': 1, 'item': null}"),
-                Document.parse("{'_id': 2}")
+                OldDocument.parse("{'_id': 1, 'item': null}"),
+                OldDocument.parse("{'_id': 2}")
         ));
         //End Example 38
 
         assertEquals(2, collection.countDocuments());
 
         //Start Example 39
-        FindIterable<Document> findIterable = collection.find(eq("item", null));
+        FindIterable<OldDocument> findIterable = collection.find(eq("item", null));
         //End Example 39
 
         assertEquals(2, findIterable.into(new ArrayList<>()).size());
@@ -423,11 +423,11 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         //Start Example 42
         collection.insertMany(asList(
-            Document.parse("{ item: 'journal', status: 'A', size: { h: 14, w: 21, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 5 }]}"),
-            Document.parse("{ item: 'notebook', status: 'A',  size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'C', qty: 5}]}"),
-            Document.parse("{ item: 'paper', status: 'D', size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'A', qty: 60 }]}"),
-            Document.parse("{ item: 'planner', status: 'D', size: { h: 22.85, w: 30, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 40}]}"),
-            Document.parse("{ item: 'postcard', status: 'A', size: { h: 10, w: 15.25, uom: 'cm' }, "
+            OldDocument.parse("{ item: 'journal', status: 'A', size: { h: 14, w: 21, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 5 }]}"),
+            OldDocument.parse("{ item: 'notebook', status: 'A',  size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'C', qty: 5}]}"),
+            OldDocument.parse("{ item: 'paper', status: 'D', size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'A', qty: 60 }]}"),
+            OldDocument.parse("{ item: 'planner', status: 'D', size: { h: 22.85, w: 30, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 40}]}"),
+            OldDocument.parse("{ item: 'postcard', status: 'A', size: { h: 10, w: 15.25, uom: 'cm' }, "
                     + "instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }")
         ));
         //End Example 42
@@ -435,7 +435,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         assertEquals(5, collection.countDocuments());
 
         //Start Example 43
-        FindIterable<Document> findIterable = collection.find(eq("status", "A"));
+        FindIterable<OldDocument> findIterable = collection.find(eq("status", "A"));
         //End Example 43
 
         assertEquals(3, findIterable.into(new ArrayList<>()).size());
@@ -465,7 +465,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         findIterable.forEach(document -> {
             assertEquals(new HashSet<>(asList("_id", "item", "status", "size")), document.keySet());
-            assertEquals(new HashSet<>(singletonList("uom")), document.get("size", Document.class).keySet());
+            assertEquals(new HashSet<>(singletonList("uom")), document.get("size", OldDocument.class).keySet());
         });
 
         //Start Example 48
@@ -474,7 +474,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         findIterable.forEach(document -> {
             assertEquals(new HashSet<>(asList("_id", "item", "instock", "status", "size")), document.keySet());
-            assertEquals(new HashSet<>(asList("h", "w")), document.get("size", Document.class).keySet());
+            assertEquals(new HashSet<>(asList("h", "w")), document.get("size", OldDocument.class).keySet());
         });
 
         //Start Example 49
@@ -484,8 +484,8 @@ public final class DocumentationSamples extends DatabaseTestCase {
         findIterable.forEach(document -> {
             assertEquals(new HashSet<>(asList("_id", "item", "instock", "status")), document.keySet());
 
-            List<Document> instock = (List<Document>) document.get("instock");
-            for (Document stockDocument : instock) {
+            List<OldDocument> instock = (List<OldDocument>) document.get("instock");
+            for (OldDocument stockDocument : instock) {
                 assertEquals(new HashSet<>(singletonList("qty")), stockDocument.keySet());
             }
         });
@@ -498,7 +498,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         findIterable.forEach(document -> {
             assertEquals(new HashSet<>(asList("_id", "item", "instock", "status")), document.keySet());
 
-            List<Document> instock = (List<Document>) document.get("instock");
+            List<OldDocument> instock = (List<OldDocument>) document.get("instock");
             assertEquals(1, instock.size());
         });
     }
@@ -506,10 +506,10 @@ public final class DocumentationSamples extends DatabaseTestCase {
     @Test
     public void testAggregate() {
 
-        MongoCollection<Document> salesCollection = database.getCollection("sales");
+        MongoCollection<OldDocument> salesCollection = database.getCollection("sales");
 
         // Start Aggregation Example 1
-        AggregateIterable<Document> aggregateIterable = salesCollection.aggregate(asList(
+        AggregateIterable<OldDocument> aggregateIterable = salesCollection.aggregate(asList(
                 match(eq("items.fruit", "banana")),
                 sort(ascending("date"))
         ));
@@ -521,7 +521,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         aggregateIterable = salesCollection.aggregate(asList(
                 unwind("$items"),
                 match(eq("items.fruit", "banana")),
-                group(new Document("day", new Document("$dayOfWeek", "$date")),
+                group(new OldDocument("day", new OldDocument("$dayOfWeek", "$date")),
                         sum("count", "$items.quantity")),
                 project(fields(
                         computed("dayOfWeek", "$_id.day"),
@@ -535,37 +535,37 @@ public final class DocumentationSamples extends DatabaseTestCase {
         // Start Aggregation Example 3
         aggregateIterable = salesCollection.aggregate(asList(
                 unwind("$items"),
-                group(new Document("day", new Document("$dayOfWeek", "$date")),
+                group(new OldDocument("day", new OldDocument("$dayOfWeek", "$date")),
                         sum("items_old", "$items.quantity"),
-                        sum("revenue", new Document("$multiply", asList("$items.quantity", "$items.price")))),
+                        sum("revenue", new OldDocument("$multiply", asList("$items.quantity", "$items.price")))),
                 project(fields(
                         computed("day", "$_id.day"),
                         include("revenue", "items_sold"),
                         computed("discount",
-                                new Document("$cond",
-                                        new Document("if", new Document("$lte", Arrays.<Object>asList("$revenue", 250)))
+                                new OldDocument("$cond",
+                                        new OldDocument("if", new OldDocument("$lte", Arrays.<Object>asList("$revenue", 250)))
                                                 .append("then", 25)
                                                 .append("else", 0)))))));
         // End Aggregation Example 3
 
         aggregateIterable.into(new ArrayList<>());
 
-        MongoCollection<Document> airAlliancesCollection = database.getCollection("air_alliances");
+        MongoCollection<OldDocument> airAlliancesCollection = database.getCollection("air_alliances");
 
         // Start Aggregation Example 4
         aggregateIterable = airAlliancesCollection.aggregate(asList(
                 lookup("air_airlines",
                         singletonList(new Variable<>("constituents", "$airlines")),
-                        singletonList(match(expr(new Document("$in", asList("$name", "$$constituents"))))),
+                        singletonList(match(expr(new OldDocument("$in", asList("$name", "$$constituents"))))),
                         "airlines"),
                 project(fields(
                         excludeId(),
                         include("name"),
                         computed("airlines",
-                                new Document("$filter",
-                                        new Document("input", "$airlines")
+                                new OldDocument("$filter",
+                                        new OldDocument("input", "$airlines")
                                                 .append("as", "airline")
-                                                .append("cond", new Document("$eq", asList("$$airline.country", "Canada")))))))));
+                                                .append("cond", new OldDocument("$eq", asList("$$airline.country", "Canada")))))))));
 
         // End Aggregation Example 4
 
@@ -576,16 +576,16 @@ public final class DocumentationSamples extends DatabaseTestCase {
     public void testUpdates() {
         //Start Example 51
         collection.insertMany(asList(
-                Document.parse("{ item: 'canvas', qty: 100, size: { h: 28, w: 35.5, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'mat', qty: 85, size: { h: 27.9, w: 35.5, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'mousepad', qty: 25, size: { h: 19, w: 22.85, uom: 'cm' }, status: 'P' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'P' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'sketchbook', qty: 80, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'sketch pad', qty: 95, size: { h: 22.85, w: 30.5, uom: 'cm' }, status: 'A' }")
+                OldDocument.parse("{ item: 'canvas', qty: 100, size: { h: 28, w: 35.5, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'mat', qty: 85, size: { h: 27.9, w: 35.5, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'mousepad', qty: 25, size: { h: 19, w: 22.85, uom: 'cm' }, status: 'P' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'P' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'sketchbook', qty: 80, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'sketch pad', qty: 95, size: { h: 22.85, w: 30.5, uom: 'cm' }, status: 'A' }")
         ));
         //End Example 51
 
@@ -597,7 +597,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         //End Example 52
 
         collection.find(eq("item", "paper")).forEach(document -> {
-            assertEquals("cm", document.get("size", Document.class).getString("uom"));
+            assertEquals("cm", document.get("size", OldDocument.class).getString("uom"));
             assertEquals("P", document.getString("status"));
             assertTrue(document.containsKey("lastModified"));
         });
@@ -609,17 +609,17 @@ public final class DocumentationSamples extends DatabaseTestCase {
         //End Example 53
 
         collection.find(lt("qty", 50)).forEach(document -> {
-            assertEquals("in", document.get("size", Document.class).getString("uom"));
+            assertEquals("in", document.get("size", OldDocument.class).getString("uom"));
             assertEquals("P", document.getString("status"));
             assertTrue(document.containsKey("lastModified"));
         });
 
         //Start Example 54
         collection.replaceOne(eq("item", "paper"),
-                Document.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"));
+                OldDocument.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"));
         //End Example 54
 
-        collection.find(eq("item", "paper")).projection(excludeId()).forEach(document -> assertEquals(Document.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"),
+        collection.find(eq("item", "paper")).projection(excludeId()).forEach(document -> assertEquals(OldDocument.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"),
                 document));
 
     }
@@ -629,11 +629,11 @@ public final class DocumentationSamples extends DatabaseTestCase {
 
         //Start Example 55
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }")
         ));
         //End Example 55
 
@@ -652,7 +652,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         assertEquals(1, collection.countDocuments());
 
         //Start Example 56
-        collection.deleteMany(new Document());
+        collection.deleteMany(new OldDocument());
         //End Example 56
 
         assertEquals(0, collection.countDocuments());
@@ -662,25 +662,25 @@ public final class DocumentationSamples extends DatabaseTestCase {
     public void testWatch() throws InterruptedException {
         assumeTrue(isDiscoverableReplicaSet());
 
-        MongoCollection<Document> inventory = collection;
+        MongoCollection<OldDocument> inventory = collection;
         AtomicBoolean stop = new AtomicBoolean(false);
 
         Thread thread = new Thread(() -> {
             while (!stop.get()) {
-                collection.insertMany(asList(new Document("username", "alice"), new Document()));
+                collection.insertMany(asList(new OldDocument("username", "alice"), new OldDocument()));
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
                     // ignore
                 }
-                collection.deleteOne(new Document("username", "alice"));
+                collection.deleteOne(new OldDocument("username", "alice"));
             }
         });
         thread.start();
 
         // Start Changestream Example 1
-        MongoCursor<ChangeStreamDocument<Document>> cursor = inventory.watch().iterator();
-        ChangeStreamDocument<Document> next = cursor.next();
+        MongoCursor<ChangeStreamDocument<OldDocument>> cursor = inventory.watch().iterator();
+        ChangeStreamDocument<OldDocument> next = cursor.next();
         // End Changestream Example 1
 
         cursor.close();
@@ -701,7 +701,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
         cursor.close();
 
         // Start Changestream Example 4
-        List<Bson> pipeline = asList(match(Document.parse("{'fullDocument.username': 'alice'}")),
+        List<Bson> pipeline = asList(match(OldDocument.parse("{'fullDocument.username': 'alice'}")),
                 addFields(new Field<>("newField", "this is an added field!")));
         cursor = inventory.watch(pipeline).iterator();
         next = cursor.next();
@@ -716,7 +716,7 @@ public final class DocumentationSamples extends DatabaseTestCase {
     @Test
     public void testRunCommand() {
         // Start runCommand Example 1
-        database.runCommand(new Document("buildInfo", 1));
+        database.runCommand(new OldDocument("buildInfo", 1));
         // End runCommand Example 1
     }
 

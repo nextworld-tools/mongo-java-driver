@@ -19,7 +19,7 @@ package reactivestreams.primer;
 
 // @import: start
 import com.mongodb.client.result.UpdateResult;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintSubscriber;
@@ -31,9 +31,9 @@ public class UpdatePrimer extends PrimerTestCase {
     public void updateTopLevelFields() {
         // @begin: update-top-level-fields
         ObservableSubscriber<UpdateResult> updateSubscriber = new PrintSubscriber<>("Update complete: %s");
-        db.getCollection("restaurants").updateOne(new Document("name", "Juni"),
-                new Document("$set", new Document("cuisine", "American (New)"))
-                        .append("$currentDate", new Document("lastModified", true)))
+        db.getCollection("restaurants").updateOne(new OldDocument("name", "Juni"),
+                new OldDocument("$set", new OldDocument("cuisine", "American (New)"))
+                        .append("$currentDate", new OldDocument("lastModified", true)))
                 .subscribe(updateSubscriber);
         updateSubscriber.await();
 
@@ -50,8 +50,8 @@ public class UpdatePrimer extends PrimerTestCase {
     public void updateEmbeddedField() {
         // @begin: update-top-level-fields
         ObservableSubscriber<UpdateResult> updateSubscriber = new PrintSubscriber<>("Update complete: %s");
-        db.getCollection("restaurants").updateOne(new Document("restaurant_id", "41156888"),
-                new Document("$set", new Document("address.street", "East 31st Street")))
+        db.getCollection("restaurants").updateOne(new OldDocument("restaurant_id", "41156888"),
+                new OldDocument("$set", new OldDocument("address.street", "East 31st Street")))
                 .subscribe(updateSubscriber);
         updateSubscriber.await();
 
@@ -70,9 +70,9 @@ public class UpdatePrimer extends PrimerTestCase {
 
         // @begin: update-multiple-documents
         ObservableSubscriber<UpdateResult> updateSubscriber = new PrintSubscriber<>("Update complete: %s");
-        db.getCollection("restaurants").updateMany(new Document("address.zipcode", "10016").append("cuisine", "Other"),
-                new Document("$set", new Document("cuisine", "Category To Be Determined"))
-                        .append("$currentDate", new Document("lastModified", true)))
+        db.getCollection("restaurants").updateMany(new OldDocument("address.zipcode", "10016").append("cuisine", "Other"),
+                new OldDocument("$set", new OldDocument("cuisine", "Category To Be Determined"))
+                        .append("$currentDate", new OldDocument("lastModified", true)))
                 .subscribe(updateSubscriber);
         updateSubscriber.await();
 

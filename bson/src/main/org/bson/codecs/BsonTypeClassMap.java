@@ -21,7 +21,7 @@ import org.bson.BsonRegularExpression;
 import org.bson.BsonTimestamp;
 import org.bson.BsonType;
 import org.bson.BsonUndefined;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Binary;
 import org.bson.types.Code;
 import org.bson.types.CodeWithScope;
@@ -111,7 +111,7 @@ public class BsonTypeClassMap {
         map.put(BsonType.BOOLEAN, Boolean.class);
         map.put(BsonType.DATE_TIME, Date.class);
         map.put(BsonType.DB_POINTER, BsonDbPointer.class);
-        map.put(BsonType.DOCUMENT, Document.class);
+        map.put(BsonType.DOCUMENT, OldDocument.class);
         map.put(BsonType.DOUBLE, Double.class);
         map.put(BsonType.INT32, Integer.class);
         map.put(BsonType.INT64, Long.class);

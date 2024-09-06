@@ -28,7 +28,7 @@ import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.gridfs.GridFSUploadPublisher;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Binary;
 import org.bson.types.ObjectId;
 import org.reactivestreams.Publisher;
@@ -54,28 +54,28 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Void> {
 
-    private static final String TIMEOUT_ERROR_MESSAGE = "Saving chunks exceeded the timeout limit.";
-    private static final Document PROJECTION = new Document("_id", 1);
-    private static final Document FILES_INDEX = new Document("filename", 1).append("uploadDate", 1);
-    private static final Document CHUNKS_INDEX = new Document("files_id", 1).append("n", 1);
-    private final ClientSession clientSession;
-    private final MongoCollection<GridFSFile> filesCollection;
-    private final MongoCollection<Document> chunksCollection;
-    private final BsonValue fileId;
+    private static final String                       TIMEOUT_ERROR_MESSAGE = "Saving chunks exceeded the timeout limit.";
+    private static final OldDocument                  PROJECTION            = new OldDocument("_id", 1);
+    private static final OldDocument                  FILES_INDEX           = new OldDocument("filename", 1).append("uploadDate", 1);
+    private static final OldDocument                  CHUNKS_INDEX          = new OldDocument("files_id", 1).append("n", 1);
+    private final        ClientSession                clientSession;
+    private final        MongoCollection<GridFSFile>  filesCollection;
+    private final        MongoCollection<OldDocument> chunksCollection;
+    private final        BsonValue                    fileId;
     private final String filename;
-    private final int chunkSizeBytes;
-    private final Document metadata;
-    private final Publisher<ByteBuffer> source;
+    private final        int                          chunkSizeBytes;
+    private final        OldDocument                  metadata;
+    private final        Publisher<ByteBuffer>        source;
     @Nullable
     private final Long timeoutMs;
 
     public GridFSUploadPublisherImpl(@Nullable final ClientSession clientSession,
                                      final MongoCollection<GridFSFile> filesCollection,
-                                     final MongoCollection<Document> chunksCollection,
+                                     final MongoCollection<OldDocument> chunksCollection,
                                      final BsonValue fileId,
                                      final String filename,
                                      final int chunkSizeBytes,
-                                     @Nullable final Document metadata,
+                                     @Nullable final OldDocument metadata,
                                      final Publisher<ByteBuffer> source) {
         this.clientSession = clientSession;
         this.filesCollection = notNull("files collection", filesCollection);
@@ -146,7 +146,7 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
     }
 
     private Mono<Void> createCheckAndCreateIndexesMono(@Nullable final Timeout timeout) {
-        return collectionWithTimeoutDeferred(filesCollection.withDocumentClass(Document.class).withReadPreference(primary()), timeout)
+        return collectionWithTimeoutDeferred(filesCollection.withDocumentClass(OldDocument.class).withReadPreference(primary()), timeout)
                 .map(collection -> clientSession != null ? collection.find(clientSession) : collection.find())
                 .flatMap(findPublisher -> Mono.from(findPublisher.projection(PROJECTION).first()))
                 .switchIfEmpty(Mono.defer(() ->
@@ -157,7 +157,7 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
                 .then();
     }
 
-    private <T> Mono<Boolean> hasIndex(final MongoCollection<T> collection, final Document index, @Nullable final Timeout timeout) {
+    private <T> Mono<Boolean> hasIndex(final MongoCollection<T> collection, final OldDocument index, @Nullable final Timeout timeout) {
         return collectionWithTimeoutDeferred(collection, timeout)
                 .map(wrappedCollection -> {
                     if (clientSession != null) {
@@ -169,8 +169,8 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
                 .collectList()
                 .map(indexes -> {
                     boolean hasIndex = false;
-                    for (Document result : indexes) {
-                        Document indexDoc = result.get("key", new Document());
+                    for (OldDocument result : indexes) {
+                        OldDocument indexDoc = result.get("key", new OldDocument());
                         for (final Map.Entry<String, Object> entry : indexDoc.entrySet()) {
                             if (entry.getValue() instanceof Number) {
                                 entry.setValue(((Number) entry.getValue()).intValue());
@@ -185,7 +185,7 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
                 });
     }
 
-    private <T> Mono<Void> checkAndCreateIndex(final MongoCollection<T> collection, final Document index, @Nullable final Timeout timeout) {
+    private <T> Mono<Void> checkAndCreateIndex(final MongoCollection<T> collection, final OldDocument index, @Nullable final Timeout timeout) {
         return hasIndex(collection, index, timeout).flatMap(hasIndex -> {
             if (!hasIndex) {
                 return createIndexMono(collection, index, timeout).flatMap(s -> Mono.empty());
@@ -195,7 +195,7 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
         });
     }
 
-    private <T> Mono<String> createIndexMono(final MongoCollection<T> collection, final Document index, @Nullable final Timeout timeout) {
+    private <T> Mono<String> createIndexMono(final MongoCollection<T> collection, final OldDocument index, @Nullable final Timeout timeout) {
         return collectionWithTimeoutDeferred(collection, timeout).flatMap(wrappedCollection ->
              Mono.from(clientSession == null ? wrappedCollection.createIndex(index) : wrappedCollection.createIndex(clientSession, index))
         );
@@ -221,7 +221,7 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
                     }
                     Binary data = new Binary(byteArray);
 
-                    Document chunkDocument = new Document("files_id", fileId)
+                    OldDocument chunkDocument = new OldDocument("files_id", fileId)
                             .append("n", index.intValue())
                             .append("data", data);
 
@@ -270,14 +270,14 @@ public final class GridFSUploadPublisherImpl implements GridFSUploadPublisher<Vo
     }
 
     private Mono<DeleteResult> createCancellationMono(final AtomicBoolean terminated, @Nullable final Timeout timeout) {
-        Mono<MongoCollection<Document>> chunksCollectionMono = collectionWithTimeoutDeferred(chunksCollection, timeout);
+        Mono<MongoCollection<OldDocument>> chunksCollectionMono = collectionWithTimeoutDeferred(chunksCollection, timeout);
         if (terminated.compareAndSet(false, true)) {
             if (clientSession != null) {
                 return chunksCollectionMono.flatMap(collection -> Mono.from(collection
-                        .deleteMany(clientSession, new Document("files_id", fileId))));
+                        .deleteMany(clientSession, new OldDocument("files_id", fileId))));
             } else {
                 return chunksCollectionMono.flatMap(collection -> Mono.from(collection
-                        .deleteMany(new Document("files_id", fileId))));
+                        .deleteMany(new OldDocument("files_id", fileId))));
             }
         } else {
             return Mono.empty();

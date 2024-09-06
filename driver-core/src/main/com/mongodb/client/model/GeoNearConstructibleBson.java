@@ -19,7 +19,7 @@ package com.mongodb.client.model;
 import com.mongodb.annotations.Immutable;
 import com.mongodb.internal.client.model.AbstractConstructibleBson;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 final class GeoNearConstructibleBson extends AbstractConstructibleBson<GeoNearConstructibleBson> implements GeoNearOptions {
@@ -32,7 +32,7 @@ final class GeoNearConstructibleBson extends AbstractConstructibleBson<GeoNearCo
         super(base);
     }
 
-    private GeoNearConstructibleBson(final Bson base, final Document appended) {
+    private GeoNearConstructibleBson(final Bson base, final OldDocument appended) {
         super(base, appended);
     }
 
@@ -66,7 +66,7 @@ final class GeoNearConstructibleBson extends AbstractConstructibleBson<GeoNearCo
     }
 
     @Override
-    public GeoNearOptions query(final Document query) {
+    public GeoNearOptions query(final OldDocument query) {
         return setOption("query", query);
     }
 
@@ -76,7 +76,7 @@ final class GeoNearConstructibleBson extends AbstractConstructibleBson<GeoNearCo
     }
 
     @Override
-    protected GeoNearConstructibleBson newSelf(final Bson base, final Document appended) {
+    protected GeoNearConstructibleBson newSelf(final Bson base, final OldDocument appended) {
         return new GeoNearConstructibleBson(base, appended);
     }
 }

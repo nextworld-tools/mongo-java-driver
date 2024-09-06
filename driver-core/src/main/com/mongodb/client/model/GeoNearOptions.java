@@ -16,7 +16,7 @@
 
 package com.mongodb.client.model;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 /**
@@ -90,7 +90,7 @@ public interface GeoNearOptions extends Bson {
      * @return a new {@link GeoNearOptions} with the provided option set
      * @since 4.8
      */
-    GeoNearOptions query(Document query);
+    GeoNearOptions query(OldDocument query);
 
     /**
      * Determines how MongoDB calculates the distance between two points.

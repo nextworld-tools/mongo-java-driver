@@ -21,7 +21,7 @@ import com.mongodb.MongoServerException
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.WriteConcern
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
@@ -41,7 +41,7 @@ class RenameCollectionOperationSpecification extends OperationFunctionalSpecific
 
     def 'should return rename a collection'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
         assert collectionNameExists(getCollectionName())
         def operation = new RenameCollectionOperation(getNamespace(),
                 new MongoNamespace(getDatabaseName(), 'newCollection'), null)
@@ -59,7 +59,7 @@ class RenameCollectionOperationSpecification extends OperationFunctionalSpecific
 
     def 'should throw if not drop and collection exists'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
         assert collectionNameExists(getCollectionName())
         def operation = new RenameCollectionOperation(getNamespace(), getNamespace(), null)
 
@@ -77,7 +77,7 @@ class RenameCollectionOperationSpecification extends OperationFunctionalSpecific
     @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
         assert collectionNameExists(getCollectionName())
         def operation = new RenameCollectionOperation(getNamespace(),
                 new MongoNamespace(getDatabaseName(), 'newCollection'), new WriteConcern(5))

@@ -153,9 +153,9 @@ class MongoDatabaseSpec extends BaseSpec with MockitoSugar {
   }
 
   it should "call the underlying listCollections()" in {
-    when(wrapped.listCollections()).thenReturn(mock[ListCollectionsPublisher[org.bson.Document]])
+    when(wrapped.listCollections()).thenReturn(mock[ListCollectionsPublisher[org.bson.OldDocument]])
     when(wrapped.listCollections(classOf[BsonDocument])).thenReturn(mock[ListCollectionsPublisher[BsonDocument]])
-    when(wrapped.listCollections(clientSession)).thenReturn(mock[ListCollectionsPublisher[org.bson.Document]])
+    when(wrapped.listCollections(clientSession)).thenReturn(mock[ListCollectionsPublisher[org.bson.OldDocument]])
     when(wrapped.listCollections(clientSession, classOf[BsonDocument]))
       .thenReturn(mock[ListCollectionsPublisher[BsonDocument]])
 

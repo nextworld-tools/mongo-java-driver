@@ -33,7 +33,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonTimestamp;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,8 +74,8 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 public class CommandBatchCursorFunctionalTest extends OperationTest {
 
     private ConnectionSource connectionSource;
-    private Connection connection;
-    private CommandBatchCursor<Document> cursor;
+    private Connection                      connection;
+    private CommandBatchCursor<OldDocument> cursor;
 
     @BeforeEach
     void setup() {
@@ -188,7 +188,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
     void shouldBlockWaitingForNextBatchOnATailableCursor(final boolean awaitData, final int maxTimeMS) {
 
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions().capped(true).sizeInBytes(1000));
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 1).append("ts", new BsonTimestamp(5, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 1).append("ts", new BsonTimestamp(5, 0)));
 
         BsonDocument commandResult = executeFindCommand(new BsonDocument("ts",
                 new BsonDocument("$gte", new BsonTimestamp(5, 0))), 0, 2, true, awaitData);
@@ -200,7 +200,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
 
         new Thread(() -> {
             sleep(100);
-            getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 2).append("ts", new BsonTimestamp(6, 0)));
+            getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 2).append("ts", new BsonTimestamp(6, 0)));
         }).start();
 
         assertTrue(cursor.hasNext());
@@ -211,21 +211,21 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
     @DisplayName("test tryNext with tailable")
     void testTryNextWithTailable() {
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions().capped(true).sizeInBytes(1000));
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 1).append("ts", new BsonTimestamp(5, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 1).append("ts", new BsonTimestamp(5, 0)));
 
         BsonDocument commandResult = executeFindCommand(new BsonDocument("ts",
                 new BsonDocument("$gte", new BsonTimestamp(5, 0))), 0, 2, true, true);
         cursor = new CommandBatchCursor<>(TimeoutMode.CURSOR_LIFETIME, commandResult, 2, 0, DOCUMENT_DECODER,
                                           null, connectionSource, connection);
 
-        List<Document> nextBatch = cursor.tryNext();
+        List<OldDocument> nextBatch = cursor.tryNext();
         assertNotNull(nextBatch);
         assertEquals(1, nextBatch.get(0).get("_id"));
 
         nextBatch = cursor.tryNext();
         assertNull(nextBatch);
 
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 2).append("ts", new BsonTimestamp(6, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 2).append("ts", new BsonTimestamp(6, 0)));
 
         nextBatch = cursor.tryNext();
         assertNotNull(nextBatch);
@@ -237,7 +237,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
     void hasNextShouldThrowWhenCursorIsClosedInAnotherThread() throws InterruptedException {
 
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions().capped(true).sizeInBytes(1000));
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 1).append("ts", new BsonTimestamp(5, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 1).append("ts", new BsonTimestamp(5, 0)));
 
         BsonDocument commandResult = executeFindCommand(new BsonDocument("ts",
                 new BsonDocument("$gte", new BsonTimestamp(5, 0))), 0, 2, true, true);
@@ -263,7 +263,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
     void testMaxTimeMS() {
         assumeFalse(isSharded());
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions().capped(true).sizeInBytes(1000));
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 1).append("ts", new BsonTimestamp(5, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 1).append("ts", new BsonTimestamp(5, 0)));
 
         long maxTimeMS = 500;
         BsonDocument commandResult = executeFindCommand(new BsonDocument("ts",
@@ -271,7 +271,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
         cursor = new CommandBatchCursor<>(TimeoutMode.CURSOR_LIFETIME, commandResult, 2, maxTimeMS, DOCUMENT_DECODER,
                                           null, connectionSource, connection);
 
-        List<Document> nextBatch = cursor.tryNext();
+        List<OldDocument> nextBatch = cursor.tryNext();
         assertNotNull(nextBatch);
 
         long startTime = System.currentTimeMillis();
@@ -288,7 +288,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
     @DisplayName("test tailable interrupt")
     void testTailableInterrupt() throws InterruptedException {
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions().capped(true).sizeInBytes(1000));
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 1).append("ts", new BsonTimestamp(5, 0)));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 1).append("ts", new BsonTimestamp(5, 0)));
 
         BsonDocument commandResult = executeFindCommand(new BsonDocument("ts",
                 new BsonDocument("$gte", new BsonTimestamp(5, 0))), 0, 2, true, true);
@@ -313,7 +313,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
         thread.start();
         sleep(1000);
         thread.interrupt();
-        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", 2));
+        getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", 2));
         latch.await();
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));
@@ -400,7 +400,7 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
                 .collect(Collectors.joining());
 
         IntStream.range(11, 1000).forEach(i ->
-                getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new Document("_id", i).append("s", bigString))
+                getCollectionHelper().insertDocuments(DOCUMENT_DECODER, new OldDocument("_id", i).append("s", bigString))
         );
 
         BsonDocument commandResult = executeFindCommand(300, 0);
@@ -538,8 +538,8 @@ public class CommandBatchCursorFunctionalTest extends OperationTest {
         return results;
     }
 
-    private List<Document> cursorFlatten() {
-        List<Document> results = new ArrayList<>();
+    private List<OldDocument> cursorFlatten() {
+        List<OldDocument> results = new ArrayList<>();
         while (cursor.hasNext()) {
             results.addAll(cursor.next());
         }

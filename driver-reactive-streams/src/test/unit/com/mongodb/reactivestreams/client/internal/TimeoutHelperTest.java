@@ -20,7 +20,7 @@ import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.internal.time.Timeout;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -51,12 +51,12 @@ class TimeoutHelperTest {
     @Test
     void shouldNotSetRemainingTimeoutOnCollectionWhenTimeoutIsNull() {
         //given
-        MongoCollection<Document> collection = mock(MongoCollection.class);
+        MongoCollection<OldDocument> collection = mock(MongoCollection.class);
 
         //when
-        MongoCollection<Document> result = collectionWithTimeout(collection, null);
-        MongoCollection<Document> monoResult = collectionWithTimeoutMono(collection, null).block();
-        MongoCollection<Document> monoResultDeferred = collectionWithTimeoutDeferred(collection, null).block();
+        MongoCollection<OldDocument> result = collectionWithTimeout(collection, null);
+        MongoCollection<OldDocument> monoResult = collectionWithTimeoutMono(collection, null).block();
+        MongoCollection<OldDocument> monoResultDeferred = collectionWithTimeoutDeferred(collection, null).block();
 
         //then
         assertEquals(collection, result);
@@ -81,15 +81,15 @@ class TimeoutHelperTest {
     @Test
     void shouldNotSetRemainingTimeoutOnCollectionWhenTimeoutIsInfinite() {
         //given
-        MongoCollection<Document> collectionWithTimeout = mock(MongoCollection.class);
-        MongoCollection<Document> collection = mock(MongoCollection.class, mongoCollection -> {
+        MongoCollection<OldDocument> collectionWithTimeout = mock(MongoCollection.class);
+        MongoCollection<OldDocument> collection = mock(MongoCollection.class, mongoCollection -> {
             when(mongoCollection.withTimeout(anyLong(), eq(TimeUnit.MILLISECONDS))).thenReturn(collectionWithTimeout);
         });
 
         //when
-        MongoCollection<Document> result = collectionWithTimeout(collection, Timeout.infinite());
-        MongoCollection<Document> monoResult = collectionWithTimeoutMono(collection, Timeout.infinite()).block();
-        MongoCollection<Document> monoResultDeferred = collectionWithTimeoutDeferred(collection, Timeout.infinite()).block();
+        MongoCollection<OldDocument> result = collectionWithTimeout(collection, Timeout.infinite());
+        MongoCollection<OldDocument> monoResult = collectionWithTimeoutMono(collection, Timeout.infinite()).block();
+        MongoCollection<OldDocument> monoResultDeferred = collectionWithTimeoutDeferred(collection, Timeout.infinite()).block();
 
         //then
         assertEquals(collectionWithTimeout, result);
@@ -121,16 +121,16 @@ class TimeoutHelperTest {
     @Test
     void shouldSetRemainingTimeoutOnCollectionWhenTimeout() {
         //given
-        MongoCollection<Document> collectionWithTimeout = mock(MongoCollection.class);
-        MongoCollection<Document> collection = mock(MongoCollection.class, mongoCollection -> {
+        MongoCollection<OldDocument> collectionWithTimeout = mock(MongoCollection.class);
+        MongoCollection<OldDocument> collection = mock(MongoCollection.class, mongoCollection -> {
             when(mongoCollection.withTimeout(anyLong(), eq(TimeUnit.MILLISECONDS))).thenReturn(collectionWithTimeout);
         });
         Timeout timeout = Timeout.expiresIn(1, TimeUnit.DAYS, ZERO_DURATION_MEANS_EXPIRED);
 
         //when
-        MongoCollection<Document> result = collectionWithTimeout(collection, timeout);
-        MongoCollection<Document> monoResult = collectionWithTimeoutMono(collection, timeout).block();
-        MongoCollection<Document> monoResultDeferred = collectionWithTimeoutDeferred(collection, timeout).block();
+        MongoCollection<OldDocument> result = collectionWithTimeout(collection, timeout);
+        MongoCollection<OldDocument> monoResult = collectionWithTimeoutMono(collection, timeout).block();
+        MongoCollection<OldDocument> monoResultDeferred = collectionWithTimeoutDeferred(collection, timeout).block();
 
         //then
         verify(collection, times(3))
@@ -163,7 +163,7 @@ class TimeoutHelperTest {
     @Test
     void shouldThrowErrorWhenTimeoutHasExpiredOnCollection() {
         //given
-        MongoCollection<Document> collection = mock(MongoCollection.class);
+        MongoCollection<OldDocument> collection = mock(MongoCollection.class);
         Timeout timeout = Timeout.expiresIn(1, TimeUnit.MICROSECONDS, ZERO_DURATION_MEANS_EXPIRED);
 
         //when
@@ -204,7 +204,7 @@ class TimeoutHelperTest {
     @Test
     void shouldThrowErrorWhenTimeoutHasExpiredWithZeroRemainingOnCollection() {
         //given
-        MongoCollection<Document> collection = mock(MongoCollection.class);
+        MongoCollection<OldDocument> collection = mock(MongoCollection.class);
         Timeout timeout = Timeout.expiresIn(0, TimeUnit.NANOSECONDS, ZERO_DURATION_MEANS_EXPIRED);
 
         //when

@@ -34,7 +34,7 @@
 package reactivestreams.helpers;
 
 import com.mongodb.MongoTimeoutException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -232,7 +232,7 @@ public final class SubscriberHelpers {
     /**
      * A Subscriber that prints the json version of each document
      */
-    public static class PrintDocumentSubscriber extends ConsumerSubscriber<Document> {
+    public static class PrintDocumentSubscriber extends ConsumerSubscriber<OldDocument> {
         /**
          * Construct a new instance
          */

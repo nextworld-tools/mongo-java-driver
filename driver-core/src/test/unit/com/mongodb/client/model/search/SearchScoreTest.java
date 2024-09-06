@@ -18,7 +18,7 @@ package com.mongodb.client.model.search;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static com.mongodb.client.model.search.SearchPath.fieldPath;
@@ -97,8 +97,8 @@ final class SearchScoreTest {
                 fieldPath("fieldName"));
     }
 
-    private static Document docExampleCustom() {
-        return new Document("boost",
-                new Document("path", fieldPath("fieldName").toValue()));
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("boost",
+                new OldDocument("path", fieldPath("fieldName").toValue()));
     }
 }

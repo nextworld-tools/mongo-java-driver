@@ -36,7 +36,7 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -178,13 +178,13 @@ class AggregateIterableImpl<TDocument, TResult> extends MongoIterableImpl<TResul
     }
 
     @Override
-    public Document explain() {
-        return executeExplain(Document.class, null);
+    public OldDocument explain() {
+        return executeExplain(OldDocument.class, null);
     }
 
     @Override
-    public Document explain(final ExplainVerbosity verbosity) {
-        return executeExplain(Document.class, notNull("verbosity", verbosity));
+    public OldDocument explain(final ExplainVerbosity verbosity) {
+        return executeExplain(OldDocument.class, notNull("verbosity", verbosity));
     }
 
     @Override

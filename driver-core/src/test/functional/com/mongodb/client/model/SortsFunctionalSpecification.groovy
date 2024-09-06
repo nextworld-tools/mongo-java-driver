@@ -17,7 +17,7 @@
 package com.mongodb.client.model
 
 import com.mongodb.OperationFunctionalSpecification
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Sorts.ascending
@@ -26,13 +26,13 @@ import static com.mongodb.client.model.Sorts.metaTextScore
 import static com.mongodb.client.model.Sorts.orderBy
 
 class SortsFunctionalSpecification extends OperationFunctionalSpecification {
-    def a = new Document('_id', 1).append('x', 1)
+    def a = new OldDocument('_id', 1).append('x', 1)
             .append('y', 'bear')
 
-    def b = new Document('_id', 2).append('x', 1)
+    def b = new OldDocument('_id', 2).append('x', 1)
             .append('y', 'albatross')
 
-    def c = new Document('_id', 3).append('x', 2)
+    def c = new OldDocument('_id', 3).append('x', 2)
             .append('y', 'cat')
 
     def setup() {
@@ -40,11 +40,11 @@ class SortsFunctionalSpecification extends OperationFunctionalSpecification {
     }
 
     def 'find'(Bson sort) {
-        getCollectionHelper().find(new Document(), sort)
+        getCollectionHelper().find(new OldDocument(), sort)
     }
 
     def 'find'(Bson sort, Bson projection) {
-        find(new Document(), sort, projection)
+        find(new OldDocument(), sort, projection)
     }
 
     def 'find'(Bson filter, Bson sort, Bson projection) {
@@ -67,11 +67,11 @@ class SortsFunctionalSpecification extends OperationFunctionalSpecification {
 
     def 'metaTextScore'() {
         given:
-        getCollectionHelper().createIndex(new Document('y', 'text'))
+        getCollectionHelper().createIndex(new OldDocument('y', 'text'))
 
         expect:
-        find(new Document('$text', new Document('$search', 'bear')), metaTextScore('score'),
-                new Document('score', new Document('$meta', 'textScore')))*.containsKey('score')
+        find(new OldDocument('$text', new OldDocument('$search', 'bear')), metaTextScore('score'),
+                new OldDocument('score', new OldDocument('$meta', 'textScore')))*.containsKey('score')
     }
 
     def 'orderBy'() {

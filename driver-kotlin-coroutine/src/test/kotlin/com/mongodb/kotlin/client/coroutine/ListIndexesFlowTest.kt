@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -39,7 +39,7 @@ class ListIndexesFlowTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: ListIndexesPublisher<Document> = mock()
+        val wrapped: ListIndexesPublisher<OldDocument> = mock()
         val flow = ListIndexesFlow(wrapped)
 
         val batchSize = 10

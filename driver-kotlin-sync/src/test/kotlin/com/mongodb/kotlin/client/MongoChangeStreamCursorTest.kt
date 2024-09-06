@@ -21,7 +21,7 @@ import com.mongodb.client.MongoChangeStreamCursor as JMongoChangeStreamCursor
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.test.assertEquals
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -46,7 +46,7 @@ class MongoChangeStreamCursorTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JMongoChangeStreamCursor<Document> = mock()
+        val wrapped: JMongoChangeStreamCursor<OldDocument> = mock()
         val cursor = MongoChangeStreamCursorImpl(wrapped)
 
         whenever(wrapped.resumeToken).doReturn(mock())

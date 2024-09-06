@@ -38,7 +38,7 @@ import org.bson.BsonDocument
 import org.bson.BsonDocumentWrapper
 import org.bson.BsonInt32
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.RawBsonDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DecoderContext
@@ -82,8 +82,8 @@ class CryptConnectionSpecification extends Specification {
         when:
 
         def response = cryptConnection.command('db',
-                new BsonDocumentWrapper(new Document('find', 'test')
-                        .append('filter', new Document('ssid', '555-55-5555')), codec),
+                new BsonDocumentWrapper(new OldDocument('find', 'test')
+                        .append('filter', new OldDocument('ssid', '555-55-5555')), codec),
                 NoOpFieldNameValidator.INSTANCE, ReadPreference.primary(), codec, operationContext)
 
         then:
@@ -113,8 +113,8 @@ class CryptConnectionSpecification extends Specification {
         def codec = new DocumentCodec()
         def bytes = new byte[2097152 - 85]
         def payload = new SplittablePayload(INSERT, [
-                new BsonDocumentWrapper(new Document('_id', 1).append('ssid', '555-55-5555').append('b', bytes), codec),
-                new BsonDocumentWrapper(new Document('_id', 2).append('ssid', '666-66-6666').append('b', bytes), codec)
+            new BsonDocumentWrapper(new OldDocument('_id', 1).append('ssid', '555-55-5555').append('b', bytes), codec),
+            new BsonDocumentWrapper(new OldDocument('_id', 2).append('ssid', '666-66-6666').append('b', bytes), codec)
         ].withIndex().collect { doc, i -> new WriteRequestWithIndex(new InsertRequest(doc), i) }, true)
         def encryptedCommand = toRaw(new BsonDocument('insert', new BsonString('test')).append('documents', new BsonArray(
                 [
@@ -132,7 +132,7 @@ class CryptConnectionSpecification extends Specification {
 
         when:
         def response = cryptConnection.command('db',
-                new BsonDocumentWrapper(new Document('insert', 'test'), codec),
+                new BsonDocumentWrapper(new OldDocument('insert', 'test'), codec),
                 NoOpFieldNameValidator.INSTANCE, ReadPreference.primary(), new BsonDocumentCodec(),
                 operationContext, true, payload, NoOpFieldNameValidator.INSTANCE,)
 
@@ -169,9 +169,9 @@ class CryptConnectionSpecification extends Specification {
         def codec = new DocumentCodec()
         def maxBatchCount = 2
         def payload = new SplittablePayload(INSERT, [
-                new BsonDocumentWrapper(new Document('_id', 1), codec),
-                new BsonDocumentWrapper(new Document('_id', 2), codec),
-                new BsonDocumentWrapper(new Document('_id', 3), codec)
+            new BsonDocumentWrapper(new OldDocument('_id', 1), codec),
+            new BsonDocumentWrapper(new OldDocument('_id', 2), codec),
+            new BsonDocumentWrapper(new OldDocument('_id', 3), codec)
         ].withIndex().collect { doc, i -> new WriteRequestWithIndex(new InsertRequest(doc), i) }, true)
         def encryptedCommand = toRaw(new BsonDocument('insert', new BsonString('test')).append('documents', new BsonArray(
                 [
@@ -189,7 +189,7 @@ class CryptConnectionSpecification extends Specification {
 
         when:
         def response = cryptConnection.command('db',
-                new BsonDocumentWrapper(new Document('insert', 'test'), codec),
+                new BsonDocumentWrapper(new OldDocument('insert', 'test'), codec),
                 NoOpFieldNameValidator.INSTANCE, ReadPreference.primary(), new BsonDocumentCodec(), operationContext, true, payload,
                 NoOpFieldNameValidator.INSTANCE)
 
@@ -224,7 +224,7 @@ class CryptConnectionSpecification extends Specification {
         new RawBsonDocument(buffer.getInternalBuffer(), 0, buffer.getSize())
     }
 
-    Document rawToDocument(RawBsonDocument document) {
+    OldDocument rawToDocument(RawBsonDocument document) {
         new DocumentCodec().decode(new BsonBinaryReader(document.getByteBuffer().asNIO()), DecoderContext.builder().build())
     }
 

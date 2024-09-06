@@ -29,7 +29,7 @@ import org.bson.BsonArray
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import spock.lang.IgnoreIf
 
@@ -143,7 +143,7 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
 
     private final static CODEC = new BsonDocumentCodec()
 
-    private CollectionHelper<Document> getHelper() {
+    private CollectionHelper<OldDocument> getHelper() {
         def helper = getCollectionHelper()
         helper.create(helper.getNamespace().getCollectionName(), new CreateCollectionOptions())
         helper

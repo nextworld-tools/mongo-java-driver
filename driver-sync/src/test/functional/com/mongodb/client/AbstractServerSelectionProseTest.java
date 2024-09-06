@@ -25,7 +25,7 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -93,7 +93,7 @@ public abstract class AbstractServerSelectionProseTest {
         ServerAddress serverWithFailPoint = clientSettings.getClusterSettings().getHosts().get(0);
         ExecutorService executor = Executors.newFixedThreadPool(tasks);
         try (MongoClient client = createClient(clientSettings)) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("operationCountBasedSelectionWithinLatencyWindow");
             collection.drop();
             try (FailPoint ignored = FailPoint.enable(configureFailPoint, serverWithFailPoint)) {
@@ -116,14 +116,14 @@ public abstract class AbstractServerSelectionProseTest {
         }
     }
 
-    private static Map<ServerAddress, Double> doSelections(final MongoCollection<Document> collection,
+    private static Map<ServerAddress, Double> doSelections(final MongoCollection<OldDocument> collection,
             final TestCommandListener commandListener, final ExecutorService ex, final int tasks, final int opsPerTask,
             final int timeoutSeconds) throws InterruptedException, ExecutionException {
         List<Future<Boolean>> results = ex.invokeAll(IntStream.range(0, tasks)
                 .<Callable<Boolean>>mapToObj(taskIdx -> () -> {
                     boolean result = false;
                     for (int opIdx = 0; opIdx < opsPerTask; opIdx++) {
-                        try (MongoCursor<Document> cursor = collection.find(eq(0)).iterator()) {
+                        try (MongoCursor<OldDocument> cursor = collection.find(eq(0)).iterator()) {
                             result |= cursor.hasNext();
                         }
                     }

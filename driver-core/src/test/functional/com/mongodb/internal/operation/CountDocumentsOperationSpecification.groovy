@@ -40,7 +40,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
@@ -58,11 +58,11 @@ class CountDocumentsOperationSpecification extends OperationFunctionalSpecificat
 
     def setup() {
         documents = [
-                new Document('x', 1),
-                new Document('x', 2),
-                new Document('x', 3),
-                new Document('x', 4),
-                new Document('x', 5).append('y', 1)
+            new OldDocument('x', 1),
+            new OldDocument('x', 2),
+            new OldDocument('x', 3),
+            new OldDocument('x', 4),
+            new OldDocument('x', 5).append('y', 1)
         ]
         getCollectionHelper().insertDocuments(new DocumentCodec(), documents)
     }

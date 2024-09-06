@@ -23,7 +23,7 @@ import com.mongodb.client.internal.MappingIterable;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.internal.BatchCursorPublisher;
 import com.mongodb.reactivestreams.client.internal.ListCollectionNamesPublisherImpl;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -89,7 +89,7 @@ class SyncMongoIterable<T> implements MongoIterable<T> {
 
     private BatchCursorPublisher<T> furtherUnwrapWrapped() {
         if (this.wrapped instanceof ListCollectionNamesPublisherImpl) {
-            BatchCursorPublisher<Document> wrappedDocumentPublisher = ((ListCollectionNamesPublisherImpl) this.wrapped).getWrapped();
+            BatchCursorPublisher<OldDocument> wrappedDocumentPublisher = ((ListCollectionNamesPublisherImpl) this.wrapped).getWrapped();
             // this casting obviously does not always work, but should work in tests
             @SuppressWarnings("unchecked")
             BatchCursorPublisher<T> wrappedTPublisher = (BatchCursorPublisher<T>) wrappedDocumentPublisher;

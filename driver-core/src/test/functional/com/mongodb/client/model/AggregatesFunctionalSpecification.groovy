@@ -23,7 +23,7 @@ import com.mongodb.client.model.fill.FillOutputField
 import org.bson.BsonDecimal128
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 import org.bson.types.Decimal128
 import spock.lang.IgnoreIf
@@ -104,24 +104,24 @@ import static org.spockframework.util.CollectionUtil.containsAny
 
 class AggregatesFunctionalSpecification extends OperationFunctionalSpecification {
 
-    def a = new Document('_id', 1).append('x', 1)
+    def a = new OldDocument('_id', 1).append('x', 1)
                                   .append('y', 'a')
                                   .append('z', false)
                                   .append('a', [1, 2, 3])
-                                  .append('a1', [new Document('c', 1).append('d', 2), new Document('c', 2).append('d', 3)])
-                                  .append('o', new Document('a', 1))
+                                  .append('a1', [new OldDocument('c', 1).append('d', 2), new OldDocument('c', 2).append('d', 3)])
+                                  .append('o', new OldDocument('a', 1))
 
-    def b = new Document('_id', 2).append('x', 2)
+    def b = new OldDocument('_id', 2).append('x', 2)
                                   .append('y', 'b')
                                   .append('z', true)
                                   .append('a', [3, 4, 5, 6])
-                                  .append('a1', [new Document('c', 2).append('d', 3), new Document('c', 3).append('d', 4)])
-                                  .append('o', new Document('b', 2))
+                                  .append('a1', [new OldDocument('c', 2).append('d', 3), new OldDocument('c', 3).append('d', 4)])
+                                  .append('o', new OldDocument('b', 2))
 
-    def c = new Document('_id', 3).append('x', 3)
+    def c = new OldDocument('_id', 3).append('x', 3)
                                   .append('y', 'c')
                                   .append('z', true)
-                                  .append('o', new Document('c', 3))
+                                  .append('o', new OldDocument('c', 3))
 
     def setup() {
         getCollectionHelper().insertDocuments(a, b, c)
@@ -139,17 +139,17 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
     def '$project'() {
         expect:
-        aggregate([project(fields(include('x'), computed('c', '$y')))]) == [new Document('_id', 1).append('x', 1).append('c', 'a'),
-                                                                            new Document('_id', 2).append('x', 2).append('c', 'b'),
-                                                                            new Document('_id', 3).append('x', 3).append('c', 'c')]
+        aggregate([project(fields(include('x'), computed('c', '$y')))]) == [new OldDocument('_id', 1).append('x', 1).append('c', 'a'),
+                                                                            new OldDocument('_id', 2).append('x', 2).append('c', 'b'),
+                                                                            new OldDocument('_id', 3).append('x', 3).append('c', 'c')]
     }
 
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def '$project an exclusion'() {
         expect:
-        aggregate([project(exclude('a', 'a1', 'z', 'o'))]) == [new Document('_id', 1).append('x', 1).append('y', 'a'),
-                                                          new Document('_id', 2).append('x', 2).append('y', 'b'),
-                                                          new Document('_id', 3).append('x', 3).append('y', 'c')]
+        aggregate([project(exclude('a', 'a1', 'z', 'o'))]) == [new OldDocument('_id', 1).append('x', 1).append('y', 'a'),
+                                                               new OldDocument('_id', 2).append('x', 2).append('y', 'b'),
+                                                               new OldDocument('_id', 3).append('x', 3).append('y', 'c')]
     }
 
     def '$sort'() {
@@ -169,20 +169,20 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
     def '$unwind'() {
         expect:
-        aggregate([project(fields(include('a'), excludeId())), unwind('$a')]) == [new Document('a', 1),
-                                                                                  new Document('a', 2),
-                                                                                  new Document('a', 3),
-                                                                                  new Document('a', 3),
-                                                                                  new Document('a', 4),
-                                                                                  new Document('a', 5),
-                                                                                  new Document('a', 6)]
+        aggregate([project(fields(include('a'), excludeId())), unwind('$a')]) == [new OldDocument('a', 1),
+                                                                                  new OldDocument('a', 2),
+                                                                                  new OldDocument('a', 3),
+                                                                                  new OldDocument('a', 3),
+                                                                                  new OldDocument('a', 4),
+                                                                                  new OldDocument('a', 5),
+                                                                                  new OldDocument('a', 6)]
     }
 
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def '$unwind with UnwindOptions'() {
         given:
         getCollectionHelper().drop()
-        getCollectionHelper().insertDocuments(new Document('a', [1]), new Document('a', null), new Document('a', []))
+        getCollectionHelper().insertDocuments(new OldDocument('a', [1]), new OldDocument('a', null), new OldDocument('a', []))
 
         when:
         def results = aggregate([project(fields(include('a'), excludeId())), unwind('$a', options)])
@@ -192,56 +192,56 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         where:
         options                                                  | expectedResults
-        new UnwindOptions()                                      | [Document.parse('{a: 1}')]
-        new UnwindOptions().preserveNullAndEmptyArrays(true)     | [Document.parse('{a: 1}'), Document.parse('{a: null}'),
-                                                                    Document.parse('{}')]
+        new UnwindOptions()                                      | [OldDocument.parse('{a: 1}')]
+        new UnwindOptions().preserveNullAndEmptyArrays(true)     | [OldDocument.parse('{a: 1}'), OldDocument.parse('{a: null}'),
+                                                                    OldDocument.parse('{}')]
         new UnwindOptions()
                 .preserveNullAndEmptyArrays(true)
-                .includeArrayIndex('b')                          | [Document.parse('{a: 1, b: 0}'), Document.parse('{a: null, b: null}'),
-                                                                    Document.parse('{b: null}')]
+                .includeArrayIndex('b')                          | [OldDocument.parse('{a: 1, b: 0}'), OldDocument.parse('{a: null, b: null}'),
+                                                                    OldDocument.parse('{b: null}')]
     }
 
     def '$group'() {
         expect:
-        aggregate([group(null)]) == [new Document('_id', null)]
+        aggregate([group(null)]) == [new OldDocument('_id', null)]
 
-        aggregate([group('$z')]).containsAll([new Document('_id', true), new Document('_id', false)])
+        aggregate([group('$z')]).containsAll([new OldDocument('_id', true), new OldDocument('_id', false)])
 
-        aggregate([group(null, sum('acc', '$x'))]) == [new Document('_id', null).append('acc', 6)]
+        aggregate([group(null, sum('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 6)]
 
-        aggregate([group(null, avg('acc', '$x'))]) == [new Document('_id', null).append('acc', 2)]
+        aggregate([group(null, avg('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 2)]
 
-        aggregate([group(null, first('acc', '$x'))]) == [new Document('_id', null).append('acc', 1)]
+        aggregate([group(null, first('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 1)]
 
-        aggregate([group(null, last('acc', '$x'))]) == [new Document('_id', null).append('acc', 3)]
+        aggregate([group(null, last('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 3)]
 
-        aggregate([group(null, max('acc', '$x'))]) == [new Document('_id', null).append('acc', 3)]
+        aggregate([group(null, max('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 3)]
 
-        aggregate([group(null, min('acc', '$x'))]) == [new Document('_id', null).append('acc', 1)]
+        aggregate([group(null, min('acc', '$x'))]) == [new OldDocument('_id', null).append('acc', 1)]
 
-        aggregate([group('$z', push('acc', '$z'))]).containsAll([new Document('_id', true).append('acc', [true, true]),
-                                                                 new Document('_id', false).append('acc', [false])])
+        aggregate([group('$z', push('acc', '$z'))]).containsAll([new OldDocument('_id', true).append('acc', [true, true]),
+                                                                 new OldDocument('_id', false).append('acc', [false])])
 
-        aggregate([group('$z', addToSet('acc', '$z'))]).containsAll([new Document('_id', true).append('acc', [true]),
-                                                                     new Document('_id', false).append('acc', [false])])
+        aggregate([group('$z', addToSet('acc', '$z'))]).containsAll([new OldDocument('_id', true).append('acc', [true]),
+                                                                     new OldDocument('_id', false).append('acc', [false])])
     }
 
     @IgnoreIf({ serverVersionLessThan(3, 6) })
     def '$group with $mergeObjects'() {
         aggregate([group(null, mergeObjects('acc', '$o'))]).containsAll(
-                [new Document('_id', null).append('acc', new Document('a', 1).append('b', 2).append('c', 3))])
+                [new OldDocument('_id', null).append('acc', new OldDocument('a', 1).append('b', 2).append('c', 3))])
     }
 
     @IgnoreIf({ serverVersionLessThan(5, 2) })
     def '$group with top or bottom n'() {
         when:
-        List<Document> results = aggregate([group(new Document('gid', '$z'),
+        List<OldDocument> results = aggregate([group(new OldDocument('gid', '$z'),
                 minN('res', '$y',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))))])
                 .collect()
         then:
-        ((Document) results.stream().find { it.get('_id') == new Document('gid', true) })
+        ((OldDocument) results.stream().find { it.get('_id') == new OldDocument('gid', true) })
                 .get('res', List).toSet() == ['b', 'c'].toSet()
 
         when:
@@ -267,21 +267,21 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         results.first().get('res', List) == ['c']
 
         when:
-        results = aggregate([group(new Document('gid', '$z'),
+        results = aggregate([group(new OldDocument('gid', '$z'),
                 bottom('res', descending('y'), ['$x', '$y']))])
                 .collect()
         then:
-        ((Document) results.stream().find { it.get('_id') == new Document('gid', true) })
+        ((OldDocument) results.stream().find { it.get('_id') == new OldDocument('gid', true) })
                 .get('res', List) == [2, 'b']
 
         when:
-        results = aggregate([group(new Document('gid', '$z'),
+        results = aggregate([group(new OldDocument('gid', '$z'),
                 bottomN('res', descending('y'), ['$x', '$y'],
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))))])
                 .collect()
         then:
-        ((Document) results.stream().find { it.get('_id') == new Document('gid', true) })
+        ((OldDocument) results.stream().find { it.get('_id') == new OldDocument('gid', true) })
                 .get('res', List) == [[3, 'c'], [2, 'b']]
 
         when:
@@ -327,7 +327,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         given:
         def outCollectionName = getCollectionName() + '.out'
         getCollectionHelper(new MongoNamespace(getDatabaseName(), outCollectionName))
-                .createUniqueIndex(new Document('x', 1))
+                .createUniqueIndex(new OldDocument('x', 1))
         getCollectionHelper(new MongoNamespace('db1', outCollectionName)).create()
 
         when:
@@ -436,9 +436,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         getCollectionHelper().drop()
         fromHelper.drop()
 
-        getCollectionHelper().insertDocuments(new Document('_id', 0).append('a', 1),
-                new Document('_id', 1).append('a', null), new Document('_id', 2))
-        fromHelper.insertDocuments(new Document('_id', 0).append('b', 1), new Document('_id', 1).append('b', null), new Document('_id', 2))
+        getCollectionHelper().insertDocuments(new OldDocument('_id', 0).append('a', 1),
+                new OldDocument('_id', 1).append('a', null), new OldDocument('_id', 2))
+        fromHelper.insertDocuments(new OldDocument('_id', 0).append('b', 1), new OldDocument('_id', 1).append('b', null), new OldDocument('_id', 2))
         def lookupDoc = lookup(fromCollectionName, 'a', 'b', 'same')
 
         when:
@@ -446,9 +446,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results == [
-            Document.parse('{_id: 0, a: 1, "same": [{_id: 0, b: 1}]}'),
-            Document.parse('{_id: 1, a: null, "same": [{_id: 1, b: null}, {_id: 2}]}'),
-            Document.parse('{_id: 2, "same": [{_id: 1, b: null}, {_id: 2}]}')
+            OldDocument.parse('{_id: 0, a: 1, "same": [{_id: 0, b: 1}]}'),
+            OldDocument.parse('{_id: 1, a: null, "same": [{_id: 1, b: null}, {_id: 2}]}'),
+            OldDocument.parse('{_id: 2, "same": [{_id: 1, b: null}, {_id: 2}]}')
         ]
 
         cleanup:
@@ -466,22 +466,22 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         fromHelper.drop()
 
         fromHelper.insertDocuments(
-                Document.parse('{ "_id" : 1, "stock_item" : "abc", warehouse: "A", "instock" : 120 }'),
-                Document.parse('{ "_id" : 2, "stock_item" : "abc", warehouse: "B", "instock" : 60 }'),
-                Document.parse('{ "_id" : 3, "stock_item" : "xyz", warehouse: "B", "instock" : 40 }'),
-                Document.parse('{ "_id" : 4, "stock_item" : "xyz", warehouse: "A", "instock" : 80 }'))
+                OldDocument.parse('{ "_id" : 1, "stock_item" : "abc", warehouse: "A", "instock" : 120 }'),
+                OldDocument.parse('{ "_id" : 2, "stock_item" : "abc", warehouse: "B", "instock" : 60 }'),
+                OldDocument.parse('{ "_id" : 3, "stock_item" : "xyz", warehouse: "B", "instock" : 40 }'),
+                OldDocument.parse('{ "_id" : 4, "stock_item" : "xyz", warehouse: "A", "instock" : 80 }'))
 
         collection.insertDocuments(
-                Document.parse('{ "_id" : 1, "item" : "abc", "price" : 12, "ordered" : 2 }'),
-                Document.parse('{ "_id" : 2, "item" : "xyz", "price" : 10, "ordered" : 60 }')
+                OldDocument.parse('{ "_id" : 1, "item" : "abc", "price" : 12, "ordered" : 2 }'),
+                OldDocument.parse('{ "_id" : 2, "item" : "xyz", "price" : 10, "ordered" : 60 }')
         )
 
         def let = asList(new Variable('order_item', '$item'), new Variable('order_qty', '$ordered'))
 
         def  pipeline = asList(
-                match(expr(new Document('$and',
-                        asList( new Document('$eq', asList('$stock_item', '$$order_item')),
-                                new Document('$gte', asList('$instock', '$$order_qty')))))),
+                match(expr(new OldDocument('$and',
+                        asList( new OldDocument('$eq', asList('$stock_item', '$$order_item')),
+                                new OldDocument('$gte', asList('$instock', '$$order_qty')))))),
                 project(fields(exclude('stock_item'), excludeId())))
 
         def lookupDoc = lookup(fromCollectionName, let, pipeline, 'stockdata')
@@ -491,9 +491,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results == [
-                Document.parse('{ "_id" : 1.0, "item" : "abc", "price" : 12.0, "ordered" : 2.0, ' +
+            OldDocument.parse('{ "_id" : 1.0, "item" : "abc", "price" : 12.0, "ordered" : 2.0, ' +
                         '"stockdata" : [ { "warehouse" : "A", "instock" : 120.0 }, { "warehouse" : "B", "instock" : 60.0 } ] }'),
-                Document.parse('{ "_id" : 2.0, "item" : "xyz", "price" : 10.0, "ordered" : 60.0, ' +
+            OldDocument.parse('{ "_id" : 2.0, "item" : "xyz", "price" : 10.0, "ordered" : 60.0, ' +
                         '"stockdata" : [ { "warehouse" : "A", "instock" : 80.0 } ] }') ]
 
         cleanup:
@@ -511,17 +511,17 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         fromCollection.drop()
 
         fromCollection.insertDocuments(
-                Document.parse('{ "_id" : 1, year: 2018, name: "New Years", date: { $date : "2018-01-01T00:00:00Z"} }'),
-                Document.parse('{ "_id" : 2, year: 2018, name: "Pi Day", date: { $date : "2018-03-14T00:00:00Z" } }'),
-                Document.parse('{ "_id" : 3, year: 2018, name: "Ice Cream Day", date: { $date : "2018-07-15T00:00:00Z"} }'),
-                Document.parse('{ "_id" : 4, year: 2017, name: "New Years", date: { $date : "2017-01-01T00:00:00Z" } }'),
-                Document.parse('{ "_id" : 5, year: 2017, name: "Ice Cream Day", date: { $date : "2017-07-16T00:00:00Z" } }')
+                OldDocument.parse('{ "_id" : 1, year: 2018, name: "New Years", date: { $date : "2018-01-01T00:00:00Z"} }'),
+                OldDocument.parse('{ "_id" : 2, year: 2018, name: "Pi Day", date: { $date : "2018-03-14T00:00:00Z" } }'),
+                OldDocument.parse('{ "_id" : 3, year: 2018, name: "Ice Cream Day", date: { $date : "2018-07-15T00:00:00Z"} }'),
+                OldDocument.parse('{ "_id" : 4, year: 2017, name: "New Years", date: { $date : "2017-01-01T00:00:00Z" } }'),
+                OldDocument.parse('{ "_id" : 5, year: 2017, name: "Ice Cream Day", date: { $date : "2017-07-16T00:00:00Z" } }')
         )
 
         collection.insertDocuments(
-                Document.parse('''{ "_id" : 1, "student" : "Ann Aardvark",
+                OldDocument.parse('''{ "_id" : 1, "student" : "Ann Aardvark",
                             sickdays: [ { $date : "2018-05-01T00:00:00Z" }, { $date : "2018-08-23T00:00:00Z" } ] }'''),
-                Document.parse('''{ "_id" : 2, "student" : "Zoe Zebra",
+                OldDocument.parse('''{ "_id" : 2, "student" : "Zoe Zebra",
                             sickdays: [ { $date : "2018-02-01T00:00:00Z" }, { $date : "2018-05-23T00:00:00Z" } ] }''')
         )
 
@@ -538,13 +538,13 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results == [
-                Document.parse(
+            OldDocument.parse(
                         '''{ '_id' : 1, 'student' : "Ann Aardvark",
                         'sickdays' : [ ISODate("2018-05-01T00:00:00Z"), ISODate("2018-08-23T00:00:00Z") ],
                         'holidays' : [  { 'name' : "New Years", 'date' : ISODate ("2018-01-01T00:00:00Z") },
                                         { 'name' : "Pi Day", 'date' : ISODate("2018-03-14T00:00:00Z") },
                                         { 'name' : "Ice Cream Day", 'date' : ISODate("2018-07-15T00:00:00Z") } ] }'''),
-                Document.parse(
+            OldDocument.parse(
                         '''{ '_id' : 2, 'student' : "Zoe Zebra",
                         'sickdays' : [ ISODate("2018-02-01T00:00:00Z"), ISODate("2018-05-23T00:00:00Z") ],
                         'holidays' : [  { 'name' : "New Years", 'date' : ISODate("2018-01-01T00:00:00Z") },
@@ -565,7 +565,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         (0..50).each {
             def size = (35 + it)
             def manufacturer = ['Sony', 'Samsung', 'Vizio'][it % 3]
-            helper.insertDocuments(Document.parse("""    {
+            helper.insertDocuments(OldDocument.parse("""    {
                   title: "${manufacturer} ${size} inch HDTV",
                   attributes: {
                     "type": "HD",
@@ -593,7 +593,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results == [
-            Document.parse(
+            OldDocument.parse(
                     '''{ 'Manufacturer': [
                         {'_id': "Samsung", 'count': 17},
                         {'_id': "Sony", 'count': 17},
@@ -620,30 +620,30 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         fromHelper.drop()
 
-        fromHelper.insertDocuments(Document.parse('{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"] }'))
 
         def lookupDoc = graphLookup('contacts', new BsonString('$friends'), 'friends', 'name', 'socialNetwork')
 
         when:
         def results = fromHelper.aggregate([lookupDoc,
                                             unwind('$socialNetwork'),
-                                            sort(new Document('_id', 1).append('socialNetwork._id', 1))])
+                                            sort(new OldDocument('_id', 1).append('socialNetwork._id', 1))])
 
         then:
         results.subList(0, 5) == [
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown" ] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 4, name: "Fred Brown", friends: ["Joe Lee"] } }''')
         ]
 
@@ -659,11 +659,11 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         fromHelper.drop()
 
-        fromHelper.insertDocuments(Document.parse('{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"] }'))
-        fromHelper.insertDocuments(Document.parse('{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"] }'))
+        fromHelper.insertDocuments(OldDocument.parse('{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"] }'))
 
         def lookupDoc = graphLookup('contacts', new BsonString('$friends'), 'friends', 'name', 'socialNetwork',
                                     new GraphLookupOptions()
@@ -673,18 +673,18 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         when:
         def results = fromHelper.aggregate([lookupDoc,
                                             unwind('$socialNetwork'),
-                                            sort(new Document('_id', 1)
+                                            sort(new OldDocument('_id', 1)
                                                          .append('socialNetwork._id', 1))])
 
         then:
         results.subList(0, 4) == [
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], depth:1 } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"], depth:0 } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"], depth:0 } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"], socialNetwork: {
                     _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown" ], depth:1 } }''')
         ]
 
@@ -701,15 +701,15 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         fromHelper.drop()
 
         fromHelper.insertDocuments(
-            Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
                 hobbies : ["tennis", "unicycling", "golf"] }'''),
-            Document.parse('''{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"],
+            OldDocument.parse('''{ _id: 1, name: "Anna Jones", friends: ["Bob Smith", "Chris Green", "Joe Lee"],
                  hobbies : ["archery", "golf", "woodworking"] }'''),
-            Document.parse('''{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"],
+            OldDocument.parse('''{ _id: 2, name: "Chris Green", friends: ["Anna Jones", "Bob Smith"],
                 hobbies : ["knitting", "frisbee"] }'''),
-            Document.parse('''{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"],
+            OldDocument.parse('''{ _id: 3, name: "Joe Lee", friends: ["Anna Jones", "Fred Brown"],
                 hobbies : [ "tennis", "golf", "topiary" ] }'''),
-            Document.parse('''{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"],
+            OldDocument.parse('''{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"],
                 hobbies : [ "travel", "ceramics", "golf" ] }'''))
 
 
@@ -720,21 +720,21 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         when:
         def results = fromHelper.aggregate([lookupDoc,
                                             unwind('$golfers'),
-                                            sort(new Document('_id', 1)
+                                            sort(new OldDocument('_id', 1)
                                                     .append('golfers._id', 1))])
 
         then:
         results.subList(0, 4) == [
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
                         hobbies : ["tennis", "unicycling", "golf"], golfers: {_id: 0, name: "Bob Smith",
                         friends: ["Anna Jones", "Chris Green"], hobbies : ["tennis", "unicycling", "golf"] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
                        hobbies: ["tennis", "unicycling", "golf"], golfers:{ _id: 1, name: "Anna Jones",
                        friends: ["Bob Smith", "Chris Green", "Joe Lee"], hobbies : ["archery", "golf", "woodworking"] } } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
                        hobbies: ["tennis", "unicycling", "golf"], golfers: { _id: 3, name: "Joe Lee",
                        friends: ["Anna Jones", "Fred Brown"], hobbies : [ "tennis", "golf", "topiary" ] } }'''),
-                Document.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
+            OldDocument.parse('''{ _id: 0, name: "Bob Smith", friends: ["Anna Jones", "Chris Green"],
                        hobbies: ["tennis", "unicycling", "golf"], golfers:{ _id: 4, name: "Fred Brown", friends: ["Joe Lee"],
                        hobbies : [ "travel", "ceramics", "golf" ] } }''')
         ]
@@ -750,28 +750,28 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         helper.drop()
 
-        helper.insertDocuments(Document.parse('{screenSize: 30}'))
-        helper.insertDocuments(Document.parse('{screenSize: 24}'))
-        helper.insertDocuments(Document.parse('{screenSize: 42}'))
-        helper.insertDocuments(Document.parse('{screenSize: 22}'))
-        helper.insertDocuments(Document.parse('{screenSize: 55}'))
-        helper.insertDocuments(Document.parse('{screenSize: 155}'))
-        helper.insertDocuments(Document.parse('{screenSize: 75}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 30}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 24}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 42}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 22}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 55}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 155}'))
+        helper.insertDocuments(OldDocument.parse('{screenSize: 75}'))
 
         def bucket = bucket('$screenSize', [0, 24, 32, 50, 70], new BucketOptions()
                 .defaultBucket('monster')
                 .output(sum('count', 1), push('matches', '$screenSize')))
 
         when:
-        def results = helper.aggregate([sort(new Document('screenSize', 1)), bucket])
+        def results = helper.aggregate([sort(new OldDocument('screenSize', 1)), bucket])
 
         then:
         results == [
-                Document.parse('{_id: 0, count: 1, matches: [22]}'),
-                Document.parse('{_id: 24, count: 2, matches: [24, 30]}'),
-                Document.parse('{_id: 32, count: 1, matches: [42]}'),
-                Document.parse('{_id: 50, count: 1, matches: [55]}'),
-                Document.parse('{_id: "monster", count: 2, matches: [75, 155]}')
+            OldDocument.parse('{_id: 0, count: 1, matches: [22]}'),
+            OldDocument.parse('{_id: 24, count: 2, matches: [24, 30]}'),
+            OldDocument.parse('{_id: 32, count: 1, matches: [42]}'),
+            OldDocument.parse('{_id: 50, count: 1, matches: [55]}'),
+            OldDocument.parse('{_id: "monster", count: 2, matches: [75, 155]}')
         ]
         cleanup:
         helper?.drop()
@@ -785,7 +785,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         helper.drop()
 
         (1..100).each {
-            helper.insertDocuments(Document.parse("{price: ${it * 2}}"))
+            helper.insertDocuments(OldDocument.parse("{price: ${it * 2}}"))
         }
 
         when:
@@ -819,7 +819,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         helper.drop()
 
         (0..2000).each {
-            def document = new Document('price', it * 5.01D)
+            def document = new OldDocument('price', it * 5.01D)
             helper.insertDocuments(document)
         }
 
@@ -881,28 +881,28 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         when:
         helper.drop()
 
-        helper.insertDocuments(Document.parse('{_id: 0, x: 1}'))
-        helper.insertDocuments(Document.parse('{_id: 2, x: 1}'))
-        helper.insertDocuments(Document.parse('{_id: 3, x: 0}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, x: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 2, x: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 3, x: 0}'))
 
         def results = helper.aggregate([sortByCount('$x')])
 
         then:
-        results == [Document.parse('{_id: 1, count: 2}'),
-                    Document.parse('{_id: 0, count: 1}')]
+        results == [OldDocument.parse('{_id: 1, count: 2}'),
+                    OldDocument.parse('{_id: 0, count: 1}')]
 
         when:
         helper.drop()
 
-        helper.insertDocuments(Document.parse('{_id: 0, x: 1.4}'))
-        helper.insertDocuments(Document.parse('{_id: 2, x: 1.1}'))
-        helper.insertDocuments(Document.parse('{_id: 3, x: 0.5}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, x: 1.4}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 2, x: 1.1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 3, x: 0.5}'))
 
-        results = helper.aggregate([sortByCount(new Document('$floor', '$x'))])
+        results = helper.aggregate([sortByCount(new OldDocument('$floor', '$x'))])
 
         then:
-        results == [Document.parse('{_id: 1, count: 2}'),
-                    Document.parse('{_id: 0, count: 1}')]
+        results == [OldDocument.parse('{_id: 1, count: 2}'),
+                    OldDocument.parse('{_id: 0, count: 1}')]
 
         cleanup:
         helper?.drop()
@@ -915,7 +915,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 1, x: "string"}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 1, x: "string"}'))
         def init = 'function() { return { x: "test string" } }'
         def accumulate = 'function(state) { return state }'
         def merge = 'function(state1, state2) { return state1 }'
@@ -924,15 +924,15 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results1.size() == 1
-        results1.contains(Document.parse('{ _id: "string", testString: { x: "test string" } }'))
+        results1.contains(OldDocument.parse('{ _id: "string", testString: { x: "test string" } }'))
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 8751, title: "The Banquet", author: "Dante", copies: 2}'),
-                Document.parse('{_id: 8752, title: "Divine Comedy", author: "Dante", copies: 1}'),
-                Document.parse('{_id: 8645, title: "Eclogues", author: "Dante", copies: 2}'),
-                Document.parse('{_id: 7000, title: "The Odyssey", author: "Homer", copies: 10}'),
-                Document.parse('{_id: 7020, title: "Iliad", author: "Homer", copies: 10}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 8751, title: "The Banquet", author: "Dante", copies: 2}'),
+                OldDocument.parse('{_id: 8752, title: "Divine Comedy", author: "Dante", copies: 1}'),
+                OldDocument.parse('{_id: 8645, title: "Eclogues", author: "Dante", copies: 2}'),
+                OldDocument.parse('{_id: 7000, title: "The Odyssey", author: "Homer", copies: 10}'),
+                OldDocument.parse('{_id: 7020, title: "Iliad", author: "Homer", copies: 10}'))
         def initFunction = 'function(initCount, initSum) { return { count: parseInt(initCount), sum: parseInt(initSum) } }'
         def accumulateFunction = 'function(state, numCopies) { return { count : state.count + 1, sum : state.sum + numCopies } }'
         def mergeFunction = 'function(state1, state2) { return { count : state1.count + state2.count, sum : state1.sum + state2.sum } }'
@@ -940,13 +940,13 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         def accumulatorExpression = accumulator('avgCopies', initFunction, [ '0', '0' ], accumulateFunction,
                 [ '$copies' ], mergeFunction, finalizeFunction)
         def results2 = helper.aggregate([group('$author', asList(
-                new BsonField('minCopies', new Document('$min', '$copies')), accumulatorExpression,
-                new BsonField('maxCopies', new Document('$max', '$copies'))))])
+                new BsonField('minCopies', new OldDocument('$min', '$copies')), accumulatorExpression,
+                new BsonField('maxCopies', new OldDocument('$max', '$copies'))))])
 
         then:
         results2.size() == 2
-        results2.contains(Document.parse('{_id: "Dante", minCopies: 1, avgCopies: 1.6666666666666667, maxCopies : 2}'))
-        results2.contains(Document.parse('{_id: "Homer", minCopies: 10, avgCopies: 10.0, maxCopies : 10}'))
+        results2.contains(OldDocument.parse('{_id: "Dante", minCopies: 1, avgCopies: 1.6666666666666667, maxCopies : 2}'))
+        results2.contains(OldDocument.parse('{_id: "Homer", minCopies: 10, avgCopies: 10.0, maxCopies : 10}'))
 
         cleanup:
         helper?.drop()
@@ -959,68 +959,68 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         def results = helper.aggregate([addFields(new Field('newField', null))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, newField: null}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, newField: null}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('newField', 'hello'))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, newField: "hello"}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, newField: "hello"}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('b', '$a'))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, b: 1}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, b: 1}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('this', '$$CURRENT'))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, this: {_id: 0, a: 1}}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, this: {_id: 0, a: 1}}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('myNewField',
-                                                        new Document('c', 3).append('d', 4)))])
+                                                        new OldDocument('c', 3).append('d', 4)))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, myNewField: {c: 3, d: 4}}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, myNewField: {c: 3, d: 4}}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
-        results = helper.aggregate([addFields(new Field('alt3', new Document('$lt', asList('$a', 3))))])
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
+        results = helper.aggregate([addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3))))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, alt3: true}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, alt3: true}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('b', 3), new Field('c', 5))])
 
         then:
-        results == [Document.parse('{_id: 0, a: 1, b: 3, c: 5}')]
+        results == [OldDocument.parse('{_id: 0, a: 1, b: 3, c: 5}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a: 1}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a: 1}'))
         results = helper.aggregate([addFields(new Field('a', [1, 2, 3]))])
 
         then:
-        results == [Document.parse('{_id: 0, a: [1, 2, 3]}')]
+        results == [OldDocument.parse('{_id: 0, a: [1, 2, 3]}')]
 
         cleanup:
         helper?.drop()
@@ -1029,9 +1029,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
     @IgnoreIf({ serverVersionLessThan(4, 2) })
     def '$set'() {
         expect:
-        aggregate([set(new Field('c', '$y'))]) == [new Document(a).append('c', 'a'),
-                                                   new Document(b).append('c', 'b'),
-                                                   new Document(c).append('c', 'c')]
+        aggregate([set(new Field('c', '$y'))]) == [new OldDocument(a).append('c', 'a'),
+                                                   new OldDocument(b).append('c', 'b'),
+                                                   new OldDocument(c).append('c', 'c')]
     }
 
     @IgnoreIf({ serverVersionLessThan(3, 4) })
@@ -1042,27 +1042,27 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: 1}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: 1}, a2: 2}'))
         results = helper.aggregate([replaceRoot('$a1')])
 
         then:
-        results == [Document.parse('{b: 1}')]
+        results == [OldDocument.parse('{b: 1}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: {c1: 4, c2: 5}}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: {c1: 4, c2: 5}}, a2: 2}'))
         results = helper.aggregate([replaceRoot('$a1.b')])
 
         then:
-        results == [Document.parse('{c1: 4, c2: 5}')]
+        results == [OldDocument.parse('{c1: 4, c2: 5}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: 1, _id: 7}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: 1, _id: 7}, a2: 2}'))
         results = helper.aggregate([replaceRoot('$a1')])
 
         then:
-        results == [Document.parse('{b: 1, _id: 7}')]
+        results == [OldDocument.parse('{b: 1, _id: 7}')]
     }
 
     @IgnoreIf({ serverVersionLessThan(4, 2) })
@@ -1073,27 +1073,27 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: 1}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: 1}, a2: 2}'))
         results = helper.aggregate([replaceWith('$a1')])
 
         then:
-        results == [Document.parse('{b: 1}')]
+        results == [OldDocument.parse('{b: 1}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: {c1: 4, c2: 5}}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: {c1: 4, c2: 5}}, a2: 2}'))
         results = helper.aggregate([replaceWith('$a1.b')])
 
         then:
-        results == [Document.parse('{c1: 4, c2: 5}')]
+        results == [OldDocument.parse('{c1: 4, c2: 5}')]
 
         when:
         helper.drop()
-        helper.insertDocuments(Document.parse('{_id: 0, a1: {b: 1, _id: 7}, a2: 2}'))
+        helper.insertDocuments(OldDocument.parse('{_id: 0, a1: {b: 1, _id: 7}, a2: 2}'))
         results = helper.aggregate([replaceWith('$a1')])
 
         then:
-        results == [Document.parse('{b: 1, _id: 7}')]
+        results == [OldDocument.parse('{b: 1, _id: 7}')]
     }
 
     @IgnoreIf({ serverVersionLessThan(4, 4) })
@@ -1106,13 +1106,13 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         coll2Helper.drop()
 
         coll1Helper.insertDocuments(
-                Document.parse('{ "name1" : "almonds" }'),
-                Document.parse('{ "name1" : "cookies" }'))
+                OldDocument.parse('{ "name1" : "almonds" }'),
+                OldDocument.parse('{ "name1" : "cookies" }'))
 
         coll2Helper.insertDocuments(
-                Document.parse('{ "name2" : "cookies" }'),
-                Document.parse('{ "name2" : "cookies" }'),
-                Document.parse('{ "name2" : "pecans" }'))
+                OldDocument.parse('{ "name2" : "cookies" }'),
+                OldDocument.parse('{ "name2" : "cookies" }'),
+                OldDocument.parse('{ "name2" : "pecans" }'))
 
         def pipeline = asList(match(eq('name2', 'cookies')), project(fields(excludeId(), computed('name', '$name2'))),
                 sort(ascending('name')))
@@ -1123,10 +1123,10 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
 
         then:
         results == [
-                Document.parse('{ name: "almonds" }'),
-                Document.parse('{ name: "cookies" }'),
-                Document.parse('{ name: "cookies" }'),
-                Document.parse('{ name: "cookies" }') ]
+            OldDocument.parse('{ name: "almonds" }'),
+            OldDocument.parse('{ name: "cookies" }'),
+            OldDocument.parse('{ name: "cookies" }'),
+            OldDocument.parse('{ name: "cookies" }') ]
 
         cleanup:
         coll1Helper?.drop()
@@ -1138,17 +1138,17 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         given:
         ZoneId utc = ZoneId.of(ZoneOffset.UTC.getId())
         getCollectionHelper().drop()
-        Document[] original = [
-                new Document('partitionId', 1)
+        OldDocument[] original = [
+                new OldDocument('partitionId', 1)
                         .append('num1', 1)
                         .append('num2', -1)
                         .append('numMissing', 1)
                         .append('date', LocalDateTime.ofInstant(Instant.ofEpochSecond(1), utc)),
-                new Document('partitionId', 1)
+                new OldDocument('partitionId', 1)
                         .append('num1', 2)
                         .append('num2', -2)
                         .append('date', LocalDateTime.ofInstant(Instant.ofEpochSecond(2), utc)),
-                new Document('partitionId', 2)
+                new OldDocument('partitionId', 2)
                         .append('num1', 3)
                         .append('num2', -3)
                         .append('numMissing', 3)
@@ -1161,7 +1161,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
         if (preSortBy != null) {
             stages.add(0, sort(preSortBy))
         }
-        List<Document> actual = aggregate(stages)
+        List<OldDocument> actual = aggregate(stages)
         List<Object> actualFieldValues = actual.stream()
                 .map { doc -> doc.get('result') }
                 .collect(toList())
@@ -1188,10 +1188,10 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                 .sum('result', '$num1', range(0, UNBOUNDED)) | [3, 2, 3]
         null | null | ascending('num1') | WindowOutputFields
                 .sum('result', '$num1', range(CURRENT, Integer.MAX_VALUE)) | [6, 5, 3]
-        null | null | ascending('num1') | WindowOutputFields
-                .of(new BsonField('result', new Document('$sum', '$num1')
+        null | null                                   | ascending('num1')  | WindowOutputFields
+                .of(new BsonField('result', new OldDocument('$sum', '$num1')
                         .append('window', Windows.of(
-                                new Document('range', asList('current', Integer.MAX_VALUE))).toBsonDocument()))) | [6, 5, 3]
+                                new OldDocument('range', asList('current', Integer.MAX_VALUE))).toBsonDocument()))) | [6, 5, 3]
         null | null | ascending('date') | WindowOutputFields
                 .avg('result', '$num1', timeRange(-1, 0, MongoTimeUnit.QUARTER)) | [1, 1.5, 2]
         null | null | null | WindowOutputFields
@@ -1200,11 +1200,11 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                 .stdDevPop('result', '$num1', documents(CURRENT, CURRENT)) | [0, 0, 0]
         null | null | ascending('num1') | WindowOutputFields
                 .min('result', '$num1', documents(-1, 0)) | [1, 1, 2]
-        null | new Document('gid', '$partitionId') | ascending('num1') | WindowOutputFields
+        null | new OldDocument('gid', '$partitionId') | ascending('num1')  | WindowOutputFields
                 .minN('result', '$num1',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', 1)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', 1)))
                                 .append('then', 2).append('else', 2)),
-                        documents(-1, 0)) | [ [1].toSet(), [1, 2].toSet(), [3].toSet() ]
+                        documents(-1, 0))                                                                           | [ [1].toSet(), [1, 2].toSet(), [3].toSet() ]
         null | null | null | WindowOutputFields
                 .max('result', '$num1', null) | [3, 3, 3]
         null | null | ascending('num1') | WindowOutputFields
@@ -1249,11 +1249,11 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                 .denseRank('result') | [ 1, 1, 2 ]
         null | null | null | WindowOutputFields
                 .bottom('result', ascending('num1'), '$num1', null) | [ 3, 3, 3 ]
-        null | new Document('gid', '$partitionId') | descending('num1') | WindowOutputFields
+        null | new OldDocument('gid', '$partitionId') | descending('num1') | WindowOutputFields
                 .bottomN('result', ascending('num1'), '$num1',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', 1)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', 1)))
                                 .append('then', 2).append('else', 2)),
-                        null) | [ [1, 2], [1, 2], [3] ]
+                        null)                                                                                       | [ [1, 2], [1, 2], [3] ]
         null | null | descending('num1') | WindowOutputFields
                 .topN('result', ascending('num1'), '$num1', 2, null) | [ [1, 2], [1, 2], [1, 2] ]
         null | null | null | WindowOutputFields
@@ -1268,9 +1268,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
     def '$setWindowFields with multiple output'() {
         given:
         getCollectionHelper().drop()
-        Document[] original = [new Document('num', 1)]
+        OldDocument[] original = [new OldDocument('num', 1)]
         getCollectionHelper().insertDocuments(original)
-        List<Document> actual = aggregate([
+        List<OldDocument> actual = aggregate([
                 setWindowFields(null, null, [
                         WindowOutputFields.count('count', null),
                         WindowOutputFields.max('max', '$num', null)]),
@@ -1285,9 +1285,9 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
     def '$setWindowFields with empty output'() {
         given:
         getCollectionHelper().drop()
-        Document[] original = [new Document('num', 1)]
+        OldDocument[] original = [new OldDocument('num', 1)]
         getCollectionHelper().insertDocuments(original)
-        List<Document> actual = aggregate([
+        List<OldDocument> actual = aggregate([
                 setWindowFields(null, null, []),
                 project(fields(excludeId()))])
 
@@ -1300,14 +1300,14 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
     def '$densify'(String field, String partitionByField, Bson densifyStage, List<Object> expectedFieldValues) {
         given:
         getCollectionHelper().drop()
-        Document[] docs = [
-                new Document('partitionId', 1)
+        OldDocument[] docs = [
+                new OldDocument('partitionId', 1)
                         .append('num', 1)
                         .append('date', Instant.ofEpochMilli(BigInteger.TWO.pow(32).longValueExact())),
-                new Document('partitionId', 1)
+                new OldDocument('partitionId', 1)
                         .append('num', 3)
                         .append('date', Instant.ofEpochMilli(BigInteger.TWO.pow(33).longValueExact())),
-                new Document('partitionId', 2)
+                new OldDocument('partitionId', 2)
                         .append('num', new BsonDecimal128(new Decimal128(new BigDecimal('4.1'))))
                         .append('date', Instant.ofEpochMilli(BigInteger.TWO.pow(34).longValueExact()))]
         getCollectionHelper().insertDocuments(docs)
@@ -1351,18 +1351,18 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
     def '$fill'(Bson preSortBy, String field, Bson fillStage, List<Object> expectedFieldValues) {
         given:
         getCollectionHelper().drop()
-        Document[] docs = [
-                new Document('partition', new Document('id', 10))
+        OldDocument[] docs = [
+            new OldDocument('partition', new OldDocument('id', 10))
                         .append('_id', 1)
                         .append('field1', 1)
-                        .append('doc', new Document('field2', 1)),
-                new Document('partition', new Document('id', 10))
+                        .append('doc', new OldDocument('field2', 1)),
+            new OldDocument('partition', new OldDocument('id', 10))
                         .append('_id', 2)
                         .append('doc', null),
-                new Document('partition', new Document('id', 20))
+            new OldDocument('partition', new OldDocument('id', 20))
                         .append('_id', 3)
                         .append('field1', 3)
-                        .append('doc', new Document('field2', 3))]
+                        .append('doc', new OldDocument('field2', 3))]
         getCollectionHelper().insertDocuments(docs)
         String resultField = 'result'
         List<Bson> stages = [
@@ -1393,7 +1393,7 @@ class AggregatesFunctionalSpecification extends OperationFunctionalSpecification
                 [1, 2, 3]
         null | 'field1' | fill(
                 // https://jira.mongodb.org/browse/SERVER-67284 prevents specifying partitionByField('partition.id')
-                fillOptions().partitionBy(new Document('p', '$partition.id')).sortBy(descending('_id')),
+                fillOptions().partitionBy(new OldDocument('p', '$partition.id')).sortBy(descending('_id')),
                 FillOutputField.locf('field1'))                                  |
                 [1, null, 3]
         descending('_id') | 'field1' | fill(

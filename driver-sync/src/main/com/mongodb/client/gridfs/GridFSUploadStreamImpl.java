@@ -28,7 +28,7 @@ import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 
 import java.util.Date;
@@ -44,9 +44,9 @@ final class GridFSUploadStreamImpl extends GridFSUploadStream {
     private final MongoCollection<BsonDocument> chunksCollection;
     private final BsonValue fileId;
     private final String filename;
-    private final int chunkSizeBytes;
-    private final Document metadata;
-    private byte[] buffer;
+    private final int         chunkSizeBytes;
+    private final OldDocument metadata;
+    private       byte[]      buffer;
     private long lengthInBytes;
     private int bufferOffset;
     private int chunkIndex;
@@ -57,7 +57,7 @@ final class GridFSUploadStreamImpl extends GridFSUploadStream {
 
     GridFSUploadStreamImpl(@Nullable final ClientSession clientSession, final MongoCollection<GridFSFile> filesCollection,
                            final MongoCollection<BsonDocument> chunksCollection, final BsonValue fileId, final String filename,
-                           final int chunkSizeBytes, @Nullable final Document metadata, @Nullable final Timeout timeout) {
+                           final int chunkSizeBytes, @Nullable final OldDocument metadata, @Nullable final Timeout timeout) {
         this.clientSession = clientSession;
         this.filesCollection = notNull("files collection", filesCollection);
         this.chunksCollection = notNull("chunks collection", chunksCollection);
@@ -93,10 +93,10 @@ final class GridFSUploadStreamImpl extends GridFSUploadStream {
 
         if (clientSession != null) {
             withNullableTimeout(chunksCollection, timeout)
-                    .deleteMany(clientSession, new Document("files_id", fileId));
+                    .deleteMany(clientSession, new OldDocument("files_id", fileId));
         } else {
             withNullableTimeout(chunksCollection, timeout)
-                    .deleteMany(new Document("files_id", fileId));
+                    .deleteMany(new OldDocument("files_id", fileId));
         }
     }
 

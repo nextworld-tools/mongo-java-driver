@@ -22,7 +22,7 @@ import org.bson.BSONException;
 import org.bson.BsonBinary;
 import org.bson.BsonBinarySubType;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.UuidCodec;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -64,9 +64,9 @@ public abstract class AbstractExplicitUuidCodecUuidRepresentationTest {
     private final BsonBinarySubType subType;
     private final UUID uuid;
     private final byte[] encodedValue;
-    private final byte[] standardEncodedValue;
-    private MongoCollection<Document> documentCollection;
-    private MongoCollection<DBObject> dbObjectCollection;
+    private final byte[]                 standardEncodedValue;
+    private MongoCollection<OldDocument> documentCollection;
+    private MongoCollection<DBObject>    dbObjectCollection;
     private MongoCollection<UuidIdPojo> uuidIdPojoCollection;
     private MongoCollection<BsonDocument> bsonDocumentCollection;
 
@@ -109,7 +109,7 @@ public abstract class AbstractExplicitUuidCodecUuidRepresentationTest {
 
     @Test
     public void shouldEncodeDocumentWithUuidRepresentation() {
-        documentCollection.insertOne(new Document("_id", uuid));
+        documentCollection.insertOne(new OldDocument("_id", uuid));
 
         BsonDocument document = bsonDocumentCollection.find().first();
         assertNotNull(document);
@@ -146,7 +146,7 @@ public abstract class AbstractExplicitUuidCodecUuidRepresentationTest {
         bsonDocumentCollection.insertOne(new BsonDocument("standard", new BsonBinary(uuid, STANDARD))
                 .append("legacy", new BsonBinary(uuid, uuidRepresentationForExplicitEncoding)));
 
-        Document document;
+        OldDocument document;
         try {
             document = documentCollection.find().first();
             assertNotNull(document);

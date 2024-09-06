@@ -28,7 +28,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.CreateViewOptions;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Mono;
@@ -107,7 +107,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public MongoCollection<Document> getCollection(final String collectionName) {
+    public MongoCollection<OldDocument> getCollection(final String collectionName) {
         return new SyncMongoCollection<>(wrapped.getCollection(collectionName));
     }
 
@@ -117,12 +117,12 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public Document runCommand(final Bson command) {
+    public OldDocument runCommand(final Bson command) {
         return requireNonNull(Mono.from(wrapped.runCommand(command)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
-    public Document runCommand(final Bson command, final ReadPreference readPreference) {
+    public OldDocument runCommand(final Bson command, final ReadPreference readPreference) {
         return requireNonNull(Mono.from(wrapped.runCommand(command, readPreference)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
@@ -137,12 +137,12 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public Document runCommand(final ClientSession clientSession, final Bson command) {
+    public OldDocument runCommand(final ClientSession clientSession, final Bson command) {
         return requireNonNull(Mono.from(wrapped.runCommand(unwrap(clientSession), command)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
-    public Document runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
+    public OldDocument runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
         return requireNonNull(Mono.from(wrapped.runCommand(unwrap(clientSession), command, readPreference)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
@@ -174,7 +174,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsIterable<Document> listCollections() {
+    public ListCollectionsIterable<OldDocument> listCollections() {
         return new SyncListCollectionsIterable<>(wrapped.listCollections());
     }
 
@@ -189,8 +189,8 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsIterable<Document> listCollections(final ClientSession clientSession) {
-        return listCollections(clientSession, Document.class);
+    public ListCollectionsIterable<OldDocument> listCollections(final ClientSession clientSession) {
+        return listCollections(clientSession, OldDocument.class);
     }
 
     @Override
@@ -244,7 +244,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return new SyncChangeStreamIterable<>(wrapped.watch());
     }
 
@@ -254,7 +254,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
         return new SyncChangeStreamIterable<>(wrapped.watch(pipeline));
     }
 
@@ -264,7 +264,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
         return new SyncChangeStreamIterable<>(wrapped.watch(unwrap(clientSession)));
     }
 
@@ -274,7 +274,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return new SyncChangeStreamIterable<>(wrapped.watch(unwrap(clientSession), pipeline));
     }
 
@@ -285,7 +285,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public AggregateIterable<Document> aggregate(final List<? extends Bson> pipeline) {
+    public AggregateIterable<OldDocument> aggregate(final List<? extends Bson> pipeline) {
         return new SyncAggregateIterable<>(wrapped.aggregate(pipeline));
     }
 
@@ -295,7 +295,7 @@ public class SyncMongoDatabase implements MongoDatabase {
     }
 
     @Override
-    public AggregateIterable<Document> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public AggregateIterable<OldDocument> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return new SyncAggregateIterable<>(wrapped.aggregate(unwrap(clientSession), pipeline));
     }
 

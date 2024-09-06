@@ -21,7 +21,7 @@ import com.mongodb.ReadPreference;
 import com.mongodb.internal.operation.DistinctOperation;
 import com.mongodb.reactivestreams.client.DistinctPublisher;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,11 +40,11 @@ public class DistinctPublisherImplTest extends TestHelper {
     void shouldBuildTheExpectedOperation() {
         String fieldName = "fieldName";
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        DistinctPublisher<Document> publisher =
-                new DistinctPublisherImpl<>(null, createMongoOperationPublisher(executor), fieldName, new Document());
+        DistinctPublisher<OldDocument> publisher =
+                new DistinctPublisherImpl<>(null, createMongoOperationPublisher(executor), fieldName, new OldDocument());
 
-        DistinctOperation<Document> expectedOperation = new DistinctOperation<>(NAMESPACE, fieldName,
-                                                                                getDefaultCodecRegistry().get(Document.class))
+        DistinctOperation<OldDocument> expectedOperation = new DistinctOperation<>(NAMESPACE, fieldName,
+                                                                                getDefaultCodecRegistry().get(OldDocument.class))
                 .retryReads(true).filter(new BsonDocument());
 
         // default input should be as expected
@@ -77,14 +77,14 @@ public class DistinctPublisherImplTest extends TestHelper {
         TestOperationExecutor executor = createOperationExecutor(asList(new MongoException("Failure"), null));
 
         // Operation fails
-        Publisher<Document> publisher =
-                new DistinctPublisherImpl<>(null, createMongoOperationPublisher(executor), "fieldName", new Document());
+        Publisher<OldDocument> publisher =
+                new DistinctPublisherImpl<>(null, createMongoOperationPublisher(executor), "fieldName", new OldDocument());
         assertThrows(MongoException.class, () -> Flux.from(publisher).blockFirst());
 
         // Missing Codec
-        Publisher<Document> publisherMissingCodec =
+        Publisher<OldDocument> publisherMissingCodec =
                 new DistinctPublisherImpl<>(null, createMongoOperationPublisher(executor).withCodecRegistry(BSON_CODEC_REGISTRY),
-                                            "fieldName", new Document());
+                                            "fieldName", new OldDocument());
         assertThrows(CodecConfigurationException.class, () -> Flux.from(publisherMissingCodec).blockFirst());
     }
 

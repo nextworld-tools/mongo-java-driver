@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 
 /**
  * Flow implementation for list Atlas Search index operations.
@@ -127,7 +127,7 @@ public class ListSearchIndexesFlow<T : Any>(private val wrapped: ListSearchIndex
      * @see [Explain command](https://www.mongodb.com/docs/manual/reference/command/explain/)
      */
     @JvmName("explainDocument")
-    public suspend fun explain(verbosity: ExplainVerbosity? = null): Document = explain<Document>(verbosity)
+    public suspend fun explain(verbosity: ExplainVerbosity? = null): OldDocument = explain<OldDocument>(verbosity)
 
     /**
      * Explain the execution plan for this operation with the given verbosity level.

@@ -29,7 +29,7 @@ import com.mongodb.internal.connection.AsyncConnection
 import com.mongodb.internal.connection.Connection
 import org.bson.BsonDocument
 import org.bson.BsonRegularExpression
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.Decoder
 import org.bson.codecs.DocumentCodec
 
@@ -40,7 +40,7 @@ class ListDatabasesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should return a list of database names'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('_id', 1))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('_id', 1))
         def operation = new ListDatabasesOperation(codec)
 
         when:

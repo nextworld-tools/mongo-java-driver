@@ -22,7 +22,7 @@ import com.mongodb.benchmark.framework.BenchmarkResult;
 import com.mongodb.benchmark.framework.BenchmarkResultWriter;
 import com.mongodb.benchmark.framework.BenchmarkRunner;
 import com.mongodb.benchmark.framework.EvergreenBenchmarkResultWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.Codec;
 
 import java.util.Arrays;
@@ -38,9 +38,9 @@ public class BenchmarkSuite {
     private static final int MIN_TIME_SECONDS = 60;
     private static final int MAX_TIME_SECONDS = 300;
 
-    private static final Class DOCUMENT_CLASS = Document.class;
-    private static final IdRemover<Document> ID_REMOVER = document -> document.remove("_id");
-    private static final Codec<Document> DOCUMENT_CODEC = getDefaultCodecRegistry().get(DOCUMENT_CLASS);
+    private static final Class                  DOCUMENT_CLASS = OldDocument.class;
+    private static final IdRemover<OldDocument> ID_REMOVER     = document -> document.remove("_id");
+    private static final Codec<OldDocument>     DOCUMENT_CODEC = getDefaultCodecRegistry().get(DOCUMENT_CLASS);
 
     private static final List<BenchmarkResultWriter> WRITERS = Arrays.asList(
             new EvergreenBenchmarkResultWriter());
@@ -65,17 +65,17 @@ public class BenchmarkSuite {
         runBenchmark(new BsonDecodingBenchmark<>("Full", "extended_bson/full_bson.json", DOCUMENT_CODEC));
 
         runBenchmark(new RunCommandBenchmark<>(DOCUMENT_CODEC));
-        runBenchmark(new FindOneBenchmark<Document>("single_and_multi_document/tweet.json", BenchmarkSuite.DOCUMENT_CLASS));
+        runBenchmark(new FindOneBenchmark<OldDocument>("single_and_multi_document/tweet.json", BenchmarkSuite.DOCUMENT_CLASS));
 
-        runBenchmark(new InsertOneBenchmark<Document>("Small", "./single_and_multi_document/small_doc.json", 10000,
+        runBenchmark(new InsertOneBenchmark<OldDocument>("Small", "./single_and_multi_document/small_doc.json", 10000,
                 DOCUMENT_CLASS, ID_REMOVER));
-        runBenchmark(new InsertOneBenchmark<Document>("Large", "./single_and_multi_document/large_doc.json", 10,
+        runBenchmark(new InsertOneBenchmark<OldDocument>("Large", "./single_and_multi_document/large_doc.json", 10,
                 DOCUMENT_CLASS, ID_REMOVER));
 
-        runBenchmark(new FindManyBenchmark<Document>("single_and_multi_document/tweet.json", BenchmarkSuite.DOCUMENT_CLASS));
-        runBenchmark(new InsertManyBenchmark<Document>("Small", "./single_and_multi_document/small_doc.json", 10000,
+        runBenchmark(new FindManyBenchmark<OldDocument>("single_and_multi_document/tweet.json", BenchmarkSuite.DOCUMENT_CLASS));
+        runBenchmark(new InsertManyBenchmark<OldDocument>("Small", "./single_and_multi_document/small_doc.json", 10000,
                 DOCUMENT_CLASS));
-        runBenchmark(new InsertManyBenchmark<Document>("Large", "./single_and_multi_document/large_doc.json", 10,
+        runBenchmark(new InsertManyBenchmark<OldDocument>("Large", "./single_and_multi_document/large_doc.json", 10,
                 DOCUMENT_CLASS));
 
         runBenchmark(new GridFSUploadBenchmark("single_and_multi_document/gridfs_large.bin"));

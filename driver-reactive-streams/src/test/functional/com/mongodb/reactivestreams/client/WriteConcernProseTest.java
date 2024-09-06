@@ -23,7 +23,7 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,8 +41,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class WriteConcernProseTest extends DatabaseTestCase {
-    private BsonDocument failPointDocument;
-    private CollectionHelper<Document> collectionHelper;
+    private BsonDocument                  failPointDocument;
+    private CollectionHelper<OldDocument> collectionHelper;
 
     @BeforeEach
     @Override
@@ -73,7 +73,7 @@ public class WriteConcernProseTest extends DatabaseTestCase {
     }
 
     private void insertOneDocument() {
-        Mono.from(collection.insertOne(Document.parse("{ x: 1 }"))).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(OldDocument.parse("{ x: 1 }"))).block(TIMEOUT_DURATION);
     }
 
     private void setFailPoint() {

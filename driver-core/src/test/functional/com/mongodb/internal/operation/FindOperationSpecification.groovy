@@ -47,7 +47,7 @@ import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.BsonTimestamp
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -77,7 +77,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def decoder = new DocumentCodec()
 
         when:
-        FindOperation operation = new FindOperation<Document>(getNamespace(), decoder)
+        FindOperation operation = new FindOperation<OldDocument>(getNamespace(), decoder)
 
         then:
         operation.getNamespace() == getNamespace()
@@ -101,7 +101,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def hint = new BsonString('a_1')
 
         when:
-        FindOperation operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        FindOperation operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .filter(filter)
                 .limit(20)
                 .skip(30)
@@ -129,9 +129,9 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should query with default values'() {
         given:
-        def document = new Document('_id', 1)
+        def document = new OldDocument('_id', 1)
         getCollectionHelper().insertDocuments(new DocumentCodec(), document)
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
 
         when:
         def results = executeAndCollectBatchCursorResults(operation, async)
@@ -145,8 +145,8 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should apply filter'() {
         given:
-        def document = new Document('_id', 1)
-        getCollectionHelper().insertDocuments(new DocumentCodec(), document, new Document())
+        def document = new OldDocument('_id', 1)
+        getCollectionHelper().insertDocuments(new DocumentCodec(), document, new OldDocument())
 
         when:
         def results = executeAndCollectBatchCursorResults(operation, async)
@@ -157,15 +157,15 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         where:
         [async, operation] << [
                 [true, false],
-                [new FindOperation<Document>(getNamespace(), new DocumentCodec())
+                [new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                          .filter(new BsonDocument('_id', new BsonInt32(1)))]
         ].combinations()
     }
 
     def 'should apply sort'() {
         given:
-        def documents = [new Document('_id', 3), new Document('_id', 1), new Document('_id', 2), new Document('_id', 5),
-                         new Document('_id', 4)]
+        def documents = [new OldDocument('_id', 3), new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 5),
+                         new OldDocument('_id', 4)]
         getCollectionHelper().insertDocuments(new DocumentCodec(), documents)
 
 
@@ -173,12 +173,12 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def results = executeAndCollectBatchCursorResults(operation, async)
 
         then:
-        results == [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3), new Document('_id', 4), new Document('_id', 5)]
+        results == [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3), new OldDocument('_id', 4), new OldDocument('_id', 5)]
 
         where:
         [async, operation] << [
                 [true, false],
-                [new FindOperation<Document>(getNamespace(), new DocumentCodec())
+                [new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                          .sort(new BsonDocument('_id', new BsonInt32(1)))]
         ].combinations()
     }
@@ -186,15 +186,15 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     def 'should apply projection'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(),
-                new Document('x', 5).append('y', 10), new Document('_id', 1).append('x', 10))
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+                new OldDocument('x', 5).append('y', 10), new OldDocument('_id', 1).append('x', 10))
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .projection(new BsonDocument('_id', new BsonInt32(0)).append('x', new BsonInt32(1)))
 
         when:
         def results = executeAndCollectBatchCursorResults(operation, async)
 
         then:
-        results == [new Document('x', 5), new Document('x', 10)]
+        results == [new OldDocument('x', 5), new OldDocument('x', 10)]
 
         where:
         async << [true, false]
@@ -202,11 +202,11 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should apply skip'() {
         given:
-        def documents = [new Document('_id', 3), new Document('_id', 1), new Document('_id', 2), new Document('_id', 4),
-                         new Document('_id', 5)]
+        def documents = [new OldDocument('_id', 3), new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 4),
+                         new OldDocument('_id', 5)]
         getCollectionHelper().insertDocuments(new DocumentCodec(), documents)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .sort(new BsonDocument('_id', new BsonInt32(1)))
                 .skip(3)
 
@@ -214,7 +214,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def results = executeAndCollectBatchCursorResults(operation, async)
 
         then:
-        results == [new Document('_id', 4), new Document('_id', 5)]
+        results == [new OldDocument('_id', 4), new OldDocument('_id', 5)]
 
         where:
         async << [true, false]
@@ -222,11 +222,11 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should apply limit'() {
         given:
-        def documents = [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3), new Document('_id', 4),
-                         new Document('_id', 5)]
+        def documents = [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3), new OldDocument('_id', 4),
+                         new OldDocument('_id', 5)]
         getCollectionHelper().insertDocuments(new DocumentCodec(), documents)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .sort(new BsonDocument('_id', new BsonInt32(1)))
                 .limit(limit)
 
@@ -234,7 +234,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def results = executeAndCollectBatchCursorResults(operation, async)
 
         then:
-        results == [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3)]
+        results == [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3)]
 
         where:
         [async, limit] << [[true, false], [3, -3]].combinations()
@@ -242,10 +242,10 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should apply batch size'() {
         given:
-        def documents = [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3), new Document('_id', 4),
-                         new Document('_id', 5)]
+        def documents = [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3), new OldDocument('_id', 4),
+                         new OldDocument('_id', 5)]
         getCollectionHelper().insertDocuments(new DocumentCodec(), documents)
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .sort(new BsonDocument('_id', new BsonInt32(1)))
                 .batchSize(batchSize)
 
@@ -275,7 +275,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         }()
 
         then:
-        firstBatch == [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3)]
+        firstBatch == [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3)]
         hasAnotherBatch == hasNext
 
         where:
@@ -288,7 +288,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should throw query exception'() {
         given:
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .filter(new BsonDocument('x', new BsonDocument('$thisIsNotAnOperator', BsonBoolean.TRUE)))
 
         when:
@@ -304,10 +304,10 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     def '$max should limit items returned'() {
         given:
         (1..100).each {
-            collectionHelper.insertDocuments(new DocumentCodec(), new Document('x', 'y').append('count', it))
+            collectionHelper.insertDocuments(new DocumentCodec(), new OldDocument('x', 'y').append('count', it))
         }
         collectionHelper.createIndex(new BsonDocument('count', new BsonInt32(1)))
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .max(new BsonDocument('count', new BsonInt32(11)))
                 .hint(new BsonDocument('count', new BsonInt32(1)))
 
@@ -324,10 +324,10 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     def '$min should limit items returned'() {
         given:
         (1..100).each {
-            collectionHelper.insertDocuments(new DocumentCodec(), new Document('x', 'y').append('count', it))
+            collectionHelper.insertDocuments(new DocumentCodec(), new OldDocument('x', 'y').append('count', it))
         }
         collectionHelper.createIndex(new BsonDocument('count', new BsonInt32(1)))
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .min(new BsonDocument('count', new BsonInt32(10)))
                 .hint(new BsonDocument('count', new BsonInt32(1)))
 
@@ -344,11 +344,11 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     def '$returnKey should only return the field that was in an index used to perform the find'() {
         given:
         (1..13).each {
-            collectionHelper.insertDocuments(new DocumentCodec(), new Document('x', it))
+            collectionHelper.insertDocuments(new DocumentCodec(), new OldDocument('x', it))
         }
         collectionHelper.createIndex(new BsonDocument('x', new BsonInt32(1)))
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .filter(new BsonDocument('x', new BsonInt32(7)))
                 .returnKey(true)
 
@@ -356,7 +356,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def results = executeAndCollectBatchCursorResults(operation, async)
 
         then:
-        results == [new Document('x', 7)]
+        results == [new OldDocument('x', 7)]
 
         where:
         async << [true, false]
@@ -368,7 +368,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def index = new BsonDocument('a', new BsonInt32(1))
         collectionHelper.createIndex(index)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .hint((BsonValue) hint)
                 .asExplainableOperation(null, new BsonDocumentCodec())
 
@@ -390,20 +390,20 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(2)),
                 new BsonDocumentCodec()).execute(getBinding())
         def expectedComment = 'this is a comment'
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .comment(new BsonString(expectedComment))
 
         when:
         execute(operation, async)
 
         then:
-        Document profileDocument = profileCollectionHelper.find().get(0)
+        OldDocument profileDocument = profileCollectionHelper.find().get(0)
         if (serverVersionAtLeast(3, 6)) {
-            assertEquals(expectedComment, ((Document) profileDocument.get('command')).get('comment'))
+            assertEquals(expectedComment, ((OldDocument) profileDocument.get('command')).get('comment'))
         } else if (serverVersionAtLeast(3, 2)) {
-            assertEquals(expectedComment, ((Document) profileDocument.get('query')).get('comment'))
+            assertEquals(expectedComment, ((OldDocument) profileDocument.get('query')).get('comment'))
         } else {
-            assertEquals(expectedComment, ((Document) profileDocument.get('query')).get('$comment'))
+            assertEquals(expectedComment, ((OldDocument) profileDocument.get('query')).get('$comment'))
         }
 
         cleanup:
@@ -421,7 +421,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         String fieldName = serverVersionAtLeast(3, 2) ? '$recordId' : '$diskLoc'
         collectionHelper.insertDocuments(new BsonDocument())
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
                 .showRecordId(true)
 
         when:
@@ -437,8 +437,8 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ !ClusterFixture.isDiscoverableReplicaSet() })
     def 'should read from a secondary'() {
         given:
-        collectionHelper.insertDocuments(new DocumentCodec(), new Document())
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        collectionHelper.insertDocuments(new DocumentCodec(), new OldDocument())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
         def syncBinding = new ClusterBinding(getCluster(), ReadPreference.secondary(), ReadConcern.DEFAULT, OPERATION_CONTEXT)
         def asyncBinding = new AsyncClusterBinding(getAsyncCluster(), ReadPreference.secondary(), ReadConcern.DEFAULT,
                 OPERATION_CONTEXT)
@@ -456,10 +456,10 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(4, 4) || ClusterFixture.isStandalone() })
     def 'should read from a secondary when hedge is specified'() {
         given:
-        def documents = [new Document('_id', 3), new Document('_id', 1), new Document('_id', 2), new Document('_id', 5),
-                         new Document('_id', 4)]
+        def documents = [new OldDocument('_id', 3), new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 5),
+                         new OldDocument('_id', 4)]
         collectionHelper.insertDocuments(new DocumentCodec(), documents)
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
 
         when:
         def hedgeOptions = isHedgeEnabled != null ?
@@ -500,7 +500,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('find', new BsonString(getCollectionName()))
         appendReadConcernToCommand(sessionContext, MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
 
         when:
         operation.execute(binding)
@@ -540,7 +540,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('find', new BsonString(getCollectionName()))
         appendReadConcernToCommand(sessionContext, MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec())
 
         when:
         executeAsync(operation, binding)
@@ -581,7 +581,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('find', new BsonString(getCollectionName())).append('allowDiskUse', BsonBoolean.TRUE)
         appendReadConcernToCommand(sessionContext, MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec()).allowDiskUse(true)
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec()).allowDiskUse(true)
 
         when:
         operation.execute(binding)
@@ -621,7 +621,7 @@ class FindOperationSpecification extends OperationFunctionalSpecification {
         def commandDocument = new BsonDocument('find', new BsonString(getCollectionName())).append('allowDiskUse', BsonBoolean.TRUE)
         appendReadConcernToCommand(sessionContext, MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new FindOperation<Document>(getNamespace(), new DocumentCodec()).allowDiskUse(true)
+        def operation = new FindOperation<OldDocument>(getNamespace(), new DocumentCodec()).allowDiskUse(true)
 
         when:
         executeAsync(operation, binding)

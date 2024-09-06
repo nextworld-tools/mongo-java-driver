@@ -45,7 +45,7 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
@@ -60,12 +60,12 @@ import org.mockito.kotlin.whenever
 
 class MongoCollectionTest {
 
-    @Mock val wrapped: JMongoCollection<Document> = mock()
+    @Mock val wrapped: JMongoCollection<OldDocument> = mock()
     @Mock val clientSession: ClientSession = ClientSession(mock())
 
     private val defaultFilter = BsonDocument()
-    private val filter = Document("a", 1)
-    private val pipeline = listOf(Document(mapOf("a" to 1)))
+    private val filter = OldDocument("a", 1)
+    private val pipeline = listOf(OldDocument(mapOf("a" to 1)))
 
     @Test
     fun shouldHaveTheSameMethods() {
@@ -92,7 +92,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingGetDocumentClass() {
         val mongoCollection = MongoCollection(wrapped)
-        whenever(wrapped.documentClass).doReturn(Document::class.java)
+        whenever(wrapped.documentClass).doReturn(OldDocument::class.java)
 
         mongoCollection.documentClass
         verify(wrapped).documentClass
@@ -257,31 +257,31 @@ class MongoCollectionTest {
         val mongoCollection = MongoCollection(wrapped)
         val fieldName = "fieldName"
 
-        whenever(wrapped.distinct(fieldName, defaultFilter, Document::class.java)).doReturn(mock())
-        whenever(wrapped.distinct(fieldName, filter, Document::class.java)).doReturn(mock())
-        whenever(wrapped.distinct(clientSession.wrapped, fieldName, defaultFilter, Document::class.java))
+        whenever(wrapped.distinct(fieldName, defaultFilter, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.distinct(fieldName, filter, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.distinct(clientSession.wrapped, fieldName, defaultFilter, OldDocument::class.java))
             .doReturn(mock())
-        whenever(wrapped.distinct(clientSession.wrapped, fieldName, filter, Document::class.java)).doReturn(mock())
+        whenever(wrapped.distinct(clientSession.wrapped, fieldName, filter, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.distinct(fieldName, defaultFilter, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.distinct(fieldName, filter, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.distinct(clientSession.wrapped, fieldName, defaultFilter, BsonDocument::class.java))
             .doReturn(mock())
         whenever(wrapped.distinct(clientSession.wrapped, fieldName, filter, BsonDocument::class.java)).doReturn(mock())
 
-        mongoCollection.distinct("fieldName", resultClass = Document::class.java)
-        mongoCollection.distinct("fieldName", filter, Document::class.java)
-        mongoCollection.distinct(clientSession, "fieldName", resultClass = Document::class.java)
-        mongoCollection.distinct(clientSession, "fieldName", filter, Document::class.java)
+        mongoCollection.distinct("fieldName", resultClass = OldDocument::class.java)
+        mongoCollection.distinct("fieldName", filter, OldDocument::class.java)
+        mongoCollection.distinct(clientSession, "fieldName", resultClass = OldDocument::class.java)
+        mongoCollection.distinct(clientSession, "fieldName", filter, OldDocument::class.java)
 
         mongoCollection.distinct<BsonDocument>("fieldName")
         mongoCollection.distinct<BsonDocument>("fieldName", filter)
         mongoCollection.distinct<BsonDocument>(clientSession, "fieldName")
         mongoCollection.distinct<BsonDocument>(clientSession, "fieldName", filter)
 
-        verify(wrapped).distinct(fieldName, defaultFilter, Document::class.java)
-        verify(wrapped).distinct(fieldName, filter, Document::class.java)
-        verify(wrapped).distinct(clientSession.wrapped, fieldName, defaultFilter, Document::class.java)
-        verify(wrapped).distinct(clientSession.wrapped, fieldName, filter, Document::class.java)
+        verify(wrapped).distinct(fieldName, defaultFilter, OldDocument::class.java)
+        verify(wrapped).distinct(fieldName, filter, OldDocument::class.java)
+        verify(wrapped).distinct(clientSession.wrapped, fieldName, defaultFilter, OldDocument::class.java)
+        verify(wrapped).distinct(clientSession.wrapped, fieldName, filter, OldDocument::class.java)
 
         verify(wrapped).distinct(fieldName, defaultFilter, BsonDocument::class.java)
         verify(wrapped).distinct(fieldName, filter, BsonDocument::class.java)
@@ -294,11 +294,11 @@ class MongoCollectionTest {
     fun shouldCallTheUnderlyingFind() {
         val mongoCollection = MongoCollection(wrapped)
 
-        whenever(wrapped.documentClass).doReturn(Document::class.java)
-        whenever(wrapped.find(defaultFilter, Document::class.java)).doReturn(mock())
-        whenever(wrapped.find(filter, Document::class.java)).doReturn(mock())
-        whenever(wrapped.find(clientSession.wrapped, defaultFilter, Document::class.java)).doReturn(mock())
-        whenever(wrapped.find(clientSession.wrapped, filter, Document::class.java)).doReturn(mock())
+        whenever(wrapped.documentClass).doReturn(OldDocument::class.java)
+        whenever(wrapped.find(defaultFilter, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.find(filter, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.find(clientSession.wrapped, defaultFilter, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.find(clientSession.wrapped, filter, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.find(defaultFilter, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.find(filter, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.find(clientSession.wrapped, defaultFilter, BsonDocument::class.java)).doReturn(mock())
@@ -309,10 +309,10 @@ class MongoCollectionTest {
         mongoCollection.find(clientSession)
         mongoCollection.find(clientSession, filter)
 
-        mongoCollection.find(resultClass = Document::class.java)
-        mongoCollection.find(filter, resultClass = Document::class.java)
-        mongoCollection.find(clientSession, resultClass = Document::class.java)
-        mongoCollection.find(clientSession, filter, Document::class.java)
+        mongoCollection.find(resultClass = OldDocument::class.java)
+        mongoCollection.find(filter, resultClass = OldDocument::class.java)
+        mongoCollection.find(clientSession, resultClass = OldDocument::class.java)
+        mongoCollection.find(clientSession, filter, OldDocument::class.java)
 
         mongoCollection.find<BsonDocument>()
         mongoCollection.find<BsonDocument>(filter)
@@ -320,10 +320,10 @@ class MongoCollectionTest {
         mongoCollection.find<BsonDocument>(clientSession, filter)
 
         verify(wrapped, times(4)).documentClass
-        verify(wrapped, times(2)).find(defaultFilter, Document::class.java)
-        verify(wrapped, times(2)).find(filter, Document::class.java)
-        verify(wrapped, times(2)).find(clientSession.wrapped, defaultFilter, Document::class.java)
-        verify(wrapped, times(2)).find(clientSession.wrapped, filter, Document::class.java)
+        verify(wrapped, times(2)).find(defaultFilter, OldDocument::class.java)
+        verify(wrapped, times(2)).find(filter, OldDocument::class.java)
+        verify(wrapped, times(2)).find(clientSession.wrapped, defaultFilter, OldDocument::class.java)
+        verify(wrapped, times(2)).find(clientSession.wrapped, filter, OldDocument::class.java)
         verify(wrapped, times(1)).find(defaultFilter, BsonDocument::class.java)
         verify(wrapped, times(1)).find(filter, BsonDocument::class.java)
         verify(wrapped, times(1)).find(clientSession.wrapped, defaultFilter, BsonDocument::class.java)
@@ -335,24 +335,24 @@ class MongoCollectionTest {
     fun shouldCallTheUnderlyingAggregate() {
         val mongoCollection = MongoCollection(wrapped)
 
-        whenever(wrapped.documentClass).doReturn(Document::class.java)
-        whenever(wrapped.aggregate(pipeline, Document::class.java)).doReturn(mock())
-        whenever(wrapped.aggregate(clientSession.wrapped, pipeline, Document::class.java)).doReturn(mock())
+        whenever(wrapped.documentClass).doReturn(OldDocument::class.java)
+        whenever(wrapped.aggregate(pipeline, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.aggregate(clientSession.wrapped, pipeline, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.aggregate(pipeline, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.aggregate(clientSession.wrapped, pipeline, BsonDocument::class.java)).doReturn(mock())
 
         mongoCollection.aggregate(pipeline)
         mongoCollection.aggregate(clientSession, pipeline)
 
-        mongoCollection.aggregate(pipeline, resultClass = Document::class.java)
-        mongoCollection.aggregate(clientSession, pipeline, Document::class.java)
+        mongoCollection.aggregate(pipeline, resultClass = OldDocument::class.java)
+        mongoCollection.aggregate(clientSession, pipeline, OldDocument::class.java)
 
         mongoCollection.aggregate<BsonDocument>(pipeline)
         mongoCollection.aggregate<BsonDocument>(clientSession, pipeline)
 
         verify(wrapped, times(2)).documentClass
-        verify(wrapped, times(2)).aggregate(pipeline, Document::class.java)
-        verify(wrapped, times(2)).aggregate(clientSession.wrapped, pipeline, Document::class.java)
+        verify(wrapped, times(2)).aggregate(pipeline, OldDocument::class.java)
+        verify(wrapped, times(2)).aggregate(clientSession.wrapped, pipeline, OldDocument::class.java)
         verify(wrapped, times(1)).aggregate(pipeline, BsonDocument::class.java)
         verify(wrapped, times(1)).aggregate(clientSession.wrapped, pipeline, BsonDocument::class.java)
         verifyNoMoreInteractions(wrapped)
@@ -361,13 +361,13 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingWatch() {
         val mongoCollection = MongoCollection(wrapped)
-        val pipeline = listOf(Document(mapOf("a" to 1)))
+        val pipeline = listOf(OldDocument(mapOf("a" to 1)))
 
-        whenever(wrapped.documentClass).doReturn(Document::class.java)
-        whenever(wrapped.watch(emptyList(), Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(pipeline, Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(clientSession.wrapped, emptyList(), Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(clientSession.wrapped, pipeline, Document::class.java)).doReturn(mock())
+        whenever(wrapped.documentClass).doReturn(OldDocument::class.java)
+        whenever(wrapped.watch(emptyList(), OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(pipeline, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(clientSession.wrapped, emptyList(), OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(clientSession.wrapped, pipeline, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.watch(emptyList(), BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.watch(pipeline, BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.watch(clientSession.wrapped, emptyList(), BsonDocument::class.java)).doReturn(mock())
@@ -378,10 +378,10 @@ class MongoCollectionTest {
         mongoCollection.watch(clientSession)
         mongoCollection.watch(clientSession, pipeline)
 
-        mongoCollection.watch(resultClass = Document::class.java)
-        mongoCollection.watch(pipeline, Document::class.java)
-        mongoCollection.watch(clientSession, resultClass = Document::class.java)
-        mongoCollection.watch(clientSession, pipeline, Document::class.java)
+        mongoCollection.watch(resultClass = OldDocument::class.java)
+        mongoCollection.watch(pipeline, OldDocument::class.java)
+        mongoCollection.watch(clientSession, resultClass = OldDocument::class.java)
+        mongoCollection.watch(clientSession, pipeline, OldDocument::class.java)
 
         mongoCollection.watch<BsonDocument>()
         mongoCollection.watch<BsonDocument>(pipeline)
@@ -389,10 +389,10 @@ class MongoCollectionTest {
         mongoCollection.watch<BsonDocument>(clientSession, pipeline)
 
         verify(wrapped, times(4)).documentClass
-        verify(wrapped, times(2)).watch(emptyList(), Document::class.java)
-        verify(wrapped, times(2)).watch(pipeline, Document::class.java)
-        verify(wrapped, times(2)).watch(clientSession.wrapped, emptyList(), Document::class.java)
-        verify(wrapped, times(2)).watch(clientSession.wrapped, pipeline, Document::class.java)
+        verify(wrapped, times(2)).watch(emptyList(), OldDocument::class.java)
+        verify(wrapped, times(2)).watch(pipeline, OldDocument::class.java)
+        verify(wrapped, times(2)).watch(clientSession.wrapped, emptyList(), OldDocument::class.java)
+        verify(wrapped, times(2)).watch(clientSession.wrapped, pipeline, OldDocument::class.java)
         verify(wrapped, times(1)).watch(emptyList(), BsonDocument::class.java)
         verify(wrapped, times(1)).watch(pipeline, BsonDocument::class.java)
         verify(wrapped, times(1)).watch(clientSession.wrapped, emptyList(), BsonDocument::class.java)
@@ -403,7 +403,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingInsertOne() {
         val mongoCollection = MongoCollection(wrapped)
-        val value = Document("u", 1)
+        val value = OldDocument("u", 1)
         val defaultOptions = InsertOneOptions()
         val options = InsertOneOptions().comment("comment")
 
@@ -427,7 +427,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingInsertMany() {
         val mongoCollection = MongoCollection(wrapped)
-        val value = listOf(Document("u", 1))
+        val value = listOf(OldDocument("u", 1))
         val defaultOptions = InsertManyOptions()
         val options = InsertManyOptions().comment("comment")
 
@@ -451,7 +451,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingBulkWrite() {
         val mongoCollection = MongoCollection(wrapped)
-        val value = listOf(InsertOneModel(Document("u", 1)))
+        val value = listOf(InsertOneModel(OldDocument("u", 1)))
         val defaultOptions = BulkWriteOptions()
         val options = BulkWriteOptions().comment("comment")
 
@@ -475,7 +475,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingUpdateOne() {
         val mongoCollection = MongoCollection(wrapped)
-        val update = Document("u", 1)
+        val update = OldDocument("u", 1)
         val updates = listOf(update)
         val defaultOptions = UpdateOptions()
         val options = UpdateOptions().comment("comment")
@@ -514,7 +514,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingUpdateMany() {
         val mongoCollection = MongoCollection(wrapped)
-        val update = Document("u", 1)
+        val update = OldDocument("u", 1)
         val updates = listOf(update)
         val defaultOptions = UpdateOptions()
         val options = UpdateOptions().comment("comment")
@@ -553,7 +553,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingReplaceOne() {
         val mongoCollection = MongoCollection(wrapped)
-        val replacement = Document("u", 1)
+        val replacement = OldDocument("u", 1)
         val defaultOptions = ReplaceOptions()
         val options = ReplaceOptions().comment("comment")
 
@@ -652,7 +652,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingFindOneAndUpdate() {
         val mongoCollection = MongoCollection(wrapped)
-        val update = Document("u", 1)
+        val update = OldDocument("u", 1)
         val updateList = listOf(update)
         val defaultOptions = FindOneAndUpdateOptions()
         val options = FindOneAndUpdateOptions().comment("comment")
@@ -693,7 +693,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingFindOneAndReplace() {
         val mongoCollection = MongoCollection(wrapped)
-        val replacement = Document("u", 1)
+        val replacement = OldDocument("u", 1)
         val defaultOptions = FindOneAndReplaceOptions()
         val options = FindOneAndReplaceOptions().comment("comment")
 
@@ -722,7 +722,7 @@ class MongoCollectionTest {
     fun shouldCallTheUnderlyingDrop() {
         val mongoCollection = MongoCollection(wrapped)
         val defaultOptions = DropCollectionOptions()
-        val options = DropCollectionOptions().encryptedFields(Document())
+        val options = DropCollectionOptions().encryptedFields(OldDocument())
 
         mongoCollection.drop()
         mongoCollection.drop(options)
@@ -739,7 +739,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingCreateIndex() {
         val mongoCollection = MongoCollection(wrapped)
-        val key = Document()
+        val key = OldDocument()
         val defaultOptions = IndexOptions()
         val options = IndexOptions().name("name")
 
@@ -763,7 +763,7 @@ class MongoCollectionTest {
     @Test
     fun shouldCallTheUnderlyingCreateIndexes() {
         val mongoCollection = MongoCollection(wrapped)
-        val indexes = listOf(IndexModel(Document()))
+        val indexes = listOf(IndexModel(OldDocument()))
         val defaultOptions = CreateIndexOptions()
         val options = CreateIndexOptions().commitQuorum(CreateIndexCommitQuorum.MAJORITY)
 
@@ -789,22 +789,22 @@ class MongoCollectionTest {
     fun shouldCallTheUnderlyingListIndexes() {
         val mongoCollection = MongoCollection(wrapped)
 
-        whenever(wrapped.listIndexes(Document::class.java)).doReturn(mock())
-        whenever(wrapped.listIndexes(clientSession.wrapped, Document::class.java)).doReturn(mock())
+        whenever(wrapped.listIndexes(OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.listIndexes(clientSession.wrapped, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.listIndexes(BsonDocument::class.java)).doReturn(mock())
         whenever(wrapped.listIndexes(clientSession.wrapped, BsonDocument::class.java)).doReturn(mock())
 
         mongoCollection.listIndexes()
         mongoCollection.listIndexes(clientSession)
 
-        mongoCollection.listIndexes(resultClass = Document::class.java)
-        mongoCollection.listIndexes(clientSession, Document::class.java)
+        mongoCollection.listIndexes(resultClass = OldDocument::class.java)
+        mongoCollection.listIndexes(clientSession, OldDocument::class.java)
 
         mongoCollection.listIndexes<BsonDocument>()
         mongoCollection.listIndexes<BsonDocument>(clientSession)
 
-        verify(wrapped, times(2)).listIndexes(Document::class.java)
-        verify(wrapped, times(2)).listIndexes(clientSession.wrapped, Document::class.java)
+        verify(wrapped, times(2)).listIndexes(OldDocument::class.java)
+        verify(wrapped, times(2)).listIndexes(clientSession.wrapped, OldDocument::class.java)
         verify(wrapped, times(1)).listIndexes(BsonDocument::class.java)
         verify(wrapped, times(1)).listIndexes(clientSession.wrapped, BsonDocument::class.java)
         verifyNoMoreInteractions(wrapped)
@@ -814,7 +814,7 @@ class MongoCollectionTest {
     fun shouldCallTheUnderlyingDropIndex() {
         val mongoCollection = MongoCollection(wrapped)
         val indexName = "index"
-        val keys = Document()
+        val keys = OldDocument()
         val defaultOptions = DropIndexOptions()
         val options = DropIndexOptions().maxTime(1, TimeUnit.MILLISECONDS)
 

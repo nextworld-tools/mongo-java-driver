@@ -25,7 +25,7 @@ import com.mongodb.reactivestreams.client.MongoClient;
 import com.mongodb.reactivestreams.client.MongoClients;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import org.bson.Document;
+import org.bson.OldDocument;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.OperationSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintDocumentSubscriber;
@@ -75,7 +75,7 @@ public class QuickTour {
         MongoDatabase database = mongoClient.getDatabase("mydb");
 
         // get a handle to the "test" collection
-        MongoCollection<Document> collection = database.getCollection("test");
+        MongoCollection<OldDocument> collection = database.getCollection("test");
 
         // drop all the data in it
         ObservableSubscriber<Void> successSubscriber = new OperationSubscriber<>();
@@ -83,24 +83,24 @@ public class QuickTour {
         successSubscriber.await();
 
         // make a document and insert it
-        Document doc = new Document("name", "MongoDB")
+        OldDocument doc = new OldDocument("name", "MongoDB")
                 .append("type", "database")
                 .append("count", 1)
-                .append("info", new Document("x", 203).append("y", 102));
+                .append("info", new OldDocument("x", 203).append("y", 102));
 
         ObservableSubscriber<InsertOneResult> insertOneSubscriber = new OperationSubscriber<>();
         collection.insertOne(doc).subscribe(insertOneSubscriber);
         insertOneSubscriber.await();
 
         // get it (since it's the only one in there since we dropped the rest earlier on)
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         collection.find().first().subscribe(documentSubscriber);
         documentSubscriber.await();
 
         // now, lets add lots of little documents to the collection so we can explore queries and cursors
-        List<Document> documents = new ArrayList<>();
+        List<OldDocument> documents = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
-            documents.add(new Document("i", i));
+            documents.add(new OldDocument("i", i));
         }
 
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
@@ -148,7 +148,7 @@ public class QuickTour {
         documentSubscriber = new PrintDocumentSubscriber();
         collection.aggregate(asList(
                 match(gt("i", 0)),
-                project(Document.parse("{ITimes10: {$multiply: ['$i', 10]}}")))
+                project(OldDocument.parse("{ITimes10: {$multiply: ['$i', 10]}}")))
         ).subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -179,7 +179,7 @@ public class QuickTour {
 
         // Create Index
         OperationSubscriber<String> createIndexSubscriber = new PrintSubscriber<>("Create Index Result: %s");
-        collection.createIndex(new Document("i", 1)).subscribe(createIndexSubscriber);
+        collection.createIndex(new OldDocument("i", 1)).subscribe(createIndexSubscriber);
         createIndexSubscriber.await();
 
         // Clean up

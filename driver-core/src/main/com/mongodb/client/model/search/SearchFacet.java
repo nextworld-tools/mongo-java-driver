@@ -21,7 +21,7 @@ import com.mongodb.annotations.Sealed;
 import org.bson.BsonDocument;
 import org.bson.BsonType;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -57,7 +57,7 @@ public interface SearchFacet extends Bson {
      */
     static StringSearchFacet stringFacet(final String name, final FieldSearchPath path) {
         return new SearchConstructibleBsonElement(notNull("name", name),
-                new Document("type", "string")
+                new OldDocument("type", "string")
                         .append("path", notNull("path", path).toValue()));
     }
 
@@ -75,7 +75,7 @@ public interface SearchFacet extends Bson {
     static NumberSearchFacet numberFacet(final String name, final FieldSearchPath path, final Iterable<? extends Number> boundaries) {
         isTrueArgument("boundaries must contain at least 2 elements", sizeAtLeast(boundaries, 2));
         return new SearchConstructibleBsonElement(notNull("name", name),
-                new Document("type", "number")
+                new OldDocument("type", "number")
                         .append("path", notNull("path", path).toValue())
                         .append("boundaries", notNull("boundaries", boundaries)));
     }
@@ -94,7 +94,7 @@ public interface SearchFacet extends Bson {
     static DateSearchFacet dateFacet(final String name, final FieldSearchPath path, final Iterable<Instant> boundaries) {
         isTrueArgument("boundaries must contain at least 2 elements", sizeAtLeast(boundaries, 2));
         return new SearchConstructibleBsonElement(notNull("name", name),
-                new Document("type", "date")
+                new OldDocument("type", "date")
                         .append("path", notNull("path", path).toValue())
                         .append("boundaries", notNull("boundaries", boundaries)));
     }

@@ -22,7 +22,7 @@ import com.mongodb.client.model.Collation
 import com.mongodb.kotlin.client.ListSearchIndexesIterable
 import java.util.concurrent.TimeUnit
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 
 internal class SyncListSearchIndexesIterable<T : Any>(val wrapped: ListSearchIndexesIterable<T>) :
     JListSearchIndexesIterable<T>, SyncMongoIterable<T>(wrapped) {
@@ -46,9 +46,9 @@ internal class SyncListSearchIndexesIterable<T : Any>(val wrapped: ListSearchInd
 
     override fun comment(comment: String?): SyncListSearchIndexesIterable<T> = apply { wrapped.comment(comment) }
     override fun comment(comment: BsonValue?): SyncListSearchIndexesIterable<T> = apply { wrapped.comment(comment) }
-    override fun explain(): Document = wrapped.explain()
+    override fun explain(): OldDocument = wrapped.explain()
 
-    override fun explain(verbosity: ExplainVerbosity): Document = wrapped.explain(verbosity)
+    override fun explain(verbosity: ExplainVerbosity): OldDocument = wrapped.explain(verbosity)
 
     override fun <E : Any> explain(explainResultClass: Class<E>): E = wrapped.explain(explainResultClass)
 

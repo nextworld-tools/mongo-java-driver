@@ -21,7 +21,7 @@ import org.bson.BsonRegularExpression
 import org.bson.BsonTimestamp
 import org.bson.BsonType
 import org.bson.BsonUndefined
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.Binary
 import org.bson.types.Code
 import org.bson.types.CodeWithScope
@@ -42,7 +42,7 @@ class BsonTypeClassMapSpecification extends Specification {
         map.get(BsonType.BOOLEAN) == Boolean
         map.get(BsonType.DATE_TIME) == Date
         map.get(BsonType.DB_POINTER) == BsonDbPointer
-        map.get(BsonType.DOCUMENT) == Document
+        map.get(BsonType.DOCUMENT) == OldDocument
         map.get(BsonType.DOUBLE) == Double
         map.get(BsonType.INT32) == Integer
         map.get(BsonType.INT64) == Long

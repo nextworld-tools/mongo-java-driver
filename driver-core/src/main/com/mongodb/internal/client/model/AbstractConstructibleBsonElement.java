@@ -17,7 +17,7 @@ package com.mongodb.internal.client.model;
 
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -50,7 +50,7 @@ public abstract class AbstractConstructibleBsonElement<S extends AbstractConstru
     }
 
     protected AbstractConstructibleBsonElement(final String name, final Bson value) {
-        this(new Document(name, value));
+        this(new OldDocument(name, value));
     }
 
     protected AbstractConstructibleBsonElement(final Bson baseElement) {
@@ -65,7 +65,7 @@ public abstract class AbstractConstructibleBsonElement<S extends AbstractConstru
     protected abstract S newSelf(Bson baseElement, Bson appendedElementValue);
 
     /**
-     * {@linkplain Document#append(String, Object) Appends} the specified mapping to the value via {@link #newWithMutatedValue(Consumer)}.
+     * {@linkplain OldDocument#append(String, Object) Appends} the specified mapping to the value via {@link #newWithMutatedValue(Consumer)}.
      *
      * @return A new instance.
      */
@@ -80,7 +80,7 @@ public abstract class AbstractConstructibleBsonElement<S extends AbstractConstru
      * @return A new instance.
      * @see AbstractConstructibleBson#newMutated(Consumer)
      */
-    protected final S newWithMutatedValue(final Consumer<Document> mutator) {
+    protected final S newWithMutatedValue(final Consumer<OldDocument> mutator) {
         return newSelf(baseElement, appendedElementValue.newMutated(mutator));
     }
 
@@ -121,7 +121,7 @@ public abstract class AbstractConstructibleBsonElement<S extends AbstractConstru
                     })
                     .map(mergedElementValueMap -> {
                         Map<String, Object> result = new LinkedHashMap<>();
-                        result.put(elementName, new Document(mergedElementValueMap));
+                        result.put(elementName, new OldDocument(mergedElementValueMap));
                         return result;
                     });
         } else {
@@ -156,8 +156,8 @@ public abstract class AbstractConstructibleBsonElement<S extends AbstractConstru
     @Override
     public String toString() {
         return tryToMap()
-                .map(Document::new)
-                .map(Document::toString)
+                .map(OldDocument::new)
+                .map(OldDocument::toString)
                 .orElseGet(() -> "ConstructibleBsonElement{baseElement=" + baseElement
                         + ", appendedElementValue=" + appendedElementValue
                         + '}');

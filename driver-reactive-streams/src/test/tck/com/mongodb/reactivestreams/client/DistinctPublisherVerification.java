@@ -16,7 +16,7 @@
 
 package com.mongodb.reactivestreams.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -40,11 +40,11 @@ public class DistinctPublisherVerification extends PublisherVerification<Integer
     public Publisher<Integer> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
 
-        MongoCollection<Document> collection = MongoFixture.getDefaultDatabase().getCollection("DistinctTest");
+        MongoCollection<OldDocument> collection = MongoFixture.getDefaultDatabase().getCollection("DistinctTest");
         run(collection.drop());
         if (elements > 0) {
-            List<Document> documentList = LongStream.rangeClosed(1, elements).boxed()
-                    .map(i -> new Document("a", i)).collect(Collectors.toList());
+            List<OldDocument> documentList = LongStream.rangeClosed(1, elements).boxed()
+                    .map(i -> new OldDocument("a", i)).collect(Collectors.toList());
 
             run(collection.insertMany(documentList));
         }

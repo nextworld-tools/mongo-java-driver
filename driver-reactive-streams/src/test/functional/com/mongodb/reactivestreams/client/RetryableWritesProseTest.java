@@ -20,7 +20,7 @@ import com.mongodb.MongoClientException;
 import com.mongodb.MongoException;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <a href="https://github.com/mongodb/specifications/blob/master/source/retryable-writes/tests/README.rst#prose-tests">Retryable Write Prose Tests</a>.
  */
 public class RetryableWritesProseTest extends DatabaseTestCase {
-    private CollectionHelper<Document> collectionHelper;
+    private CollectionHelper<OldDocument> collectionHelper;
 
     @BeforeEach
     @Override
@@ -60,7 +60,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         boolean exceptionFound = false;
 
         try {
-            Mono.from(collection.insertOne(Document.parse("{ x : 1 }"))).block(TIMEOUT_DURATION);
+            Mono.from(collection.insertOne(OldDocument.parse("{ x : 1 }"))).block(TIMEOUT_DURATION);
         } catch (MongoClientException e) {
             assertEquals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string.", e.getMessage());
@@ -77,7 +77,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         boolean exceptionFound = false;
 
         try {
-            Mono.from(collection.findOneAndDelete(Document.parse("{ x : 1 }"))).block(TIMEOUT_DURATION);
+            Mono.from(collection.findOneAndDelete(OldDocument.parse("{ x : 1 }"))).block(TIMEOUT_DURATION);
         } catch (MongoClientException e) {
             assertEquals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string.", e.getMessage());
@@ -95,7 +95,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void poolClearedExceptionMustBeRetryable() throws InterruptedException, ExecutionException, TimeoutException {
         com.mongodb.client.RetryableWritesProseTest.poolClearedExceptionMustBeRetryable(
                 mongoClientSettings -> new SyncMongoClient(MongoClients.create(mongoClientSettings)),
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     /**
@@ -114,7 +114,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void retriesOnDifferentMongosWhenAvailable() {
         com.mongodb.client.RetryableWritesProseTest.retriesOnDifferentMongosWhenAvailable(
                 mongoClientSettings -> new SyncMongoClient(MongoClients.create(mongoClientSettings)),
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     /**
@@ -124,11 +124,11 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     public void retriesOnSameMongosWhenAnotherNotAvailable() {
         com.mongodb.client.RetryableWritesProseTest.retriesOnSameMongosWhenAnotherNotAvailable(
                 mongoClientSettings -> new SyncMongoClient(MongoClients.create(mongoClientSettings)),
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     private boolean canRunMmapv1Tests() {
-        Document storageEngine = (Document) getServerStatus().get("storageEngine");
+        OldDocument storageEngine = (OldDocument) getServerStatus().get("storageEngine");
 
         return ((isSharded() || isDiscoverableReplicaSet())
                 && storageEngine != null && storageEngine.get("name").equals("mmapv1")

@@ -23,7 +23,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -61,25 +61,25 @@ final class TestWindowOutputFields {
     private static final Map.Entry<Object, BsonArray> ARRAY_EXPR =
             new AbstractMap.SimpleImmutableEntry<>(Arrays.asList(0.5, 0.9, "$$letValueX"),
                     new BsonArray(Arrays.asList(new BsonDouble(0.5), new BsonDouble(0.9), new BsonString("$$letValueX"))));
-    private static final Map.Entry<String, BsonValue> STR_EXPR =
+    private static final Map.Entry<String, BsonValue>         STR_EXPR              =
             new AbstractMap.SimpleImmutableEntry<>("$fieldToRead", new BsonString("$fieldToRead"));
-    private static final Map.Entry<Document, BsonDocument> DOC_EXPR = new AbstractMap.SimpleImmutableEntry<>(
-            new Document("gid", "$partitionId"),
+    private static final Map.Entry<OldDocument, BsonDocument> DOC_EXPR              = new AbstractMap.SimpleImmutableEntry<>(
+            new OldDocument("gid", "$partitionId"),
             new BsonDocument("gid", new BsonString("$partitionId")));
-    private static final Map.Entry<Document, BsonDocument> DOC_INT_EXPR = new AbstractMap.SimpleImmutableEntry<>(
-            new Document("$cond", new Document("if",
-                    new Document("$eq", asList("$gid", true)))
+    private static final Map.Entry<OldDocument, BsonDocument> DOC_INT_EXPR          = new AbstractMap.SimpleImmutableEntry<>(
+            new OldDocument("$cond", new OldDocument("if",
+                    new OldDocument("$eq", asList("$gid", true)))
                     .append("then", 2).append("else", 2)),
             new BsonDocument("$cond", new BsonDocument("if",
                     new BsonDocument("$eq", new BsonArray(asList(new BsonString("$gid"), BsonBoolean.TRUE))))
                     .append("then", new BsonInt32(2)).append("else", new BsonInt32(2))));
-    private static final Window POSITION_BASED_WINDOW = documents(1, 2);
+    private static final Window                               POSITION_BASED_WINDOW = documents(1, 2);
     private static final Window RANGE_BASED_WINDOW = range(1, 2);
 
     @Test
     void of() {
         WindowOutputField expected = WindowOutputFields.sum(PATH, STR_EXPR.getKey(), POSITION_BASED_WINDOW);
-        WindowOutputField actual = WindowOutputFields.of(new BsonField(PATH, new Document("$sum", STR_EXPR.getKey())
+        WindowOutputField actual = WindowOutputFields.of(new BsonField(PATH, new OldDocument("$sum", STR_EXPR.getKey())
                 .append("window", POSITION_BASED_WINDOW.toBsonDocument())));
         assertAll(
                 () -> assertEquals(expected.toBsonField().getName(), actual.toBsonField().getName()),

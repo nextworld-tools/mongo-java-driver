@@ -55,7 +55,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.Codec;
 import org.bson.codecs.Decoder;
@@ -260,7 +260,7 @@ public final class CollectionHelper<T> {
         new MixedBulkWriteOperation(namespace, insertRequests, true, writeConcern, false).execute(binding);
     }
 
-    public void insertDocuments(final Document... documents) {
+    public void insertDocuments(final OldDocument... documents) {
         insertDocuments(new DocumentCodec(registry), asList(documents));
     }
 
@@ -314,8 +314,8 @@ public final class CollectionHelper<T> {
 
     public void updateOne(final Bson filter, final Bson update, final boolean isUpsert) {
         new MixedBulkWriteOperation(namespace,
-                                    singletonList(new UpdateRequest(filter.toBsonDocument(Document.class, registry),
-                                                                    update.toBsonDocument(Document.class, registry),
+                                    singletonList(new UpdateRequest(filter.toBsonDocument(OldDocument.class, registry),
+                                                                    update.toBsonDocument(OldDocument.class, registry),
                                                                     WriteRequest.Type.UPDATE)
                                                   .upsert(isUpsert)),
                                     true, WriteConcern.ACKNOWLEDGED, false)
@@ -324,8 +324,8 @@ public final class CollectionHelper<T> {
 
     public void replaceOne(final Bson filter, final Bson update, final boolean isUpsert) {
         new MixedBulkWriteOperation(namespace,
-                                    singletonList(new UpdateRequest(filter.toBsonDocument(Document.class, registry),
-                        update.toBsonDocument(Document.class, registry),
+                                    singletonList(new UpdateRequest(filter.toBsonDocument(OldDocument.class, registry),
+                        update.toBsonDocument(OldDocument.class, registry),
                         WriteRequest.Type.REPLACE)
                         .upsert(isUpsert)),
                                     true, WriteConcern.ACKNOWLEDGED, false)
@@ -334,7 +334,7 @@ public final class CollectionHelper<T> {
 
     public void deleteOne(final Bson filter) {
         new MixedBulkWriteOperation(namespace,
-                                    singletonList(new DeleteRequest(filter.toBsonDocument(Document.class, registry))),
+                                    singletonList(new DeleteRequest(filter.toBsonDocument(OldDocument.class, registry))),
                                     true, WriteConcern.ACKNOWLEDGED, false)
                 .execute(getBinding());
     }
@@ -358,7 +358,7 @@ public final class CollectionHelper<T> {
     private <D> List<D> aggregate(final List<Bson> pipeline, final Decoder<D> decoder, final AggregationLevel level) {
         List<BsonDocument> bsonDocumentPipeline = new ArrayList<>();
         for (Bson cur : pipeline) {
-            bsonDocumentPipeline.add(cur.toBsonDocument(Document.class, registry));
+            bsonDocumentPipeline.add(cur.toBsonDocument(OldDocument.class, registry));
         }
         BatchCursor<D> cursor = new AggregateOperation<>(namespace, bsonDocumentPipeline, decoder, level)
                 .execute(getBinding());
@@ -371,16 +371,16 @@ public final class CollectionHelper<T> {
 
     @SuppressWarnings("overloads")
     public List<T> find(final Bson filter, final Bson sort) {
-        return find(filter != null ? filter.toBsonDocument(Document.class, registry) : null,
-                    sort != null ? sort.toBsonDocument(Document.class, registry) : null,
+        return find(filter != null ? filter.toBsonDocument(OldDocument.class, registry) : null,
+          sort != null ? sort.toBsonDocument(OldDocument.class, registry) : null,
                     codec);
     }
 
     @SuppressWarnings("overloads")
     public List<T> find(final Bson filter, final Bson sort, final Bson projection) {
-        return find(filter != null ? filter.toBsonDocument(Document.class, registry) : null,
-                    sort != null ? sort.toBsonDocument(Document.class, registry) : null,
-                    projection != null ? projection.toBsonDocument(Document.class, registry) : null,
+        return find(filter != null ? filter.toBsonDocument(OldDocument.class, registry) : null,
+          sort != null ? sort.toBsonDocument(OldDocument.class, registry) : null,
+          projection != null ? projection.toBsonDocument(OldDocument.class, registry) : null,
                     codec);
     }
 
@@ -421,7 +421,7 @@ public final class CollectionHelper<T> {
                 .filter(toBsonDocument(filter)).execute(getBinding());
     }
 
-    public BsonDocument wrap(final Document document) {
+    public BsonDocument wrap(final OldDocument document) {
         return new BsonDocumentWrapper<>(document, new DocumentCodec());
     }
 
@@ -434,25 +434,25 @@ public final class CollectionHelper<T> {
                 .execute(getBinding());
     }
 
-    public void createIndex(final Document key) {
+    public void createIndex(final OldDocument key) {
         new CreateIndexesOperation(namespace, singletonList(new IndexRequest(wrap(key))), WriteConcern.ACKNOWLEDGED)
                 .execute(getBinding());
     }
 
-    public void createUniqueIndex(final Document key) {
+    public void createUniqueIndex(final OldDocument key) {
         new CreateIndexesOperation(namespace, singletonList(new IndexRequest(wrap(key)).unique(true)),
                                    WriteConcern.ACKNOWLEDGED)
                 .execute(getBinding());
     }
 
-    public void createIndex(final Document key, final String defaultLanguage) {
+    public void createIndex(final OldDocument key, final String defaultLanguage) {
         new CreateIndexesOperation(namespace,
                                    singletonList(new IndexRequest(wrap(key)).defaultLanguage(defaultLanguage)), WriteConcern.ACKNOWLEDGED).execute(getBinding());
     }
 
     public void createIndex(final Bson key) {
         new CreateIndexesOperation(namespace,
-                                   singletonList(new IndexRequest(key.toBsonDocument(Document.class, registry))), WriteConcern.ACKNOWLEDGED).execute(getBinding());
+                                   singletonList(new IndexRequest(key.toBsonDocument(OldDocument.class, registry))), WriteConcern.ACKNOWLEDGED).execute(getBinding());
     }
 
     public List<BsonDocument> listIndexes(){

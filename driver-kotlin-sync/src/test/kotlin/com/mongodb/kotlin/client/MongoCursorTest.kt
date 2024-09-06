@@ -21,7 +21,7 @@ import com.mongodb.client.MongoCursor as JMongoCursor
 import kotlin.reflect.full.declaredFunctions
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.test.assertEquals
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -54,7 +54,7 @@ class MongoCursorTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JMongoCursor<Document> = mock()
+        val wrapped: JMongoCursor<OldDocument> = mock()
         val cursor = MongoCursorImpl(wrapped)
 
         whenever(wrapped.serverCursor).doReturn(ServerCursor(1, ServerAddress()))

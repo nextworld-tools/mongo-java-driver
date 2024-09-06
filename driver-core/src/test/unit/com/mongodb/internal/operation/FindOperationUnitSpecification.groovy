@@ -23,7 +23,7 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 
@@ -104,7 +104,7 @@ class FindOperationUnitSpecification extends OperationUnitSpecification {
 
     def 'should use the readPreference to set secondaryOk for commands'() {
         when:
-        def operation = new FindOperation<Document>(namespace, new DocumentCodec())
+        def operation = new FindOperation<OldDocument>(namespace, new DocumentCodec())
 
         then:
         testOperationSecondaryOk(operation, [3, 2, 0], readPreference, async, commandResult)

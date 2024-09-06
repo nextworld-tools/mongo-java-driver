@@ -24,7 +24,7 @@ import com.mongodb.client.cursor.TimeoutMode
 import com.mongodb.client.model.Collation
 import java.util.concurrent.TimeUnit
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 /**
@@ -270,7 +270,7 @@ public class FindIterable<T : Any>(private val wrapped: JFindIterable<T>) : Mong
      * @return the execution plan
      * @see [Explain command](https://www.mongodb.com/docs/manual/reference/command/explain/)
      */
-    public fun explain(verbosity: ExplainVerbosity? = null): Document = explain<Document>(verbosity)
+    public fun explain(verbosity: ExplainVerbosity? = null): OldDocument = explain<OldDocument>(verbosity)
 
     /**
      * Explain the execution plan for this operation with the given verbosity level

@@ -69,7 +69,7 @@ import com.mongodb.internal.operation.WriteOperation;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -878,8 +878,8 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public ListSearchIndexesIterable<Document> listSearchIndexes() {
-        return createListSearchIndexesIterable(Document.class);
+    public ListSearchIndexesIterable<OldDocument> listSearchIndexes() {
+        return createListSearchIndexesIterable(OldDocument.class);
     }
 
     @Override
@@ -948,8 +948,8 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public ListIndexesIterable<Document> listIndexes() {
-        return listIndexes(Document.class);
+    public ListIndexesIterable<OldDocument> listIndexes() {
+        return listIndexes(OldDocument.class);
     }
 
     @Override
@@ -958,8 +958,8 @@ class MongoCollectionImpl<TDocument> implements MongoCollection<TDocument> {
     }
 
     @Override
-    public ListIndexesIterable<Document> listIndexes(final ClientSession clientSession) {
-        return listIndexes(clientSession, Document.class);
+    public ListIndexesIterable<OldDocument> listIndexes(final ClientSession clientSession) {
+        return listIndexes(clientSession, OldDocument.class);
     }
 
     @Override

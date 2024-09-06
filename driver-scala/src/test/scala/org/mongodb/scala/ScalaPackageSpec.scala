@@ -166,7 +166,7 @@ class ScalaPackageSpec extends BaseSpec {
       "document" -> Document("a" -> 1, "b" -> List(1, 2, 3))
     )
 
-    val document: org.bson.Document = bsonDocument
+    val document: org.bson.OldDocument = bsonDocument
     BsonDocumentWrapper.asBsonDocument(document, DEFAULT_CODEC_REGISTRY) should equal(bsonDocument.underlying)
   }
 }

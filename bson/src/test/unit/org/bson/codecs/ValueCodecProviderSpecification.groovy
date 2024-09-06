@@ -16,7 +16,7 @@
 
 package org.bson.codecs
 
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistries
 import org.bson.types.Binary
 import org.bson.types.Code
@@ -65,7 +65,7 @@ class ValueCodecProviderSpecification extends Specification {
         provider.get(Symbol, registry) instanceof SymbolCodec
         provider.get(UUID, registry) instanceof OverridableUuidRepresentationCodec
 
-        provider.get(Document, registry) == null
+        provider.get(OldDocument, registry) == null
     }
 
 }

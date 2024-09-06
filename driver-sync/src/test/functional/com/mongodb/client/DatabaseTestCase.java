@@ -21,7 +21,7 @@ import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.internal.connection.ServerHelper;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,8 +34,8 @@ public class DatabaseTestCase {
     //For ease of use and readability, in this specific case we'll allow protected variables
     //CHECKSTYLE:OFF
     protected MongoClient client;
-    protected MongoDatabase database;
-    protected MongoCollection<Document> collection;
+    protected MongoDatabase                database;
+    protected MongoCollection<OldDocument> collection;
     //CHECKSTYLE:ON
 
     @BeforeEach
@@ -70,11 +70,11 @@ public class DatabaseTestCase {
         return collection.getNamespace();
     }
 
-    protected CollectionHelper<Document> getCollectionHelper() {
+    protected CollectionHelper<OldDocument> getCollectionHelper() {
         return new CollectionHelper<>(new DocumentCodec(), getNamespace());
     }
 
-    protected BsonDocument wrap(final Document document) {
+    protected BsonDocument wrap(final OldDocument document) {
         return new BsonDocumentWrapper<>(document, new DocumentCodec());
     }
 }

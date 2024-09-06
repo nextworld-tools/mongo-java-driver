@@ -22,7 +22,7 @@ import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +62,7 @@ public abstract class AbstractExplainTest {
         FindIterable<BsonDocument> iterable = collection.find()
                 .filter(Filters.eq("_id", 1));
 
-        Document explainDocument = iterable.explain();
+        OldDocument explainDocument = iterable.explain();
         assertNotNull(explainDocument);
         assertTrue(explainDocument.containsKey("queryPlanner"));
         assertTrue(explainDocument.containsKey("executionStats"));
@@ -97,7 +97,7 @@ public abstract class AbstractExplainTest {
         AggregateIterable<BsonDocument> iterable = collection
                 .aggregate(singletonList(Aggregates.match(Filters.eq("_id", 1))));
 
-        Document explainDocument = getAggregateExplainDocument(iterable.explain());
+        OldDocument explainDocument = getAggregateExplainDocument(iterable.explain());
         assertTrue(explainDocument.containsKey("queryPlanner"));
         assertTrue(explainDocument.containsKey("executionStats"));
 
@@ -119,13 +119,13 @@ public abstract class AbstractExplainTest {
 
     // Post-MongoDB 7.0, sharded cluster responses move the explain plan document into a "shards" document, which a plan for each shard.
     // This method grabs the explain plan document from the first shard when this new structure is present.
-    private static Document getAggregateExplainDocument(final Document rootAggregateExplainDocument) {
+    private static OldDocument getAggregateExplainDocument(final OldDocument rootAggregateExplainDocument) {
         assertNotNull(rootAggregateExplainDocument);
-        Document aggregateExplainDocument = rootAggregateExplainDocument;
+        OldDocument aggregateExplainDocument = rootAggregateExplainDocument;
         if (rootAggregateExplainDocument.containsKey("shards")) {
-            Document shardDocument = rootAggregateExplainDocument.get("shards", Document.class);
+            OldDocument shardDocument = rootAggregateExplainDocument.get("shards", OldDocument.class);
             String firstKey = shardDocument.keySet().iterator().next();
-            aggregateExplainDocument = shardDocument.get(firstKey, Document.class);
+            aggregateExplainDocument = shardDocument.get(firstKey, OldDocument.class);
         }
         return aggregateExplainDocument;
     }
@@ -155,7 +155,7 @@ public abstract class AbstractExplainTest {
         AggregateIterable<BsonDocument> iterable = collection
                 .aggregate(singletonList(Aggregates.match(Filters.eq("_id", 1))));
 
-        Document explainDocument = iterable.explain();
+        OldDocument explainDocument = iterable.explain();
         assertNotNull(explainDocument);
 
         explainDocument = iterable.explain(ExplainVerbosity.QUERY_PLANNER);

@@ -16,7 +16,7 @@
 
 package com.mongodb.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -49,7 +49,7 @@ final class RetryableReadsProseTest {
     void retriesOnDifferentMongosWhenAvailable() {
         RetryableWritesProseTest.retriesOnDifferentMongosWhenAvailable(MongoClients::create,
             mongoCollection -> {
-                try (MongoCursor<Document> cursor = mongoCollection.find().iterator()) {
+                try (MongoCursor<OldDocument> cursor = mongoCollection.find().iterator()) {
                     return cursor.hasNext();
                 }
             }, "find", false);
@@ -64,7 +64,7 @@ final class RetryableReadsProseTest {
     void retriesOnSameMongosWhenAnotherNotAvailable() {
         RetryableWritesProseTest.retriesOnSameMongosWhenAnotherNotAvailable(MongoClients::create,
                 mongoCollection -> {
-                    try (MongoCursor<Document> cursor = mongoCollection.find().iterator()) {
+                    try (MongoCursor<OldDocument> cursor = mongoCollection.find().iterator()) {
                         return cursor.hasNext();
                     }
                 }, "find", false);

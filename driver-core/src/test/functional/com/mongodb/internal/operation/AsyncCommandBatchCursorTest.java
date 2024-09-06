@@ -35,7 +35,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.Assertions;
@@ -63,7 +63,7 @@ class AsyncCommandBatchCursorTest {
                             .append("id", CURSOR_ID)
                             .append("firstBatch", new BsonArrayWrapper<>(new BsonArray())));
 
-    private static final Decoder<Document> DOCUMENT_CODEC = new DocumentCodec();
+    private static final Decoder<OldDocument> DOCUMENT_CODEC = new DocumentCodec();
 
 
     private AsyncConnection mockConnection;
@@ -108,7 +108,7 @@ class AsyncCommandBatchCursorTest {
             return null;
         }).when(mockConnection).commandAsync(eq(NAMESPACE.getDatabaseName()), any(), any(), any(), any(), any(), any());
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
-        AsyncCommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        AsyncCommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
 
         //when
         commandBatchCursor.next((result, t) -> {
@@ -134,7 +134,7 @@ class AsyncCommandBatchCursorTest {
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
         when(timeoutContext.hasTimeoutMS()).thenReturn(true);
 
-        AsyncCommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        AsyncCommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
 
         //when
         commandBatchCursor.next((result, t) -> {
@@ -166,7 +166,7 @@ class AsyncCommandBatchCursorTest {
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
         when(timeoutContext.hasTimeoutMS()).thenReturn(true);
 
-        AsyncCommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        AsyncCommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
 
         //when
         commandBatchCursor.next((result, t) -> {
@@ -187,8 +187,8 @@ class AsyncCommandBatchCursorTest {
     }
 
 
-    private AsyncCommandBatchCursor<Document> createBatchCursor() {
-        return new AsyncCommandBatchCursor<Document>(
+    private AsyncCommandBatchCursor<OldDocument> createBatchCursor() {
+        return new AsyncCommandBatchCursor<OldDocument>(
                 TimeoutMode.CURSOR_LIFETIME,
                 COMMAND_CURSOR_DOCUMENT,
                 0,

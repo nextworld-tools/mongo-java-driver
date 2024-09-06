@@ -25,7 +25,7 @@ import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.Projections;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
@@ -301,7 +301,7 @@ public interface FindPublisher<TResult> extends Publisher<TResult> {
      * @mongodb.driver.manual reference/command/explain/
      * @mongodb.server.release 3.2
      */
-    Publisher<Document> explain();
+    Publisher<OldDocument> explain();
 
     /**
      * Explain the execution plan for this operation with the given verbosity level
@@ -312,7 +312,7 @@ public interface FindPublisher<TResult> extends Publisher<TResult> {
      * @mongodb.driver.manual reference/command/explain/
      * @mongodb.server.release 3.2
      */
-    Publisher<Document> explain(ExplainVerbosity verbosity);
+    Publisher<OldDocument> explain(ExplainVerbosity verbosity);
 
     /**
      * Explain the execution plan for this operation with the server's default verbosity level

@@ -57,7 +57,7 @@ import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.ListIndexesPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -80,9 +80,9 @@ public class MongoCollectionImplTest extends TestHelper {
     @Mock
     private ClientSession clientSession;
 
-    private final MongoCollectionImpl<Document> collection =
+    private final MongoCollectionImpl<OldDocument>     collection              =
             new MongoCollectionImpl<>(OPERATION_PUBLISHER.withNamespace(new MongoNamespace("db.coll")));
-    private final MongoOperationPublisher<Document> mongoOperationPublisher = collection.getPublisherHelper();
+    private final MongoOperationPublisher<OldDocument> mongoOperationPublisher = collection.getPublisherHelper();
 
     private final Bson filter = BsonDocument.parse("{$match: {open: true}}");
     private final List<Bson> pipeline = singletonList(filter);
@@ -97,7 +97,7 @@ public class MongoCollectionImplTest extends TestHelper {
     public void withCodecRegistry() {
         // Cannot do equality test as registries are wrapped
         CodecRegistry codecRegistry = CodecRegistries.fromCodecs(new MyLongCodec());
-        MongoCollection<Document> newCollection = collection.withCodecRegistry(codecRegistry);
+        MongoCollection<OldDocument> newCollection = collection.withCodecRegistry(codecRegistry);
         assertTrue(newCollection.getCodecRegistry().get(Long.class) instanceof TestHelper.MyLongCodec);
     }
 
@@ -130,7 +130,7 @@ public class MongoCollectionImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.aggregate(clientSession, null))
                   ),
                   () -> {
-                      AggregatePublisher<Document> expected =
+                      AggregatePublisher<OldDocument> expected =
                               new AggregatePublisherImpl<>(null, mongoOperationPublisher, pipeline, AggregationLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.aggregate(pipeline), "Default");
                   },
@@ -142,7 +142,7 @@ public class MongoCollectionImplTest extends TestHelper {
                                                  "With result class");
                   },
                   () -> {
-                      AggregatePublisher<Document> expected =
+                      AggregatePublisher<OldDocument> expected =
                               new AggregatePublisherImpl<>(clientSession, mongoOperationPublisher, pipeline, AggregationLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.aggregate(clientSession, pipeline), "With session");
                   },
@@ -158,7 +158,7 @@ public class MongoCollectionImplTest extends TestHelper {
 
     @Test
     public void testBulkWrite() {
-        List<WriteModel<Document>> requests = singletonList(new InsertOneModel<>(new Document()));
+        List<WriteModel<OldDocument>> requests = singletonList(new InsertOneModel<>(new OldDocument()));
         BulkWriteOptions options = new BulkWriteOptions().ordered(false);
 
         assertAll("bulkWrite",
@@ -409,26 +409,26 @@ public class MongoCollectionImplTest extends TestHelper {
         assertAll("distinct",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(null, Document.class)),
+                                                     () -> collection.distinct(null, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class,
                                                      () -> collection.distinct(fieldName, null)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(fieldName, null, Document.class)),
+                                                     () -> collection.distinct(fieldName, null, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(clientSession, null, Document.class)),
+                                                     () -> collection.distinct(clientSession, null, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class,
                                                      () -> collection.distinct(clientSession, fieldName, null)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(clientSession, fieldName, null, Document.class)),
+                                                     () -> collection.distinct(clientSession, fieldName, null, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(null, fieldName, Document.class)),
+                                                     () -> collection.distinct(null, fieldName, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.distinct(null, fieldName, filter, Document.class))
+                                                     () -> collection.distinct(null, fieldName, filter, OldDocument.class))
                   ),
                   () -> {
-                      DistinctPublisher<Document> expected =
+                      DistinctPublisher<OldDocument> expected =
                               new DistinctPublisherImpl<>(null, mongoOperationPublisher, fieldName, new BsonDocument());
-                      assertPublisherIsTheSameAs(expected, collection.distinct(fieldName, Document.class), "Default");
+                      assertPublisherIsTheSameAs(expected, collection.distinct(fieldName, OldDocument.class), "Default");
                   },
                   () -> {
                       DistinctPublisher<BsonDocument> expected =
@@ -438,9 +438,9 @@ public class MongoCollectionImplTest extends TestHelper {
                                                  "With filter & result class");
                   },
                   () -> {
-                      DistinctPublisher<Document> expected =
+                      DistinctPublisher<OldDocument> expected =
                               new DistinctPublisherImpl<>(clientSession, mongoOperationPublisher, fieldName, new BsonDocument());
-                      assertPublisherIsTheSameAs(expected, collection.distinct(fieldName, Document.class), "With client session");
+                      assertPublisherIsTheSameAs(expected, collection.distinct(fieldName, OldDocument.class), "With client session");
                   },
                   () -> {
                       DistinctPublisher<BsonDocument> expected =
@@ -598,16 +598,16 @@ public class MongoCollectionImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.find(clientSession, filter, null)),
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.find(null, filter)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.find((ClientSession) null, Document.class)),
-                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.find(null, filter, Document.class))
+                                                     () -> collection.find((ClientSession) null, OldDocument.class)),
+                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.find(null, filter, OldDocument.class))
                   ),
                   () -> {
-                      FindPublisher<Document> expected =
+                      FindPublisher<OldDocument> expected =
                               new FindPublisherImpl<>(null, mongoOperationPublisher, new BsonDocument());
                       assertPublisherIsTheSameAs(expected, collection.find(), "Default");
                   },
                   () -> {
-                      FindPublisher<Document> expected =
+                      FindPublisher<OldDocument> expected =
                               new FindPublisherImpl<>(null, mongoOperationPublisher, filter);
                       assertPublisherIsTheSameAs(expected, collection.find(filter), "With filter");
                   },
@@ -617,12 +617,12 @@ public class MongoCollectionImplTest extends TestHelper {
                       assertPublisherIsTheSameAs(expected, collection.find(filter, BsonDocument.class), "With filter & result class");
                   },
                   () -> {
-                      FindPublisher<Document> expected =
+                      FindPublisher<OldDocument> expected =
                               new FindPublisherImpl<>(clientSession, mongoOperationPublisher, new BsonDocument());
                       assertPublisherIsTheSameAs(expected, collection.find(clientSession), "With client session");
                   },
                   () -> {
-                      FindPublisher<Document> expected =
+                      FindPublisher<OldDocument> expected =
                               new FindPublisherImpl<>(clientSession, mongoOperationPublisher, filter);
                       assertPublisherIsTheSameAs(expected, collection.find(clientSession, filter), "With client session & filter");
                   },
@@ -652,20 +652,20 @@ public class MongoCollectionImplTest extends TestHelper {
                                                      () -> collection.findOneAndDelete(null, filter, options))
                   ),
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndDelete(null, filter, new FindOneAndDeleteOptions());
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndDelete(null, filter, new FindOneAndDeleteOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndDelete(filter), "Default");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndDelete(null, filter, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndDelete(null, filter, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndDelete(filter, options), "With filter & options");
                   },
                   () -> {
-                      Publisher<Document> expected =
+                      Publisher<OldDocument> expected =
                               mongoOperationPublisher.findOneAndDelete(clientSession, filter, new FindOneAndDeleteOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndDelete(clientSession, filter), "With client session");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndDelete(clientSession, filter, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndDelete(clientSession, filter, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndDelete(clientSession, filter, options),
                                                  "With client session, filter & options");
                   }
@@ -675,7 +675,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testFindOneAndReplace() {
         FindOneAndReplaceOptions options = new FindOneAndReplaceOptions().collation(collation);
-        Document replacement = new Document();
+        OldDocument replacement = new OldDocument();
         assertAll("findOneAndReplace",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.findOneAndReplace(null, replacement)),
@@ -691,23 +691,23 @@ public class MongoCollectionImplTest extends TestHelper {
                                                      () -> collection.findOneAndReplace(null, filter, replacement, options))
                   ),
                   () -> {
-                      Publisher<Document> expected =
+                      Publisher<OldDocument> expected =
                               mongoOperationPublisher.findOneAndReplace(null, filter, replacement, new FindOneAndReplaceOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndReplace(filter, replacement), "Default");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndReplace(null, filter, replacement, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndReplace(null, filter, replacement, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndReplace(filter, replacement, options),
                                                  "With filter & options");
                   },
                   () -> {
-                      Publisher<Document> expected =
+                      Publisher<OldDocument> expected =
                               mongoOperationPublisher.findOneAndReplace(clientSession, filter, replacement, new FindOneAndReplaceOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndReplace(clientSession, filter, replacement),
                                                  "With client session");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndReplace(clientSession, filter, replacement, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndReplace(clientSession, filter, replacement, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndReplace(clientSession, filter, replacement, options),
                                                  "With client session, filter & options");
                   }
@@ -717,7 +717,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testFindOneAndUpdate() {
         FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().collation(collation);
-        Document update = new Document();
+        OldDocument update = new OldDocument();
         assertAll("findOneAndUpdate",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.findOneAndUpdate(null, update)),
@@ -733,23 +733,23 @@ public class MongoCollectionImplTest extends TestHelper {
                                                      () -> collection.findOneAndUpdate(null, filter, update, options))
                   ),
                   () -> {
-                      Publisher<Document> expected =
+                      Publisher<OldDocument> expected =
                               mongoOperationPublisher.findOneAndUpdate(null, filter, update, new FindOneAndUpdateOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndUpdate(filter, update), "Default");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndUpdate(null, filter, update, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndUpdate(null, filter, update, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndUpdate(filter, update, options),
                                                  "With filter & options");
                   },
                   () -> {
-                      Publisher<Document> expected =
+                      Publisher<OldDocument> expected =
                               mongoOperationPublisher.findOneAndUpdate(clientSession, filter, update, new FindOneAndUpdateOptions());
                       assertPublisherIsTheSameAs(expected, collection.findOneAndUpdate(clientSession, filter, update),
                                                  "With client session");
                   },
                   () -> {
-                      Publisher<Document> expected = mongoOperationPublisher.findOneAndUpdate(clientSession, filter, update, options);
+                      Publisher<OldDocument> expected = mongoOperationPublisher.findOneAndUpdate(clientSession, filter, update, options);
                       assertPublisherIsTheSameAs(expected, collection.findOneAndUpdate(clientSession, filter, update, options),
                                                  "With client session, filter & options");
                   }
@@ -759,7 +759,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testInsertOne() {
         InsertOneOptions options = new InsertOneOptions().bypassDocumentValidation(true);
-        Document insert = new Document("_id", 1);
+        OldDocument insert = new OldDocument("_id", 1);
         assertAll("insertOne",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.insertOne(null)),
@@ -794,7 +794,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testInsertMany() {
         InsertManyOptions options = new InsertManyOptions().bypassDocumentValidation(true);
-        List<Document> inserts = singletonList(new Document("_id", 1));
+        List<OldDocument> inserts = singletonList(new OldDocument("_id", 1));
         assertAll("insertMany",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.insertMany(null)),
@@ -831,11 +831,11 @@ public class MongoCollectionImplTest extends TestHelper {
         assertAll("listIndexes",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.listIndexes((Class<?>) null)),
-                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.listIndexes(null, Document.class)),
+                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.listIndexes(null, OldDocument.class)),
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.listIndexes(clientSession, null))
                   ),
                   () -> {
-                      ListIndexesPublisher<Document> expected =
+                      ListIndexesPublisher<OldDocument> expected =
                               new ListIndexesPublisherImpl<>(null, mongoOperationPublisher);
                       assertPublisherIsTheSameAs(expected, collection.listIndexes(), "Default");
                   },
@@ -845,7 +845,7 @@ public class MongoCollectionImplTest extends TestHelper {
                       assertPublisherIsTheSameAs(expected, collection.listIndexes(BsonDocument.class), "With result class");
                   },
                   () -> {
-                      ListIndexesPublisher<Document> expected =
+                      ListIndexesPublisher<OldDocument> expected =
                               new ListIndexesPublisherImpl<>(clientSession, mongoOperationPublisher);
                       assertPublisherIsTheSameAs(expected, collection.listIndexes(clientSession), "With client session");
                   },
@@ -877,10 +877,10 @@ public class MongoCollectionImplTest extends TestHelper {
                                                      () -> collection.mapReduce(clientSession, map, reduce, null)),
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.mapReduce(null, map, reduce)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.mapReduce(null, map, reduce, Document.class))
+                                                     () -> collection.mapReduce(null, map, reduce, OldDocument.class))
                   ),
                   () -> {
-                      com.mongodb.reactivestreams.client.MapReducePublisher<Document> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<OldDocument> expected =
                               new MapReducePublisherImpl<>(null, mongoOperationPublisher, map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(map, reduce), "Default");
                   },
@@ -892,7 +892,7 @@ public class MongoCollectionImplTest extends TestHelper {
                                                  "With result class");
                   },
                   () -> {
-                      com.mongodb.reactivestreams.client.MapReducePublisher<Document> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<OldDocument> expected =
                               new MapReducePublisherImpl<>(clientSession, mongoOperationPublisher, map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(clientSession, map, reduce), "With client session");
                   },
@@ -950,7 +950,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testReplaceOne() {
         ReplaceOptions options = new ReplaceOptions().collation(collation);
-        Document replacement = new Document();
+        OldDocument replacement = new OldDocument();
         assertAll("replaceOne",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.replaceOne(null, replacement)),
@@ -992,7 +992,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testUpdateOne() {
         UpdateOptions options = new UpdateOptions().collation(collation);
-        Document update = new Document();
+        OldDocument update = new OldDocument();
         assertAll("updateOne",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.updateOne(null, update)),
@@ -1033,7 +1033,7 @@ public class MongoCollectionImplTest extends TestHelper {
     @Test
     public void testUpdateMany() {
         UpdateOptions options = new UpdateOptions().collation(collation);
-        List<Document> updates = singletonList(new Document());
+        List<OldDocument> updates = singletonList(new OldDocument());
         assertAll("updateMany",
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.updateMany(null, updates)),
@@ -1082,17 +1082,17 @@ public class MongoCollectionImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.watch((ClientSession) null)),
                                   () -> assertThrows(IllegalArgumentException.class, () -> collection.watch(null, pipeline)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> collection.watch(null, pipeline, Document.class))
+                                                     () -> collection.watch(null, pipeline, OldDocument.class))
                   ),
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
-                              new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher, Document.class, emptyList(),
+                      ChangeStreamPublisher<OldDocument> expected =
+                              new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher, OldDocument.class, emptyList(),
                                                               ChangeStreamLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.watch(), "Default");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
-                              new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher, Document.class, pipeline,
+                      ChangeStreamPublisher<OldDocument> expected =
+                              new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher, OldDocument.class, pipeline,
                                                               ChangeStreamLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.watch(pipeline), "With pipeline");
                   },
@@ -1111,14 +1111,14 @@ public class MongoCollectionImplTest extends TestHelper {
                                                  "With pipeline & result class");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
-                              new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher, Document.class, emptyList(),
+                      ChangeStreamPublisher<OldDocument> expected =
+                              new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher, OldDocument.class, emptyList(),
                                                               ChangeStreamLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.watch(clientSession), "with session");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
-                              new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher, Document.class, pipeline,
+                      ChangeStreamPublisher<OldDocument> expected =
+                              new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher, OldDocument.class, pipeline,
                                                               ChangeStreamLevel.COLLECTION);
                       assertPublisherIsTheSameAs(expected, collection.watch(clientSession, pipeline), "With session & pipeline");
                   },

@@ -27,7 +27,7 @@ import com.mongodb.client.model.Updates;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import java.util.List;
@@ -59,7 +59,7 @@ public final class ChangeStreamSamples {
         sleep();
 
         // Select the collection to query.
-        MongoCollection<Document> collection = database.getCollection("documents");
+        MongoCollection<OldDocument> collection = database.getCollection("documents");
 
         /*
          * Example 1
@@ -68,11 +68,11 @@ public final class ChangeStreamSamples {
         System.out.println("1. Initial document from the Change Stream:");
 
         // Create the change stream cursor.
-        MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch().cursor();
+        MongoChangeStreamCursor<ChangeStreamDocument<OldDocument>> cursor = collection.watch().cursor();
 
         // Insert a test document into the collection.
-        collection.insertOne(Document.parse("{username: 'alice123', name: 'Alice'}"));
-        ChangeStreamDocument<Document> next = cursor.next();
+        collection.insertOne(OldDocument.parse("{username: 'alice123', name: 'Alice'}"));
+        ChangeStreamDocument<OldDocument> next = cursor.next();
         System.out.println(next);
         cursor.close();
         sleep();
@@ -88,7 +88,7 @@ public final class ChangeStreamSamples {
         cursor = collection.watch().fullDocument(FullDocument.UPDATE_LOOKUP).cursor();
 
         // Update the test document.
-        collection.updateOne(Document.parse("{username: 'alice123'}"), Document.parse("{$set : { email: 'alice@example.com'}}"));
+        collection.updateOne(OldDocument.parse("{username: 'alice123'}"), OldDocument.parse("{$set : { email: 'alice@example.com'}}"));
 
         // Block until the next result is returned
         next = cursor.next();
@@ -103,13 +103,13 @@ public final class ChangeStreamSamples {
         System.out.println("3. Document from the Change Stream, with lookup enabled, matching `update` operations only: ");
 
         // Insert some dummy data.
-        collection.insertMany(asList(Document.parse("{updateMe: 1}"), Document.parse("{replaceMe: 1}")));
+        collection.insertMany(asList(OldDocument.parse("{updateMe: 1}"), OldDocument.parse("{replaceMe: 1}")));
 
         // Create $match pipeline stage.
         List<Bson> pipeline = singletonList(
                 Aggregates.match(
                         Filters.or(
-                                Document.parse("{'fullDocument.username': 'alice123'}"),
+                                OldDocument.parse("{'fullDocument.username': 'alice123'}"),
                                 Filters.in("operationType", asList("update", "replace", "delete"))
                         )
                 )
@@ -127,7 +127,7 @@ public final class ChangeStreamSamples {
         System.out.printf("Update operationType: %s %n %s%n", next.getUpdateDescription(), next);
 
         // Replace the test document.
-        collection.replaceOne(Filters.eq("replaceMe", 1), Document.parse("{replaced: true}"));
+        collection.replaceOne(Filters.eq("replaceMe", 1), OldDocument.parse("{replaced: true}"));
         next = cursor.next();
         System.out.printf("Replace operationType: %s%n", next);
 
@@ -152,7 +152,7 @@ public final class ChangeStreamSamples {
         cursor = collection.watch().resumeAfter(resumeToken).cursor();
 
         // Insert a test document.
-        collection.insertOne(Document.parse("{test: 'd'}"));
+        collection.insertOne(OldDocument.parse("{test: 'd'}"));
 
         // Block until the next result is returned
         next = cursor.next();

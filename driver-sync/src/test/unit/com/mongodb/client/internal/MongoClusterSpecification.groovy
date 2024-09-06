@@ -29,7 +29,7 @@ import com.mongodb.internal.client.model.changestream.ChangeStreamLevel
 import com.mongodb.internal.connection.Cluster
 import com.mongodb.internal.session.ServerSessionPool
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.UuidCodec
 import org.bson.codecs.ValueCodecProvider
 import org.bson.codecs.configuration.CodecRegistry
@@ -160,7 +160,7 @@ class MongoClusterSpecification extends Specification {
         def listDatabasesIterable = execute(listDatabasesMethod, session)
 
         then:
-        expect listDatabasesIterable, isTheSameAs(new ListDatabasesIterableImpl<>(session, Document,
+        expect listDatabasesIterable, isTheSameAs(new ListDatabasesIterableImpl<>(session, OldDocument,
                 CLIENT_SETTINGS.codecRegistry, primary(), executor, true, TIMEOUT_SETTINGS))
 
         when:
@@ -202,23 +202,23 @@ class MongoClusterSpecification extends Specification {
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, settings.codecRegistry,
-                readPreference, readConcern, executor, [], Document, ChangeStreamLevel.CLIENT, true, TIMEOUT_SETTINGS),
+                readPreference, readConcern, executor, [], OldDocument, ChangeStreamLevel.CLIENT, true, TIMEOUT_SETTINGS),
                 ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)])
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)])
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, settings.codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], Document, ChangeStreamLevel.CLIENT,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], OldDocument, ChangeStreamLevel.CLIENT,
                 true, TIMEOUT_SETTINGS), ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)], BsonDocument)
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)], BsonDocument)
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, settings.codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], BsonDocument,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], BsonDocument,
                 ChangeStreamLevel.CLIENT, true, TIMEOUT_SETTINGS), ['codec'])
 
         where:

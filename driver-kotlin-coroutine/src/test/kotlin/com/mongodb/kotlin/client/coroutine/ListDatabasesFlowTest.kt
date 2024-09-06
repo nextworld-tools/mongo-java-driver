@@ -22,7 +22,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -40,7 +40,7 @@ class ListDatabasesFlowTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: ListDatabasesPublisher<Document> = mock()
+        val wrapped: ListDatabasesPublisher<OldDocument> = mock()
         val flow = ListDatabasesFlow(wrapped)
 
         val batchSize = 10

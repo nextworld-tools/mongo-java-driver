@@ -17,7 +17,7 @@
 package org.bson.codecs;
 
 import org.bson.BsonInvalidOperationException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -27,37 +27,37 @@ public final class FloatCodecTest extends CodecTestCase {
 
     @Test
     public void shouldRoundTripFloatValues() {
-        roundTrip(new Document("a", Float.MAX_VALUE));
-        roundTrip(new Document("a", -Float.MAX_VALUE));
+        roundTrip(new OldDocument("a", Float.MAX_VALUE));
+        roundTrip(new OldDocument("a", -Float.MAX_VALUE));
     }
 
     @Test
     public void shouldRoundTripNegativeFloatValues() {
-        roundTrip(new Document("a", -1f));
+        roundTrip(new OldDocument("a", -1f));
     }
 
     @Test
     public void shouldHandleAlternativeNumberValues() {
-        Document expected = new Document("a", 10f);
-        roundTrip(new Document("a", 10), expected);
-        roundTrip(new Document("a", 10L), expected);
-        roundTrip(new Document("a", 9.9999999999999992), expected);
-        roundTrip(new Document("a", Decimal128.parse("10")), expected);
+        OldDocument expected = new OldDocument("a", 10f);
+        roundTrip(new OldDocument("a", 10), expected);
+        roundTrip(new OldDocument("a", 10L), expected);
+        roundTrip(new OldDocument("a", 9.9999999999999992), expected);
+        roundTrip(new OldDocument("a", Decimal128.parse("10")), expected);
     }
 
     @Test
     public void shouldErrorDecodingOutsideMinRange() {
-        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new Document("a", -Double.MAX_VALUE)));
+        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new OldDocument("a", -Double.MAX_VALUE)));
     }
 
     @Test
     public void shouldErrorDecodingOutsideMaxRange() {
-        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new Document("a", Double.MAX_VALUE)));
+        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new OldDocument("a", Double.MAX_VALUE)));
     }
 
     @Test
     public void shouldThrowWhenHandlingLossyDecimal128Values() {
-        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new Document("a", Decimal128.parse("10.0"))));
+        assertThrows(BsonInvalidOperationException.class, () -> roundTrip(new OldDocument("a", Decimal128.parse("10.0"))));
     }
 
     @Override

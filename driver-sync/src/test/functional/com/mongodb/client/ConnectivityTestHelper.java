@@ -17,7 +17,7 @@
 package com.mongodb.client;
 
 import com.mongodb.ConnectionString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.params.provider.Arguments;
 
 import java.util.Arrays;
@@ -26,7 +26,7 @@ import java.util.stream.Stream;
 import static com.mongodb.ClusterFixture.getConnectionStringSystemPropertyOrDefault;
 
 public final class ConnectivityTestHelper {
-    public static final Document LEGACY_HELLO_COMMAND = new Document("ismaster", 1);
+    public static final OldDocument LEGACY_HELLO_COMMAND = new OldDocument("ismaster", 1);
 
     /**
      * Gets the Junit Arguments for connectivity tests that use the "|"-delimited system property "org.mongodb.test.connectivity.uris"

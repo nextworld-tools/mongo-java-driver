@@ -21,7 +21,7 @@ import com.mongodb.event.CommandListener
 import com.mongodb.event.ConnectionPoolListener
 import com.mongodb.event.ServerListener
 import com.mongodb.event.ServerMonitorListener
-import org.bson.Document
+import org.bson.OldDocument
 import reactor.core.publisher.Mono
 import spock.lang.Ignore
 
@@ -64,7 +64,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         def client = MongoClients.create(settings)
 
         then:
-        Mono.from(client.getDatabase('admin').runCommand(new Document('ping', 1))).block(TIMEOUT_DURATION)
+        Mono.from(client.getDatabase('admin').runCommand(new OldDocument('ping', 1))).block(TIMEOUT_DURATION)
 
         cleanup:
         client?.close()
@@ -78,7 +78,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
                 .addCommandListener(first).addCommandListener(second).build())
 
         when:
-        Mono.from(client.getDatabase('admin').runCommand(new Document('ping', 1))).block(TIMEOUT_DURATION)
+        Mono.from(client.getDatabase('admin').runCommand(new OldDocument('ping', 1))).block(TIMEOUT_DURATION)
 
         then:
         1 * first.commandStarted(_)

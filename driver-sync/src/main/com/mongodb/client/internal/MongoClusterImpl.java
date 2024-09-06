@@ -53,7 +53,7 @@ import com.mongodb.internal.operation.WriteOperation;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -245,13 +245,13 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases() {
-        return listDatabases(Document.class);
+    public ListDatabasesIterable<OldDocument> listDatabases() {
+        return listDatabases(OldDocument.class);
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
-        return listDatabases(clientSession, Document.class);
+    public ListDatabasesIterable<OldDocument> listDatabases(final ClientSession clientSession) {
+        return listDatabases(clientSession, OldDocument.class);
     }
 
     @Override
@@ -266,7 +266,7 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return watch(Collections.emptyList());
     }
 
@@ -276,8 +276,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
+        return watch(pipeline, OldDocument.class);
     }
 
     @Override
@@ -286,7 +286,7 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
         return watch(clientSession, Collections.emptyList());
     }
 
@@ -296,8 +296,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return watch(clientSession, pipeline, OldDocument.class);
     }
 
     @Override

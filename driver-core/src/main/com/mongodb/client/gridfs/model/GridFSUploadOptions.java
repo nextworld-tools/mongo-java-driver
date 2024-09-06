@@ -17,7 +17,7 @@
 package com.mongodb.client.gridfs.model;
 
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 /**
  * GridFS upload options
@@ -27,8 +27,8 @@ import org.bson.Document;
  * @since 3.1
  */
 public final class GridFSUploadOptions {
-    private Integer chunkSizeBytes;
-    private Document metadata;
+    private Integer     chunkSizeBytes;
+    private OldDocument metadata;
 
     /**
      * Construct a new instance.
@@ -65,7 +65,7 @@ public final class GridFSUploadOptions {
      * @return the user provided metadata for the file if set or null
      */
     @Nullable
-    public Document getMetadata() {
+    public OldDocument getMetadata() {
         return metadata;
     }
 
@@ -75,7 +75,7 @@ public final class GridFSUploadOptions {
      * @param metadata the metadata to be stored
      * @return this
      */
-    public GridFSUploadOptions metadata(@Nullable final Document metadata) {
+    public GridFSUploadOptions metadata(@Nullable final OldDocument metadata) {
         this.metadata = metadata;
         return this;
     }

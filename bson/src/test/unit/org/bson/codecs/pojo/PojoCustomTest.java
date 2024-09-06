@@ -18,7 +18,7 @@ package org.bson.codecs.pojo;
 
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.Codec;
 import org.bson.codecs.DecoderContext;
@@ -467,7 +467,7 @@ public final class PojoCustomTest extends PojoTestCase {
 
     @Test
     public void testMapStringObjectModel() {
-        MapStringObjectModel model = new MapStringObjectModel(new HashMap<>(Document.parse("{a : 1, b: 'b', c: [1, 2, 3]}")));
+        MapStringObjectModel model = new MapStringObjectModel(new HashMap<>(OldDocument.parse("{a : 1, b: 'b', c: [1, 2, 3]}")));
         CodecRegistry registry = fromRegistries(fromProviders(new MapCodecProvider(), new IterableCodecProvider(), new ValueCodecProvider(),
                         getPojoCodecProviderBuilder(MapStringObjectModel.class).build()));
         roundTrip(registry, model, "{ map: {a : 1, b: 'b', c: [1, 2, 3]}}");
@@ -475,7 +475,7 @@ public final class PojoCustomTest extends PojoTestCase {
 
     @Test
     public void testMapStringObjectModelWithObjectCodec() {
-        MapStringObjectModel model = new MapStringObjectModel(new HashMap<>(Document.parse("{a : 1, b: 'b', c: [1, 2, 3]}")));
+        MapStringObjectModel model = new MapStringObjectModel(new HashMap<>(OldDocument.parse("{a : 1, b: 'b', c: [1, 2, 3]}")));
         CodecRegistry registry = fromRegistries(fromProviders(new MapCodecProvider()), fromCodecs(new ObjectCodec()),
                 fromProviders(getPojoCodecProviderBuilder(MapStringObjectModel.class).build()));
         assertThrows(UnsupportedOperationException.class, () ->

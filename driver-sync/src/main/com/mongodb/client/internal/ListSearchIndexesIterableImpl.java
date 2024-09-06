@@ -32,7 +32,7 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 
 import java.util.concurrent.TimeUnit;
@@ -118,14 +118,14 @@ final class ListSearchIndexesIterableImpl<TResult> extends MongoIterableImpl<TRe
     }
 
     @Override
-    public Document explain() {
-        return executeExplain(Document.class, null);
+    public OldDocument explain() {
+        return executeExplain(OldDocument.class, null);
     }
 
     @Override
-    public Document explain(final ExplainVerbosity verbosity) {
+    public OldDocument explain(final ExplainVerbosity verbosity) {
         notNull("verbosity", verbosity);
-        return executeExplain(Document.class, verbosity);
+        return executeExplain(OldDocument.class, verbosity);
     }
 
     @Override

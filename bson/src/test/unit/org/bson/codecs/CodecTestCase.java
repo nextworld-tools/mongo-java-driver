@@ -25,7 +25,7 @@ import org.bson.BsonType;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
 import org.bson.ByteBufNIO;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.ByteBufferBsonInput;
@@ -81,7 +81,7 @@ abstract class CodecTestCase {
         comparator.apply(decoded);
     }
 
-    public void roundTrip(final Document input, final Document expected) {
+    public void roundTrip(final OldDocument input, final OldDocument expected) {
         roundTrip(input, result -> assertEquals(expected, result));
     }
 

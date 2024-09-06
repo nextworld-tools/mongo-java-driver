@@ -20,7 +20,7 @@ import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.client.model.geojson.Point
 import com.mongodb.client.model.geojson.Polygon
 import com.mongodb.client.model.geojson.Position
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Filters.geoIntersects
@@ -31,20 +31,20 @@ import static com.mongodb.client.model.geojson.NamedCoordinateReferenceSystem.CR
 import static com.mongodb.client.model.geojson.NamedCoordinateReferenceSystem.EPSG_4326
 
 class GeoJsonFiltersFunctionalSpecification extends OperationFunctionalSpecification {
-    def firstPoint = new Document('_id', 1).append('geo', Document.parse(new Point(CRS_84, new Position(1d, 1d)).toJson()))
-    def secondPoint = new Document('_id', 2).append('geo', Document.parse(new Point(EPSG_4326, new Position(2d, 2d)).toJson()))
-    def thirdPoint = new Document('_id', 3).append('geo', Document.parse(new Point(new Position(3d, 3d)).toJson()))
-    def firstPolygon = new Document('_id', 4).append('geo', Document.parse(new Polygon([new Position(2d, 2d), new Position(6d, 2d),
-                                                                                        new Position(6d, 6d), new Position(2d, 6d),
-                                                                                        new Position(2d, 2d)]).toJson()))
+    def firstPoint = new OldDocument('_id', 1).append('geo', OldDocument.parse(new Point(CRS_84, new Position(1d, 1d)).toJson()))
+    def secondPoint = new OldDocument('_id', 2).append('geo', OldDocument.parse(new Point(EPSG_4326, new Position(2d, 2d)).toJson()))
+    def thirdPoint = new OldDocument('_id', 3).append('geo', OldDocument.parse(new Point(new Position(3d, 3d)).toJson()))
+    def firstPolygon = new OldDocument('_id', 4).append('geo', OldDocument.parse(new Polygon([new Position(2d, 2d), new Position(6d, 2d),
+                                                                                              new Position(6d, 6d), new Position(2d, 6d),
+                                                                                              new Position(2d, 2d)]).toJson()))
 
     def setup() {
-        getCollectionHelper().createIndex(new Document('geo', '2dsphere'))
+        getCollectionHelper().createIndex(new OldDocument('geo', '2dsphere'))
         getCollectionHelper().insertDocuments(firstPoint, secondPoint, thirdPoint, firstPolygon)
     }
 
     def 'find'(Bson filter) {
-        getCollectionHelper().find(filter, new Document('_id', 1)) // sort by _id
+        getCollectionHelper().find(filter, new OldDocument('_id', 1)) // sort by _id
     }
 
     def '$geoWithin'() {

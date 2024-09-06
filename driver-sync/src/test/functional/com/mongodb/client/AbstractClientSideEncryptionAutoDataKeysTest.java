@@ -31,7 +31,7 @@ import com.mongodb.client.vault.ClientEncryption;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,7 +112,7 @@ public abstract class AbstractClientSideEncryptionAutoDataKeysTest {
     @ParameterizedTest(name = DISPLAY_NAME_PLACEHOLDER + " {0}")
     @MethodSource("arguments")
     void simpleCreationAndValidation(final KmsProvider kmsProvider) {
-        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(Document.parse(
+        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(OldDocument.parse(
                 "{"
                 + "  fields: [{"
                 + "    path: 'ssn',"
@@ -122,10 +122,10 @@ public abstract class AbstractClientSideEncryptionAutoDataKeysTest {
                 + "}"));
         clientEncryption.createEncryptedCollection(db, COLL_NAME, createCollectionOptions,
                 kmsProvider.createEncryptedCollectionParamsSupplier.get());
-        MongoCollection<Document> coll = db.getCollection(COLL_NAME);
+        MongoCollection<OldDocument> coll = db.getCollection(COLL_NAME);
         assertEquals(
                 121, // DocumentValidationFailure
-                assertThrows(MongoWriteException.class, () -> coll.insertOne(Document.parse("{ ssn: '123-45-6789' }")))
+                assertThrows(MongoWriteException.class, () -> coll.insertOne(OldDocument.parse("{ ssn: '123-45-6789' }")))
                         .getCode());
     }
 
@@ -150,7 +150,7 @@ public abstract class AbstractClientSideEncryptionAutoDataKeysTest {
     @ParameterizedTest(name = DISPLAY_NAME_PLACEHOLDER + " {0}")
     @MethodSource("arguments")
     void invalidKeyId(final KmsProvider kmsProvider) {
-        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(Document.parse(
+        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(OldDocument.parse(
                 "{"
                 + "  fields: [{"
                 + "    path: 'ssn',"
@@ -173,7 +173,7 @@ public abstract class AbstractClientSideEncryptionAutoDataKeysTest {
     @ParameterizedTest(name = DISPLAY_NAME_PLACEHOLDER + " {0}")
     @MethodSource("arguments")
     void insertEncryptedValue(final KmsProvider kmsProvider) {
-        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(Document.parse(
+        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(OldDocument.parse(
                 "{"
                 + "  fields: [{"
                 + "    path: 'ssn',"
@@ -183,11 +183,11 @@ public abstract class AbstractClientSideEncryptionAutoDataKeysTest {
                 + "}"));
         BsonDocument encryptedFields = clientEncryption.createEncryptedCollection(db, COLL_NAME, createCollectionOptions,
                 kmsProvider.createEncryptedCollectionParamsSupplier.get());
-        MongoCollection<Document> coll = db.getCollection(COLL_NAME);
+        MongoCollection<OldDocument> coll = db.getCollection(COLL_NAME);
         BsonBinary dataKeyId = encryptedFields.getArray("fields").get(0).asDocument().getBinary("keyId");
         BsonBinary encryptedValue = clientEncryption.encrypt(new BsonString("123-45-6789"),
                 new EncryptOptions("Unindexed").keyId(dataKeyId));
-        coll.insertOne(new Document("ssn", encryptedValue));
+        coll.insertOne(new OldDocument("ssn", encryptedValue));
     }
 
     protected abstract MongoClient createMongoClient(MongoClientSettings settings);

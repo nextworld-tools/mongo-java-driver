@@ -24,7 +24,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -135,8 +135,8 @@ final class DensifyRangeTest {
                 1, MongoTimeUnit.MINUTE);
     }
 
-    private static Document docExampleCustom() {
-        return new Document("bounds", "partition")
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("bounds", "partition")
                 .append("step", 1L).append("unit", MongoTimeUnit.MINUTE.value());
     }
 }

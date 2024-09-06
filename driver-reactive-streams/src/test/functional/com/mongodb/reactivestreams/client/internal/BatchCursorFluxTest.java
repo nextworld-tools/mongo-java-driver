@@ -33,7 +33,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonTimestamp;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -73,11 +73,11 @@ import static org.mockito.Mockito.when;
 public class BatchCursorFluxTest {
 
     private MongoClient client;
-    private TestCommandListener commandListener;
-    private MongoCollection<Document> collection;
+    private TestCommandListener          commandListener;
+    private MongoCollection<OldDocument> collection;
 
     @Mock
-    private BatchCursorPublisher<Document> batchCursorPublisher;
+    private BatchCursorPublisher<OldDocument> batchCursorPublisher;
 
     @BeforeEach
     public void setUp() {
@@ -103,10 +103,10 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorRespectsTheSetBatchSize() {
-        List<Document> docs = createDocs(20);
+        List<OldDocument> docs = createDocs(20);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
         collection.find().batchSize(5).subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -131,10 +131,10 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorSupportsBatchSizeZero() {
-        List<Document> docs = createDocs(200);
+        List<OldDocument> docs = createDocs(200);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
         collection.find().batchSize(0).subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -151,10 +151,10 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorConsumesBatchesThenGetMores() {
-        List<Document> docs = createDocs(99);
+        List<OldDocument> docs = createDocs(99);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
         collection.find().batchSize(50).subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -180,11 +180,11 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorDynamicBatchSize() {
-        List<Document> docs = createDocs(200);
+        List<OldDocument> docs = createDocs(200);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
-        FindPublisher<Document> findPublisher = collection.find();
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
+        FindPublisher<OldDocument> findPublisher = collection.find();
         findPublisher.subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -205,11 +205,11 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorCompletesAsExpectedWithLimit() {
-        List<Document> docs = createDocs(100);
+        List<OldDocument> docs = createDocs(100);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
-        FindPublisher<Document> findPublisher = collection.find().limit(100);
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
+        FindPublisher<OldDocument> findPublisher = collection.find().limit(100);
         findPublisher.subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -222,11 +222,11 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testBatchCursorDynamicBatchSizeOnReuse() {
-        List<Document> docs = createDocs(200);
+        List<OldDocument> docs = createDocs(200);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
-        FindPublisher<Document> findPublisher = collection.find();
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
+        FindPublisher<OldDocument> findPublisher = collection.find();
         findPublisher.subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -254,7 +254,7 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testCalculateDemand() {
-        BatchCursorFlux<Document> batchCursorFlux = new BatchCursorFlux<>(batchCursorPublisher);
+        BatchCursorFlux<OldDocument> batchCursorFlux = new BatchCursorFlux<>(batchCursorPublisher);
 
         assertAll("Calculating demand",
                 () -> assertEquals(0, batchCursorFlux.calculateDemand(0)),
@@ -269,7 +269,7 @@ public class BatchCursorFluxTest {
 
     @Test
     public void testCalculateBatchSize() {
-        BatchCursorFlux<Document> batchCursorFlux = new BatchCursorFlux<>(batchCursorPublisher);
+        BatchCursorFlux<OldDocument> batchCursorFlux = new BatchCursorFlux<>(batchCursorPublisher);
 
         when(batchCursorPublisher.getBatchSize()).thenReturn(null);
         assertAll("Calculating batch size with dynamic batch size",
@@ -293,7 +293,7 @@ public class BatchCursorFluxTest {
     @DisplayName("ChangeStreamPublisher for a collection must complete after dropping the collection")
     void changeStreamPublisherCompletesAfterDroppingCollection() {
         assumeTrue(isReplicaSet() && serverVersionAtLeast(4, 0));
-        TestSubscriber<ChangeStreamDocument<Document>> subscriber = new TestSubscriber<>();
+        TestSubscriber<ChangeStreamDocument<OldDocument>> subscriber = new TestSubscriber<>();
         subscriber.doOnSubscribe(subscription -> {
             subscription.request(Long.MAX_VALUE);
         });
@@ -336,8 +336,8 @@ public class BatchCursorFluxTest {
             AtomicBoolean errorDropped = new AtomicBoolean();
             Hooks.onErrorDropped(t -> errorDropped.set(true));
 
-            Document doc = new Document("x", null);
-            Document doc2 = new Document("x", "hello");
+            OldDocument doc = new OldDocument("x", null);
+            OldDocument doc2 = new OldDocument("x", "hello");
 
             Mono.from(collection.insertMany(Arrays.asList(doc, doc2))).block();
 
@@ -359,11 +359,11 @@ public class BatchCursorFluxTest {
     @DisplayName("Ensure BatchCursor reports cursor errors")
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     public void testBatchCursorReportsCursorErrors() {
-        List<Document> docs = createDocs(200);
+        List<OldDocument> docs = createDocs(200);
         Mono.from(collection.insertMany(docs)).block(TIMEOUT_DURATION);
 
-        TestSubscriber<Document> subscriber = new TestSubscriber<>();
-        FindPublisher<Document> findPublisher = collection.find().batchSize(50);
+        TestSubscriber<OldDocument> subscriber = new TestSubscriber<>();
+        FindPublisher<OldDocument> findPublisher = collection.find().batchSize(50);
         findPublisher.subscribe(subscriber);
         assertCommandNames(emptyList());
 
@@ -394,10 +394,10 @@ public class BatchCursorFluxTest {
                 commandListener.getCommandStartedEvents().stream().map(CommandEvent::getCommandName).collect(Collectors.toList()));
     }
 
-    private List<Document> createDocs(final int amount) {
+    private List<OldDocument> createDocs(final int amount) {
         return IntStream.rangeClosed(1, amount)
                 .boxed()
-                .map(i -> new Document("_id", i))
+                .map(i -> new OldDocument("_id", i))
                 .collect(Collectors.toList());
     }
 
@@ -408,8 +408,8 @@ public class BatchCursorFluxTest {
      *
      * @return {@code operationTime} starting at which the {@code collection} is guaranteed to exist.
      */
-    private static BsonTimestamp ensureExists(final MongoClient client, final MongoCollection<Document> collection) {
-        BsonValue insertedId = Mono.from(collection.insertOne(Document.parse("{}")))
+    private static BsonTimestamp ensureExists(final MongoClient client, final MongoCollection<OldDocument> collection) {
+        BsonValue insertedId = Mono.from(collection.insertOne(OldDocument.parse("{}")))
                 .map(InsertOneResult::getInsertedId)
                 .block(TIMEOUT_DURATION);
         BsonArray deleteStatements = new BsonArray();
@@ -417,7 +417,7 @@ public class BatchCursorFluxTest {
                 .append("q", new BsonDocument()
                         .append("_id", insertedId))
                 .append("limit", new BsonInt32(1)));
-        Publisher<Document> deletePublisher = client.getDatabase(collection.getNamespace().getDatabaseName())
+        Publisher<OldDocument> deletePublisher = client.getDatabase(collection.getNamespace().getDatabaseName())
                 .runCommand(new BsonDocument()
                         .append("delete", new BsonString(collection.getNamespace().getCollectionName()))
                         .append("deletes", deleteStatements));

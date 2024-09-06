@@ -38,7 +38,7 @@ import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonType;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -969,12 +969,12 @@ public final class Aggregates {
         return new Bson() {
             @Override
             public <TDocument> BsonDocument toBsonDocument(final Class<TDocument> documentClass, final CodecRegistry codecRegistry) {
-                Document specificationDoc = new Document("path", path.toValue())
+                OldDocument specificationDoc = new OldDocument("path", path.toValue())
                         .append("queryVector", queryVector)
                         .append("index", index)
                         .append("limit", limit);
                 specificationDoc.putAll(options.toBsonDocument(documentClass, codecRegistry));
-                return new Document("$vectorSearch", specificationDoc).toBsonDocument(documentClass, codecRegistry);
+                return new OldDocument("$vectorSearch", specificationDoc).toBsonDocument(documentClass, codecRegistry);
             }
 
             @Override

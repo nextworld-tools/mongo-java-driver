@@ -19,7 +19,7 @@ package com.mongodb.client.gridfs.model;
 import com.mongodb.MongoGridFSException;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 
 import java.util.Date;
@@ -40,7 +40,7 @@ public final class GridFSFile {
     private final Date uploadDate;
 
     // Optional values
-    private final Document metadata;
+    private final OldDocument metadata;
 
     /**
      * Creates a new GridFSFile
@@ -53,7 +53,7 @@ public final class GridFSFile {
      * @param metadata the optional metadata for the file
      */
     public GridFSFile(final BsonValue id, final String filename, final long length, final int chunkSize, final Date uploadDate,
-                      @Nullable final Document metadata) {
+                      @Nullable final OldDocument metadata) {
         this.id = notNull("id", id);
         this.filename = notNull("filename", filename);
         this.length = notNull("length", length);
@@ -127,7 +127,7 @@ public final class GridFSFile {
      * @return the metadata document or null
      */
     @Nullable
-    public Document getMetadata() {
+    public OldDocument getMetadata() {
         return metadata;
     }
 

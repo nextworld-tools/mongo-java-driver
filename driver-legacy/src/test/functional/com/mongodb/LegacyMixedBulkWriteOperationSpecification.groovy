@@ -22,7 +22,7 @@ import com.mongodb.internal.bulk.UpdateRequest
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import org.bson.types.ObjectId
@@ -149,7 +149,7 @@ class LegacyMixedBulkWriteOperationSpecification extends OperationFunctionalSpec
 
     def 'should remove a document'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('_id', 1))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('_id', 1))
         def operation = createBulkWriteOperationForDelete(getNamespace(), true, ACKNOWLEDGED, false,
                 [new DeleteRequest(new BsonDocument('_id', new BsonInt32(1)))])
 
@@ -238,8 +238,8 @@ class LegacyMixedBulkWriteOperationSpecification extends OperationFunctionalSpec
     def 'when multi is false should update one matching document'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(),
-                new Document('x', 1),
-                new Document('x', 1))
+                new OldDocument('x', 1),
+                new OldDocument('x', 1))
         def operation = createBulkWriteOperationForUpdate(getNamespace(), true, ACKNOWLEDGED, false,
                 asList(new UpdateRequest(new BsonDocument('x', new BsonInt32(1)),
                         new BsonDocument('$set', new BsonDocument('y', new BsonInt32(2))), UPDATE).multi(false)))
@@ -252,14 +252,14 @@ class LegacyMixedBulkWriteOperationSpecification extends OperationFunctionalSpec
         result.count == 1
         result.upsertedId == null
         result.isUpdateOfExisting()
-        getCollectionHelper().count(new Document('y', 2)) == 1
+        getCollectionHelper().count(new OldDocument('y', 2)) == 1
     }
 
     def 'when multi is true should update all matching documents'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(),
-                new Document('x', 1),
-                new Document('x', 1))
+                new OldDocument('x', 1),
+                new OldDocument('x', 1))
         def operation = createBulkWriteOperationForUpdate(getNamespace(), true, ACKNOWLEDGED, false,
                 asList(new UpdateRequest(new BsonDocument('x', new BsonInt32(1)),
                         new BsonDocument('$set', new BsonDocument('y', new BsonInt32(2))), UPDATE).multi(true)))
@@ -272,7 +272,7 @@ class LegacyMixedBulkWriteOperationSpecification extends OperationFunctionalSpec
         result.count == 2
         result.upsertedId == null
         result.isUpdateOfExisting()
-        getCollectionHelper().count(new Document('y', 2)) == 2
+        getCollectionHelper().count(new OldDocument('y', 2)) == 2
     }
 
     def 'when upsert is true should insert a document if there are no matching documents'() {
@@ -289,7 +289,7 @@ class LegacyMixedBulkWriteOperationSpecification extends OperationFunctionalSpec
         result.count == 1
         result.upsertedId == new BsonInt32(1)
         !result.isUpdateOfExisting()
-        getCollectionHelper().count(new Document('y', 2)) == 1
+        getCollectionHelper().count(new OldDocument('y', 2)) == 1
     }
 
     def 'should return correct result for upsert'() {

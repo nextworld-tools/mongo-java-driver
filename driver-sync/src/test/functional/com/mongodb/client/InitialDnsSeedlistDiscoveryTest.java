@@ -34,7 +34,7 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonNumber;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -164,7 +164,7 @@ public abstract class InitialDnsSeedlistDiscoveryTest {
             // Instead, we just try to execute an operation and assert that it throws
             if (settings.getClusterSettings().getMode() == ClusterConnectionMode.LOAD_BALANCED) {
                 try {
-                    client.getDatabase("admin").runCommand(new Document("ping", 1));
+                    client.getDatabase("admin").runCommand(new OldDocument("ping", 1));
                 } catch (MongoClientException e) {
                     // all good
                 }
@@ -239,7 +239,7 @@ public abstract class InitialDnsSeedlistDiscoveryTest {
             assertTrue(seedsLatch.await(10, TimeUnit.SECONDS));
             assertTrue(hostsLatch.await(10, TimeUnit.SECONDS));
             if (executePingCommand) {
-                assertTrue(client.getDatabase("admin").runCommand(new Document("ping", 1)).containsKey("ok"));
+                assertTrue(client.getDatabase("admin").runCommand(new OldDocument("ping", 1)).containsKey("ok"));
             }
         }
     }

@@ -29,7 +29,7 @@ import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
 import org.bson.BsonBinary;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,7 +66,7 @@ public class ClientSideEncryptionBypassAutoEncryptionTest {
 
         // Set up the key vault for this example
         MongoNamespace keyVaultNamespace = new MongoNamespace("encryption.testKeyVault");
-        MongoCollection<Document> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
+        MongoCollection<OldDocument> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
                 .getCollection(keyVaultNamespace.getCollectionName());
         keyVaultCollection.drop();
 
@@ -106,8 +106,8 @@ public class ClientSideEncryptionBypassAutoEncryptionTest {
         BsonBinary encryptedFieldValue = clientEncryption.encrypt(new BsonString(fieldValue),
                 new EncryptOptions("AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic").keyId(dataKeyId));
 
-        MongoCollection<Document> collection = clientEncrypted.getDatabase(Fixture.getDefaultDatabaseName()).getCollection("test");
-        collection.insertOne(new Document("encryptedField", encryptedFieldValue));
+        MongoCollection<OldDocument> collection = clientEncrypted.getDatabase(Fixture.getDefaultDatabaseName()).getCollection("test");
+        collection.insertOne(new OldDocument("encryptedField", encryptedFieldValue));
 
         assertEquals(fieldValue, collection.find().first().getString("encryptedField"));
     }

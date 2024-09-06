@@ -22,7 +22,7 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -68,10 +68,10 @@ public class ClientSideEncryptionSimpleTour {
                 .build();
 
         MongoClient mongoClient = MongoClients.create(clientSettings);
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
         collection.drop(); // Clear old data
 
-        collection.insertOne(new Document("encryptedField", "123456789"));
+        collection.insertOne(new OldDocument("encryptedField", "123456789"));
 
         System.out.println(collection.find().first().toJson());
 

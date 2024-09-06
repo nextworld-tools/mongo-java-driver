@@ -19,7 +19,7 @@ package reactivestreams.primer;
 
 
 // @imports: start
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintSubscriber;
@@ -33,7 +33,7 @@ public class IndexesPrimer extends PrimerTestCase {
         // @begin: single-field-index
         // @code: start
         ObservableSubscriber<String> indexSubscriber = new PrintSubscriber<>("Index created: %s");
-        db.getCollection("restaurants").createIndex(new Document("cuisine", 1))
+        db.getCollection("restaurants").createIndex(new OldDocument("cuisine", 1))
                 .subscribe(indexSubscriber);
         indexSubscriber.await();
         // @code: end
@@ -47,7 +47,7 @@ public class IndexesPrimer extends PrimerTestCase {
         // @begin: create-compound-index
         // @code: start
         ObservableSubscriber<String> indexSubscriber = new PrintSubscriber<>("Index created: %s");
-        db.getCollection("restaurants").createIndex(new Document("cuisine", 1).append("address.zipcode", 1))
+        db.getCollection("restaurants").createIndex(new OldDocument("cuisine", 1).append("address.zipcode", 1))
                 .subscribe(indexSubscriber);
         indexSubscriber.await();
         // @code: end

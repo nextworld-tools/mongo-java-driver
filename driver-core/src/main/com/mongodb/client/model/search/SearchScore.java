@@ -21,7 +21,7 @@ import com.mongodb.annotations.Sealed;
 import com.mongodb.client.model.Projections;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -57,7 +57,7 @@ public interface SearchScore extends Bson {
      * @see SearchScoreExpression#pathExpression(FieldSearchPath)
      */
     static PathBoostSearchScore boost(final FieldSearchPath path) {
-        return new SearchConstructibleBsonElement("boost", new Document("path", notNull("value", path).toValue()));
+        return new SearchConstructibleBsonElement("boost", new OldDocument("path", notNull("value", path).toValue()));
     }
 
     /**

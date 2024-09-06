@@ -26,7 +26,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -46,7 +46,7 @@ class MapReduceFlowTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: MapReducePublisher<Document> = mock()
+        val wrapped: MapReducePublisher<OldDocument> = mock()
         val flow = MapReduceFlow(wrapped)
 
         val batchSize = 10

@@ -17,7 +17,7 @@
 package com.mongodb.reactivestreams.client
 
 import com.mongodb.MongoNamespace
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 import static Fixture.dropDatabase
@@ -29,7 +29,7 @@ import static com.mongodb.reactivestreams.client.Fixture.waitForLastServerSessio
 
 class FunctionalSpecification extends Specification {
     protected MongoDatabase database
-    protected MongoCollection<Document> collection
+    protected MongoCollection<OldDocument> collection
 
     def setupSpec() {
         dropDatabase(getDefaultDatabaseName())

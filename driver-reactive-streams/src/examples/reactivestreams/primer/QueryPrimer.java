@@ -19,7 +19,7 @@ package reactivestreams.primer;
 
 // @imports: start
 import com.mongodb.reactivestreams.client.FindPublisher;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintDocumentSubscriber;
@@ -40,12 +40,12 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryAll() {
         // @begin: query-all
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find();
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find();
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
         // @code: end
@@ -58,13 +58,13 @@ public class QueryPrimer extends PrimerTestCase {
 
         // @begin: logical-and
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("cuisine", "Italian").append("address.zipcode", "10075"));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("cuisine", "Italian").append("address.zipcode", "10075"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
         // @code: end
@@ -82,14 +82,14 @@ public class QueryPrimer extends PrimerTestCase {
 
         // @begin: logical-or
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("$or", asList(new Document("cuisine", "Italian"),
-                        new Document("address.zipcode", "10075"))));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("$or", asList(new OldDocument("cuisine", "Italian"),
+                        new OldDocument("address.zipcode", "10075"))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
         // @code: end
@@ -106,13 +106,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryTopLevelField() {
         // @begin: query-top-level-field
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("borough", "Manhattan"));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("borough", "Manhattan"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -129,13 +129,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryEmbeddedDocument() {
         // @begin: query-embedded-document
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("address.zipcode", "10075"));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("address.zipcode", "10075"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -152,13 +152,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryFieldInArray() {
         // @begin: query-field-in-array
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("grades.grade", "B"));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("grades.grade", "B"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -175,13 +175,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void greaterThan() {
         // @begin: greater-than
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("grades.score", new Document("$gt", 30)));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("grades.score", new OldDocument("$gt", 30)));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -198,13 +198,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void lessThan() {
         // @begin: less-than
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find(
-                new Document("grades.score", new Document("$lt", 10)));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find(
+                new OldDocument("grades.score", new OldDocument("$lt", 10)));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 
@@ -222,13 +222,13 @@ public class QueryPrimer extends PrimerTestCase {
     public void sort() {
         // @begin: sort
         // @code: start
-        FindPublisher<Document> publisher = db.getCollection("restaurants").find()
-                .sort(new Document("borough", 1).append("address.zipcode", 1));
+        FindPublisher<OldDocument> publisher = db.getCollection("restaurants").find()
+                .sort(new OldDocument("borough", 1).append("address.zipcode", 1));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> documentSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> documentSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(documentSubscriber);
         documentSubscriber.await();
 

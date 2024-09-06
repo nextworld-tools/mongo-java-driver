@@ -78,7 +78,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.DocumentCodec;
 
@@ -244,15 +244,15 @@ public final class ClusterFixture {
                         .count() == requiredSystemProperties.size();
     }
 
-    public static Document getServerStatus() {
+    public static OldDocument getServerStatus() {
         return new CommandReadOperation<>("admin", new BsonDocument("serverStatus", new BsonInt32(1)),
                 new DocumentCodec())
                 .execute(getBinding());
     }
 
     public static boolean supportsFsync() {
-        Document serverStatus = getServerStatus();
-        Document storageEngine = (Document) serverStatus.get("storageEngine");
+        OldDocument serverStatus = getServerStatus();
+        OldDocument storageEngine = (OldDocument) serverStatus.get("storageEngine");
 
         return storageEngine != null && !storageEngine.get("name").equals("inMemory");
     }

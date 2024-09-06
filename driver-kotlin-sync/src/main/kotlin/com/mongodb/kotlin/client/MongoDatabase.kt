@@ -24,7 +24,7 @@ import com.mongodb.client.MongoDatabase as JMongoDatabase
 import com.mongodb.client.model.CreateCollectionOptions
 import com.mongodb.client.model.CreateViewOptions
 import java.util.concurrent.TimeUnit
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -167,8 +167,8 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      *   [MongoDatabase.readPreference]
      * @return the command result
      */
-    public fun runCommand(command: Bson, readPreference: ReadPreference = this.readPreference): Document =
-        runCommand<Document>(command, readPreference)
+    public fun runCommand(command: Bson, readPreference: ReadPreference = this.readPreference): OldDocument =
+        runCommand<OldDocument>(command, readPreference)
 
     /**
      * Executes the given command in the context of the current database with the given read preference.
@@ -186,7 +186,7 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
         clientSession: ClientSession,
         command: Bson,
         readPreference: ReadPreference = this.readPreference
-    ): Document = runCommand<Document>(clientSession, command, readPreference)
+    ): OldDocument = runCommand<OldDocument>(clientSession, command, readPreference)
 
     /**
      * Executes the given command in the context of the current database with the given read preference.
@@ -305,7 +305,7 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [listCollections](https://www.mongodb.com/docs/manual/reference/command/listCollections)
      */
     @JvmName("listCollectionsAsDocument")
-    public fun listCollections(): ListCollectionsIterable<Document> = listCollections<Document>()
+    public fun listCollections(): ListCollectionsIterable<OldDocument> = listCollections<OldDocument>()
 
     /**
      * Gets all the collections in this database.
@@ -315,8 +315,8 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [listCollections](https://www.mongodb.com/docs/manual/reference/command/listCollections)
      */
     @JvmName("listCollectionsAsDocumentWithSession")
-    public fun listCollections(clientSession: ClientSession): ListCollectionsIterable<Document> =
-        listCollections<Document>(clientSession)
+    public fun listCollections(clientSession: ClientSession): ListCollectionsIterable<OldDocument> =
+        listCollections<OldDocument>(clientSession)
 
     /**
      * Gets all the collections in this database.
@@ -434,7 +434,7 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [Aggregate Command](https://www.mongodb.com/docs/manual/reference/command/aggregate/#dbcmd.aggregate)
      */
     @JvmName("aggregateAsDocument")
-    public fun aggregate(pipeline: List<Bson>): AggregateIterable<Document> = aggregate<Document>(pipeline)
+    public fun aggregate(pipeline: List<Bson>): AggregateIterable<OldDocument> = aggregate<OldDocument>(pipeline)
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages that do not require an underlying
@@ -446,8 +446,8 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [Aggregate Command](https://www.mongodb.com/docs/manual/reference/command/aggregate/#dbcmd.aggregate)
      */
     @JvmName("aggregateAsDocumentWithSession")
-    public fun aggregate(clientSession: ClientSession, pipeline: List<Bson>): AggregateIterable<Document> =
-        aggregate<Document>(clientSession, pipeline)
+    public fun aggregate(clientSession: ClientSession, pipeline: List<Bson>): AggregateIterable<OldDocument> =
+        aggregate<OldDocument>(clientSession, pipeline)
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages that do not require an underlying
@@ -514,7 +514,7 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocument")
-    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamIterable<Document> = watch<Document>(pipeline)
+    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamIterable<OldDocument> = watch<OldDocument>(pipeline)
 
     /**
      * Creates a change stream for this database.
@@ -525,8 +525,8 @@ public class MongoDatabase(private val wrapped: JMongoDatabase) {
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocumentWithSession")
-    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamIterable<Document> =
-        watch<Document>(clientSession, pipeline)
+    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamIterable<OldDocument> =
+        watch<OldDocument>(clientSession, pipeline)
 
     /**
      * Creates a change stream for this database.

@@ -18,7 +18,7 @@ package com.mongodb.internal.operation;
 
 import com.mongodb.MongoException;
 import com.mongodb.async.FutureResultCallback;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -37,12 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AsyncSingleBatchCursorTest {
 
-    private static final List<Document> SINGLE_BATCH = asList(new Document("a", 1), new Document("b", 2));
+    private static final List<OldDocument> SINGLE_BATCH = asList(new OldDocument("a", 1), new OldDocument("b", 2));
 
     @Test
     @DisplayName("should work as expected")
     void shouldWorkAsExpected() {
-        try (AsyncSingleBatchCursor<Document> cursor = new AsyncSingleBatchCursor<>(SINGLE_BATCH, 0)) {
+        try (AsyncSingleBatchCursor<OldDocument> cursor = new AsyncSingleBatchCursor<>(SINGLE_BATCH, 0)) {
 
             assertIterableEquals(SINGLE_BATCH, nextBatch(cursor));
             assertIterableEquals(emptyList(), nextBatch(cursor));
@@ -55,7 +55,7 @@ class AsyncSingleBatchCursorTest {
     @Test
     @DisplayName("should work as expected emptyCursor")
     void shouldWorkAsExpectedEmptyCursor() {
-        try (AsyncSingleBatchCursor<Document> cursor = createEmptyAsyncSingleBatchCursor(0)) {
+        try (AsyncSingleBatchCursor<OldDocument> cursor = createEmptyAsyncSingleBatchCursor(0)) {
             assertIterableEquals(emptyList(), nextBatch(cursor));
             assertTrue(cursor.isClosed());
 
@@ -66,7 +66,7 @@ class AsyncSingleBatchCursorTest {
     @Test
     @DisplayName("should not support setting batch size")
     void shouldNotSupportSettingBatchSize() {
-        try (AsyncSingleBatchCursor<Document> cursor = new AsyncSingleBatchCursor<>(SINGLE_BATCH, 0)) {
+        try (AsyncSingleBatchCursor<OldDocument> cursor = new AsyncSingleBatchCursor<>(SINGLE_BATCH, 0)) {
 
             assertEquals(0, cursor.getBatchSize());
 
@@ -75,8 +75,8 @@ class AsyncSingleBatchCursorTest {
         }
     }
 
-    List<Document> nextBatch(final AsyncSingleBatchCursor<Document> cursor) {
-        FutureResultCallback<List<Document>> futureResultCallback = new FutureResultCallback<>();
+    List<OldDocument> nextBatch(final AsyncSingleBatchCursor<OldDocument> cursor) {
+        FutureResultCallback<List<OldDocument>> futureResultCallback = new FutureResultCallback<>();
         cursor.next(futureResultCallback);
         return futureResultCallback.get(TIMEOUT, TimeUnit.MILLISECONDS);
     }

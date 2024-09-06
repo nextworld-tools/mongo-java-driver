@@ -19,7 +19,7 @@ package com.mongodb.client;
 import org.bson.BsonReader;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.CollectibleCodec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.EncoderContext;
@@ -60,7 +60,7 @@ public final class ImmutableDocumentCodec implements CollectibleCodec<ImmutableD
 
     @Override
     public void encode(final BsonWriter writer, final ImmutableDocument value, final EncoderContext encoderContext) {
-        codecRegistry.get(Document.class).encode(writer, new Document(value), encoderContext);
+        codecRegistry.get(OldDocument.class).encode(writer, new OldDocument(value), encoderContext);
     }
 
     @Override
@@ -70,7 +70,7 @@ public final class ImmutableDocumentCodec implements CollectibleCodec<ImmutableD
 
     @Override
     public ImmutableDocument decode(final BsonReader reader, final DecoderContext decoderContext) {
-        Document document = codecRegistry.get(Document.class).decode(reader, decoderContext);
+        OldDocument document = codecRegistry.get(OldDocument.class).decode(reader, decoderContext);
         return new ImmutableDocument(document);
     }
 }

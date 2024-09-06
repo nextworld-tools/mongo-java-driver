@@ -19,7 +19,7 @@ package com.mongodb.client.model
 import com.mongodb.MongoQueryException
 import com.mongodb.OperationFunctionalSpecification
 import org.bson.BsonType
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 import spock.lang.IgnoreIf
 
@@ -55,17 +55,17 @@ import static com.mongodb.client.model.Filters.type
 import static com.mongodb.client.model.Filters.where
 
 class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
-    def a = new Document('_id', 1).append('x', 1)
+    def a = new OldDocument('_id', 1).append('x', 1)
                                   .append('y', 'a')
                                   .append('a', [1, 2, 3])
-                                  .append('a1', [new Document('c', 1).append('d', 2), new Document('c', 2).append('d', 3)])
+                                  .append('a1', [new OldDocument('c', 1).append('d', 2), new OldDocument('c', 2).append('d', 3)])
 
-    def b = new Document('_id', 2).append('x', 2)
+    def b = new OldDocument('_id', 2).append('x', 2)
                                   .append('y', 'b')
                                   .append('a', [3, 4, 5, 6])
-                                  .append('a1', [new Document('c', 2).append('d', 3), new Document('c', 3).append('d', 4)])
+                                  .append('a1', [new OldDocument('c', 2).append('d', 3), new OldDocument('c', 3).append('d', 4)])
 
-    def c = new Document('_id', 3).append('x', 3)
+    def c = new OldDocument('_id', 3).append('x', 3)
                                   .append('y', 'c')
                                   .append('z', true)
 
@@ -74,7 +74,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     }
 
     def 'find'(Bson filter) {
-        getCollectionHelper().find(filter, new Document('_id', 1)) // sort by _id
+        getCollectionHelper().find(filter, new OldDocument('_id', 1)) // sort by _id
     }
 
     def 'eq'() {
@@ -96,8 +96,8 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
         find(not(regex('y', 'a.*'))) == [b, c]
 
         when:
-        def dbref = Document.parse('{$ref: "1", $id: "1"}')
-        def dbrefDoc = new Document('_id', 4).append('dbref', dbref)
+        def dbref = OldDocument.parse('{$ref: "1", $id: "1"}')
+        def dbrefDoc = new OldDocument('_id', 4).append('dbref', dbref)
         getCollectionHelper().insertDocuments(dbrefDoc)
 
         then:
@@ -113,8 +113,8 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
         find(not(eq('dbref', dbref))) == [a, b, c]
 
         when:
-        def subDoc = Document.parse('{x: 1, b: 1}')
-        getCollectionHelper().insertDocuments(new Document('subDoc', subDoc))
+        def subDoc = OldDocument.parse('{x: 1, b: 1}')
+        getCollectionHelper().insertDocuments(new OldDocument('subDoc', subDoc))
 
         then:
         find(not(eq('subDoc', subDoc))) == [a, b, c, dbrefDoc]
@@ -203,7 +203,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
 
     def 'should render $elemMatch'() {
         expect:
-        find(elemMatch('a', new Document('$gte', 2).append('$lte', 2))) == [a]
+        find(elemMatch('a', new OldDocument('$gte', 2).append('$lte', 2))) == [a]
         find(elemMatch('a1', and(eq('c', 1), gte('d', 2)))) == [a]
         find(elemMatch('a1', and(eq('c', 2), eq('d', 3)))) == [a, b]
     }
@@ -231,7 +231,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should render $bitsAllClear'() {
         when:
-        def bitDoc = Document.parse('{_id: 1, bits: 20}')
+        def bitDoc = OldDocument.parse('{_id: 1, bits: 20}')
         getCollectionHelper().drop()
         getCollectionHelper().insertDocuments(bitDoc)
 
@@ -242,7 +242,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should render $bitsAllSet'() {
         when:
-        def bitDoc = Document.parse('{_id: 1, bits: 54}')
+        def bitDoc = OldDocument.parse('{_id: 1, bits: 54}')
         getCollectionHelper().drop()
         getCollectionHelper().insertDocuments(bitDoc)
 
@@ -253,7 +253,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should render $bitsAnyClear'() {
         when:
-        def bitDoc = Document.parse('{_id: 1, bits: 50}')
+        def bitDoc = OldDocument.parse('{_id: 1, bits: 50}')
         getCollectionHelper().drop()
         getCollectionHelper().insertDocuments(bitDoc)
 
@@ -264,7 +264,7 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should render $bitsAnySet'() {
         when:
-        def bitDoc = Document.parse('{_id: 1, bits: 20}')
+        def bitDoc = OldDocument.parse('{_id: 1, bits: 20}')
         getCollectionHelper().drop()
         getCollectionHelper().insertDocuments(bitDoc)
 
@@ -288,10 +288,10 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @SuppressWarnings('deprecated')
     def 'should render $text'() {
         given:
-        getCollectionHelper().createIndex(new Document('y', 'text'))
+        getCollectionHelper().createIndex(new OldDocument('y', 'text'))
 
         when:
-        def textDocument = new Document('_id', 4).append('y', 'mongoDB for GIANT ideas')
+        def textDocument = new OldDocument('_id', 4).append('y', 'mongoDB for GIANT ideas')
         collectionHelper.insertDocuments(textDocument)
 
         then:
@@ -303,10 +303,10 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     def 'should render $text with 3.2 options'() {
         given:
         collectionHelper.drop()
-        getCollectionHelper().createIndex(new Document('desc', 'text'), 'portuguese')
+        getCollectionHelper().createIndex(new OldDocument('desc', 'text'), 'portuguese')
 
         when:
-        def textDocument = new Document('_id', 1).append('desc', 'mongodb para idéias GIGANTES')
+        def textDocument = new OldDocument('_id', 1).append('desc', 'mongodb para idéias GIGANTES')
         collectionHelper.insertDocuments(textDocument)
 
         then:
@@ -334,14 +334,14 @@ class FiltersFunctionalSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 6) })
     def '$expr'() {
         expect:
-        find(expr(Document.parse('{ $eq: [ "$x" , 3 ] } '))) == [c]
+        find(expr(OldDocument.parse('{ $eq: [ "$x" , 3 ] } '))) == [c]
     }
 
 
     @IgnoreIf({ serverVersionLessThan(3, 6) })
     def '$jsonSchema'() {
         expect:
-        find(jsonSchema(Document.parse('{ bsonType : "object", properties: { x : {type : "number", minimum : 2} } } '))) == [b, c]
+        find(jsonSchema(OldDocument.parse('{ bsonType : "object", properties: { x : {type : "number", minimum : 2} } } '))) == [b, c]
     }
 
     def 'empty matches everything'() {

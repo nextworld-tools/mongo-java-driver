@@ -291,7 +291,7 @@ class GridFSObservableSpec extends RequiresMongoDBISpec with FuturesSpec with Be
       client => {
         val database = client.getDatabase(databaseName)
         val uuid = UUID.randomUUID()
-        val fileMeta = new org.bson.Document("uuid", uuid)
+        val fileMeta = new org.bson.OldDocument("uuid", uuid)
         val bucket = GridFSBucket(database)
 
         val fileId = bucket

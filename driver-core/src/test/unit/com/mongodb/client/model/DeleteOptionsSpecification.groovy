@@ -17,7 +17,7 @@
 package com.mongodb.client.model
 
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 class DeleteOptionsSpecification extends Specification {
@@ -45,7 +45,7 @@ class DeleteOptionsSpecification extends Specification {
         new DeleteOptions().hint(hint).getHint() == hint
 
         where:
-        hint << [null, new BsonDocument(), new Document('a', 1)]
+        hint << [null, new BsonDocument(), new OldDocument('a', 1)]
     }
 
     def 'should set hintString'() {

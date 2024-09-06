@@ -23,7 +23,7 @@ import com.mongodb.client.model.Collation
 import com.mongodb.kotlin.client.FindIterable
 import java.util.concurrent.TimeUnit
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 internal class SyncFindIterable<T : Any>(val wrapped: FindIterable<T>) :
@@ -79,9 +79,9 @@ internal class SyncFindIterable<T : Any>(val wrapped: FindIterable<T>) :
 
     override fun showRecordId(showRecordId: Boolean): SyncFindIterable<T> = apply { wrapped.showRecordId(showRecordId) }
 
-    override fun explain(): Document = wrapped.explain()
+    override fun explain(): OldDocument = wrapped.explain()
 
-    override fun explain(verbosity: ExplainVerbosity): Document = wrapped.explain(verbosity)
+    override fun explain(verbosity: ExplainVerbosity): OldDocument = wrapped.explain(verbosity)
 
     override fun <E : Any> explain(explainResultClass: Class<E>): E = wrapped.explain(explainResultClass)
 

@@ -17,7 +17,7 @@
 package primer;
 
 import com.mongodb.client.FindIterable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static com.mongodb.client.model.Filters.and;
@@ -38,7 +38,7 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryAll() {
         // @begin: query-all
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find();
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find();
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -54,8 +54,8 @@ public class QueryPrimer extends PrimerTestCase {
 
         // @begin: logical-and
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("cuisine", "Italian").append("address.zipcode", "10075"));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("cuisine", "Italian").append("address.zipcode", "10075"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -76,9 +76,9 @@ public class QueryPrimer extends PrimerTestCase {
 
         // @begin: logical-or
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("$or", asList(new Document("cuisine", "Italian"),
-                        new Document("address.zipcode", "10075"))));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("$or", asList(new OldDocument("cuisine", "Italian"),
+                        new OldDocument("address.zipcode", "10075"))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -98,8 +98,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryTopLevelField() {
         // @begin: query-top-level-field
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("borough", "Manhattan"));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("borough", "Manhattan"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -118,8 +118,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryEmbeddedDocument() {
         // @begin: query-embedded-document
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("address.zipcode", "10075"));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("address.zipcode", "10075"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -138,8 +138,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void queryFieldInArray() {
         // @begin: query-field-in-array
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("grades.grade", "B"));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("grades.grade", "B"));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -158,8 +158,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void greaterThan() {
         // @begin: greater-than
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("grades.score", new Document("$gt", 30)));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("grades.score", new OldDocument("$gt", 30)));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -178,8 +178,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void lessThan() {
         // @begin: less-than
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find(
-                new Document("grades.score", new Document("$lt", 10)));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find(
+                new OldDocument("grades.score", new OldDocument("$lt", 10)));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document.
@@ -199,8 +199,8 @@ public class QueryPrimer extends PrimerTestCase {
     public void sort() {
         // @begin: sort
         // @code: start
-        FindIterable<Document> iterable = db.getCollection("restaurants").find()
-                .sort(new Document("borough", 1).append("address.zipcode", 1));
+        FindIterable<OldDocument> iterable = db.getCollection("restaurants").find()
+                .sort(new OldDocument("borough", 1).append("address.zipcode", 1));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document

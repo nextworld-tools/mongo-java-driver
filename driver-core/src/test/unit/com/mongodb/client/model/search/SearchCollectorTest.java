@@ -15,7 +15,7 @@
  */
 package com.mongodb.client.model.search;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.junit.jupiter.api.Test;
 
@@ -76,9 +76,9 @@ final class SearchCollectorTest {
                                 asList(10, 20, 30))));
     }
 
-    private static Document docExampleCustom() {
-        return new Document("facet",
-                new Document("operator", exists(
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("facet",
+                new OldDocument("operator", exists(
                         fieldPath("fieldName")))
                         .append("facets", combineToBson(asList(
                                 stringFacet(

@@ -52,7 +52,7 @@ import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -1335,7 +1335,7 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @see [List search indexes](https://www.mongodb.com/docs/manual/reference/operator/aggregation/listSearchIndexes)
      */
     @JvmName("listSearchIndexesAsDocument")
-    public fun listSearchIndexes(): ListSearchIndexesFlow<Document> = listSearchIndexes<Document>()
+    public fun listSearchIndexes(): ListSearchIndexesFlow<OldDocument> = listSearchIndexes<OldDocument>()
 
     /**
      * Get all the Atlas Search indexes in this collection.
@@ -1417,7 +1417,7 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @return the list indexes iterable interface
      * @see [List indexes](https://www.mongodb.com/docs/manual/reference/command/listIndexes/)
      */
-    @JvmName("listIndexesAsDocument") public fun listIndexes(): ListIndexesFlow<Document> = listIndexes<Document>()
+    @JvmName("listIndexesAsDocument") public fun listIndexes(): ListIndexesFlow<OldDocument> = listIndexes<OldDocument>()
 
     /**
      * Get all the indexes in this collection.
@@ -1427,8 +1427,8 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @see [List indexes](https://www.mongodb.com/docs/manual/reference/command/listIndexes/)
      */
     @JvmName("listIndexesAsDocumentWithSession")
-    public fun listIndexes(clientSession: ClientSession): ListIndexesFlow<Document> =
-        listIndexes<Document>(clientSession)
+    public fun listIndexes(clientSession: ClientSession): ListIndexesFlow<OldDocument> =
+        listIndexes<OldDocument>(clientSession)
 
     /**
      * Get all the indexes in this collection.

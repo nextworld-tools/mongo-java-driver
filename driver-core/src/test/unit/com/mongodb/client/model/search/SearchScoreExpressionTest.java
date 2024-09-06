@@ -19,7 +19,7 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static com.mongodb.client.model.search.SearchPath.fieldPath;
@@ -188,9 +188,9 @@ final class SearchScoreExpressionTest {
                 .undefined(-1.5f);
     }
 
-    private static Document docExampleCustom() {
-        return new Document("path",
-                new Document("value", fieldPath("fieldName").toValue())
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("path",
+                new OldDocument("value", fieldPath("fieldName").toValue())
                         .append("undefined", -1.5));
     }
 }

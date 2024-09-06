@@ -18,7 +18,7 @@ package com.mongodb.kotlin.client
 import com.mongodb.client.Fixture.getDefaultDatabaseName
 import com.mongodb.client.Fixture.getMongoClientSettings
 import kotlin.test.assertContentEquals
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -38,10 +38,10 @@ class SmokeTests {
     fun testDistinctNullable() {
         collection!!.insertMany(
             listOf(
-                Document.parse("{_id: 1, a: 0}"),
-                Document.parse("{_id: 2, a: 1}"),
-                Document.parse("{_id: 3, a: 0}"),
-                Document.parse("{_id: 4, a: null}")))
+                OldDocument.parse("{_id: 1, a: 0}"),
+                OldDocument.parse("{_id: 2, a: 1}"),
+                OldDocument.parse("{_id: 3, a: 0}"),
+                OldDocument.parse("{_id: 4, a: null}")))
 
         val actual = collection!!.distinct<Int?>("a").toList().toSet()
         assertEquals(setOf(null, 0, 1), actual)
@@ -52,10 +52,10 @@ class SmokeTests {
     fun testMongoIterableMap() {
         collection!!.insertMany(
             listOf(
-                Document.parse("{_id: 1, a: 0}"),
-                Document.parse("{_id: 2, a: 1}"),
-                Document.parse("{_id: 3, a: 0}"),
-                Document.parse("{_id: 4, a: null}")))
+                OldDocument.parse("{_id: 1, a: 0}"),
+                OldDocument.parse("{_id: 2, a: 1}"),
+                OldDocument.parse("{_id: 3, a: 0}"),
+                OldDocument.parse("{_id: 4, a: null}")))
 
         val actual = collection!!.find().map { it["a"] }.toList()
         assertContentEquals(listOf(0, 1, 0, null), actual)
@@ -65,7 +65,7 @@ class SmokeTests {
 
         private var mongoClient: MongoClient? = null
         private var database: MongoDatabase? = null
-        private var collection: MongoCollection<Document>? = null
+        private var collection: MongoCollection<OldDocument>? = null
 
         @BeforeAll
         @JvmStatic

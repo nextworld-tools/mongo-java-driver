@@ -2,7 +2,7 @@ package org.mongodb.scala.syncadapter
 
 import com.mongodb.{ ClientSessionOptions, ReadConcern, ReadPreference, WriteConcern }
 import com.mongodb.client.{ ClientSession, MongoCluster => JMongoCluster, MongoDatabase => JMongoDatabase }
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 import org.mongodb.scala.MongoCluster

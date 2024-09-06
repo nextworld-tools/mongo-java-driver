@@ -26,7 +26,7 @@ import com.mongodb.reactivestreams.client.MongoClients;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.mongodb.reactivestreams.client.gridfs.GridFSBucket;
 import com.mongodb.reactivestreams.client.gridfs.GridFSBuckets;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 import org.reactivestreams.Publisher;
 import reactivestreams.helpers.SubscriberHelpers.ConsumerSubscriber;
@@ -81,7 +81,7 @@ public final class GridFSTour {
         // Create some custom options
         GridFSUploadOptions options = new GridFSUploadOptions()
                 .chunkSizeBytes(1024)
-                .metadata(new Document("type", "presentation"));
+                .metadata(new OldDocument("type", "presentation"));
 
         ObservableSubscriber<ObjectId> uploadSubscriber = new OperationSubscriber<>();
         gridFSBucket.uploadFromPublisher("mongodb-tutorial", publisherToUploadFrom, options).subscribe(uploadSubscriber);

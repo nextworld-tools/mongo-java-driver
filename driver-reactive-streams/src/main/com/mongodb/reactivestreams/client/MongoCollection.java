@@ -48,7 +48,7 @@ import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -578,7 +578,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    ChangeStreamPublisher<Document> watch();
+    ChangeStreamPublisher<OldDocument> watch();
 
     /**
      * Creates a change stream for this collection.
@@ -600,7 +600,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.driver.manual reference/operator/aggregation/changeStream $changeStream
      * @since 1.6
      */
-    ChangeStreamPublisher<Document> watch(List<? extends Bson> pipeline);
+    ChangeStreamPublisher<OldDocument> watch(List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this collection.
@@ -623,7 +623,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    ChangeStreamPublisher<Document> watch(ClientSession clientSession);
+    ChangeStreamPublisher<OldDocument> watch(ClientSession clientSession);
 
     /**
      * Creates a change stream for this collection.
@@ -648,7 +648,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    ChangeStreamPublisher<Document> watch(ClientSession clientSession, List<? extends Bson> pipeline);
+    ChangeStreamPublisher<OldDocument> watch(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this collection.
@@ -1524,7 +1524,7 @@ public interface MongoCollection<TDocument> {
      * @since 4.11
      * @mongodb.server.release 6.0
      */
-    ListSearchIndexesPublisher<Document> listSearchIndexes();
+    ListSearchIndexesPublisher<OldDocument> listSearchIndexes();
 
     /**
      * Get all Atlas Search indexes in this collection.
@@ -1632,7 +1632,7 @@ public interface MongoCollection<TDocument> {
      * @return the fluent list indexes interface
      * @mongodb.driver.manual reference/command/listIndexes/ listIndexes
      */
-    ListIndexesPublisher<Document> listIndexes();
+    ListIndexesPublisher<OldDocument> listIndexes();
 
     /**
      * Get all the indexes in this collection.
@@ -1653,7 +1653,7 @@ public interface MongoCollection<TDocument> {
      * @mongodb.server.release 3.6
      * @since 1.7
      */
-    ListIndexesPublisher<Document> listIndexes(ClientSession clientSession);
+    ListIndexesPublisher<OldDocument> listIndexes(ClientSession clientSession);
 
     /**
      * Get all the indexes in this collection.

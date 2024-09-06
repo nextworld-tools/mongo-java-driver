@@ -32,7 +32,7 @@ import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.Codec;
@@ -74,7 +74,7 @@ import static org.mockito.Mockito.mock;
 public class TestHelper {
 
     @Mock
-    private AsyncBatchCursor<Document> batchCursor;
+    private AsyncBatchCursor<OldDocument> batchCursor;
 
     TestHelper() {
     }
@@ -83,8 +83,8 @@ public class TestHelper {
     static final MongoNamespace NAMESPACE = new MongoNamespace("db", "coll");
     static final Collation COLLATION = Collation.builder().locale("de").build();
 
-    static final MongoOperationPublisher<Document> OPERATION_PUBLISHER;
-    static final OperationExecutor OPERATION_EXECUTOR;
+    static final MongoOperationPublisher<OldDocument> OPERATION_PUBLISHER;
+    static final OperationExecutor                    OPERATION_EXECUTOR;
 
     static {
         OperationExecutor executor = mock(OperationExecutor.class);
@@ -103,8 +103,8 @@ public class TestHelper {
 
     static final CodecRegistry BSON_CODEC_REGISTRY = fromProviders(new BsonValueCodecProvider());
 
-    static MongoOperationPublisher<Document> createMongoOperationPublisher(final OperationExecutor executor) {
-        return new MongoOperationPublisher<>(NAMESPACE, Document.class,
+    static MongoOperationPublisher<OldDocument> createMongoOperationPublisher(final OperationExecutor executor) {
+        return new MongoOperationPublisher<>(NAMESPACE, OldDocument.class,
                                              getDefaultCodecRegistry(), ReadPreference.primary(), ReadConcern.DEFAULT,
                                              WriteConcern.ACKNOWLEDGED, true, true,
                                              UuidRepresentation.STANDARD, null, TIMEOUT_SETTINGS, executor);
@@ -274,7 +274,7 @@ public class TestHelper {
         }).when(getBatchCursor()).next(any(SingleResultCallback.class));
     }
 
-    public AsyncBatchCursor<Document> getBatchCursor() {
+    public AsyncBatchCursor<OldDocument> getBatchCursor() {
         return batchCursor;
     }
 

@@ -17,7 +17,7 @@
 package com.mongodb.client.model.mql;
 
 import com.mongodb.MongoCommandException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -91,10 +91,10 @@ class ArrayMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
 
         // Document
         MqlArray<MqlDocument> documentArray = ofArray(
-                of(Document.parse("{a: 1}")),
-                of(Document.parse("{b: 2}")));
+                of(OldDocument.parse("{a: 1}")),
+                of(OldDocument.parse("{b: 2}")));
         assertExpression(
-                Arrays.asList(Document.parse("{a: 1}"), Document.parse("{b: 2}")),
+                Arrays.asList(OldDocument.parse("{a: 1}"), OldDocument.parse("{b: 2}")),
                 documentArray,
                 "[{'$literal': {'a': 1}}, {'$literal': {'b': 2}}]");
 

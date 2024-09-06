@@ -18,7 +18,7 @@ package com.mongodb.reactivestreams.client;
 
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,14 +43,14 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 public class BatchCursorPublisherErrorTest {
 
-    private MongoCollection<Document> collection;
+    private MongoCollection<OldDocument> collection;
 
     @BeforeEach
     public void setup() {
         collection = getDefaultDatabase().getCollection("changeStreamsCancellationTest");
         Mono.from(collection.insertMany(rangeClosed(1, 11)
                 .boxed()
-                .map(i -> Document.parse(format("{a: %s}", i)))
+                .map(i -> OldDocument.parse(format("{a: %s}", i)))
                 .collect(Collectors.toList()))
         ).block(TIMEOUT_DURATION);
     }

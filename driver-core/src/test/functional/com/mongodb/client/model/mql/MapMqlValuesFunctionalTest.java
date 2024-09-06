@@ -17,7 +17,7 @@
 package com.mongodb.client.model.mql;
 
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -36,22 +36,22 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
     private final MqlMap<MqlInteger> mapKey123 = MqlValues.<MqlInteger>ofMap()
             .set("key", of(123));
 
-    private final MqlMap<MqlInteger> mapA1B2 = ofMap(Document.parse("{keyA: 1, keyB: 2}"));
+    private final MqlMap<MqlInteger> mapA1B2 = ofMap(OldDocument.parse("{keyA: 1, keyB: 2}"));
 
     @Test
     public void literalsTest() {
         // entry
         assertExpression(
-                Document.parse("{k: 'keyA', v: 1}"),
+                OldDocument.parse("{k: 'keyA', v: 1}"),
                 ofEntry(of("keyA"), of(1)));
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField (unset)
         // map
         assertExpression(
-                Document.parse("{keyA: 1, keyB: 2}"),
-                ofMap(Document.parse("{keyA: 1, keyB: 2}")),
+                OldDocument.parse("{keyA: 1, keyB: 2}"),
+                ofMap(OldDocument.parse("{keyA: 1, keyB: 2}")),
                 "{'$literal': {'keyA': 1, 'keyB': 2}}");
         assertExpression(
-                Document.parse("{key: 123}"),
+                OldDocument.parse("{key: 123}"),
                 mapKey123,
                 "{'$setField': {'field': 'key', 'input': {'$literal': {}}, 'value': 123}}");
     }
@@ -77,7 +77,7 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         // "other" parameter
         assertExpression(
                 null,
-                ofMap(Document.parse("{ 'null': null }")).get("null", of(1)));
+                ofMap(OldDocument.parse("{ 'null': null }")).get("null", of(1)));
     }
 
     @Test
@@ -104,10 +104,10 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         MqlEntry<MqlInteger> entryA1 = ofEntry(of("keyA"), of(1));
         assertExpression(
-                Document.parse("{k: 'keyA', 'v': 33}"),
+                OldDocument.parse("{k: 'keyA', 'v': 33}"),
                 entryA1.setValue(of(33)));
         assertExpression(
-                Document.parse("{k: 'keyB', 'v': 1}"),
+                OldDocument.parse("{k: 'keyB', 'v': 1}"),
                 entryA1.setKey(of("keyB")));
     }
 
@@ -115,37 +115,37 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
     public void buildMapTest() {
         // https://www.mongodb.com/docs/manual/reference/operator/aggregation/arrayToObject/ (48)
         assertExpression(
-                Document.parse("{'keyA': 1}"),
+                OldDocument.parse("{'keyA': 1}"),
                 ofArray(ofEntry(of("keyA"), of(1))).asMap(v -> v),
                 "{'$arrayToObject': [{'$map': {'input': [{'k': 'keyA', 'v': 1}], 'in': '$$this'}}]}");
 
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         assertExpression(
-                Document.parse("{'keyA': 55}"),
+                OldDocument.parse("{'keyA': 55}"),
                 ofArray(ofEntry(of("keyA"), of(1))).asMap(v -> v.setValue(of(55))),
                 "{'$arrayToObject': [{'$map': {'input': [{'k': 'keyA', 'v': 1}], "
                         + "'in': {'$setField': {'field': 'v', 'input': '$$this', 'value': 55}}}}]}");
 
         // using documents
         assertExpression(
-                Document.parse("{ 'item' : 'abc123', 'qty' : 25 }"),
+                OldDocument.parse("{ 'item' : 'abc123', 'qty' : 25 }"),
                 ofArray(
-                        of(Document.parse("{ 'k': 'item', 'v': 'abc123' }")),
-                        of(Document.parse("{ 'k': 'qty', 'v': 25 }")))
+                        of(OldDocument.parse("{ 'k': 'item', 'v': 'abc123' }")),
+                        of(OldDocument.parse("{ 'k': 'qty', 'v': 25 }")))
                         .asMap(v -> ofEntry(v.getString("k"), v.getField("v"))));
         // using arrays
         assertExpression(
-                Document.parse("{ 'item' : 'abc123', 'qty' : 25 }"),
+                OldDocument.parse("{ 'item' : 'abc123', 'qty' : 25 }"),
                 ofArray(
                         ofStringArray("item", "abc123"),
                         ofArray(of("qty"), of(25)))
                         .asMap(v -> ofEntry(v.elementAt(of(0)).asString(), v.elementAt(of(1)))));
         // last listed value used
         assertExpression(
-                Document.parse("{ 'item' : 'abc123' }"),
+                OldDocument.parse("{ 'item' : 'abc123' }"),
                 ofArray(
-                        MqlValues.<MqlString>ofMap(Document.parse("{ 'k': 'item', 'v': '123abc' }")),
-                        MqlValues.<MqlString>ofMap(Document.parse("{ 'k': 'item', 'v': 'abc123' }")))
+                        MqlValues.<MqlString>ofMap(OldDocument.parse("{ 'k': 'item', 'v': '123abc' }")),
+                        MqlValues.<MqlString>ofMap(OldDocument.parse("{ 'k': 'item', 'v': 'abc123' }")))
                         .asMap(v -> ofEntry(v.get("k"), v.get("v"))));
 
     }
@@ -155,7 +155,7 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         // https://www.mongodb.com/docs/manual/reference/operator/aggregation/objectToArray/ (23)
         assertExpression(
-                Arrays.asList(Document.parse("{'k': 'k1', 'v': 1}")),
+                Arrays.asList(OldDocument.parse("{'k': 'k1', 'v': 1}")),
                 MqlValues.<MqlInteger>ofMap().set("k1", of(1)).entries(),
                 "{'$objectToArray': {'$setField': "
                         + "{'field': 'k1', 'input': {'$literal': {}}, 'value': 1}}}");
@@ -170,18 +170,18 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
 
         // combined entrySet-buildMap usage
         assertExpression(
-                Document.parse("{'keyA': 2, 'keyB': 3}"),
+                OldDocument.parse("{'keyA': 2, 'keyB': 3}"),
                 mapA1B2
                         .entries()
                         .map(v -> v.setValue(v.getValue().add(1)))
                         .asMap(v -> v));
 
         // via getMap
-        MqlDocument doc = of(Document.parse("{ instock: { warehouse1: 2500, warehouse2: 500 } }"));
+        MqlDocument doc = of(OldDocument.parse("{ instock: { warehouse1: 2500, warehouse2: 500 } }"));
         assertExpression(
                 Arrays.asList(
-                        Document.parse("{'k': 'warehouse1', 'v': 2500}"),
-                        Document.parse("{'k': 'warehouse2', 'v': 500}")),
+                        OldDocument.parse("{'k': 'warehouse1', 'v': 2500}"),
+                        OldDocument.parse("{'k': 'warehouse2', 'v': 500}")),
                 doc.getMap("instock").entries(),
                 "{'$objectToArray': {'$getField': {'input': {'$literal': "
                         + "{'instock': {'warehouse1': 2500, 'warehouse2': 500}}}, 'field': 'instock'}}}");
@@ -190,9 +190,9 @@ class MapMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
     @Test
     public void mergeTest() {
         assertExpression(
-                Document.parse("{'keyA': 9, 'keyB': 2, 'keyC': 3}"),
-                ofMap(Document.parse("{keyA: 1, keyB: 2}"))
-                        .merge(ofMap(Document.parse("{keyA: 9, keyC: 3}"))),
+                OldDocument.parse("{'keyA': 9, 'keyB': 2, 'keyC': 3}"),
+                ofMap(OldDocument.parse("{keyA: 1, keyB: 2}"))
+                        .merge(ofMap(OldDocument.parse("{keyA: 9, keyC: 3}"))),
                 "{'$mergeObjects': [{'$literal': {'keyA': 1, 'keyB': 2}}, "
                         + "{'$literal': {'keyA': 9, 'keyC': 3}}]}");
     }

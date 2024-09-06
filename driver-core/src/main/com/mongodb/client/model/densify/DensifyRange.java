@@ -22,7 +22,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonType;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import java.time.Instant;
@@ -55,7 +55,7 @@ public interface DensifyRange extends Bson {
      * @return The requested {@link DensifyRange}.
      */
     static NumberDensifyRange fullRangeWithStep(final Number step) {
-        return new DensifyConstructibleBson(new Document("bounds", "full")
+        return new DensifyConstructibleBson(new OldDocument("bounds", "full")
                 .append("step", notNull("step", step)));
     }
 
@@ -70,7 +70,7 @@ public interface DensifyRange extends Bson {
      * @return The requested {@link DensifyRange}.
      */
     static NumberDensifyRange partitionRangeWithStep(final Number step) {
-        return new DensifyConstructibleBson(new Document("bounds", "partition")
+        return new DensifyConstructibleBson(new OldDocument("bounds", "partition")
                 .append("step", notNull("step", step)));
     }
 
@@ -86,7 +86,7 @@ public interface DensifyRange extends Bson {
         notNull("l", l);
         notNull("u", u);
         notNull("step", step);
-        return new DensifyConstructibleBson(new Document("bounds", asList(l, u))
+        return new DensifyConstructibleBson(new OldDocument("bounds", asList(l, u))
                 .append("step", notNull("step", step)));
     }
 
@@ -136,7 +136,7 @@ public interface DensifyRange extends Bson {
         notNull("l", l);
         notNull("u", u);
         notNull("unit", unit);
-        return new DensifyConstructibleBson(new Document("bounds", asList(l, u))
+        return new DensifyConstructibleBson(new OldDocument("bounds", asList(l, u))
                 .append("step", step)
                 .append("unit", unit.value()));
     }

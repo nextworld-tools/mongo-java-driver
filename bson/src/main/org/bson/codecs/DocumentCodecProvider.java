@@ -16,7 +16,7 @@
 
 package org.bson.codecs;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.Transformer;
 import org.bson.codecs.configuration.CodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -80,10 +80,10 @@ public class DocumentCodecProvider implements CodecProvider {
     @SuppressWarnings("unchecked")
     public <T> Codec<T> get(final Class<T> clazz, final CodecRegistry registry) {
         if (clazz == CodeWithScope.class) {
-            return (Codec<T>) new CodeWithScopeCodec(registry.get(Document.class));
+            return (Codec<T>) new CodeWithScopeCodec(registry.get(OldDocument.class));
         }
 
-        if (clazz == Document.class) {
+        if (clazz == OldDocument.class) {
             return (Codec<T>) new DocumentCodec(registry, bsonTypeClassMap, valueTransformer);
         }
 

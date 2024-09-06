@@ -34,7 +34,7 @@ import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonType;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,11 +176,11 @@ public abstract class AbstractClientSideEncryptionDecryptionEventsTest {
 
     @Test
     public void decryptError() {
-        MongoCollection<Document> decryptionEvents = encryptedClient
+        MongoCollection<OldDocument> decryptionEvents = encryptedClient
                 .getDatabase(getDefaultDatabaseName())
                 .getCollection("decryption_events");
 
-        decryptionEvents.insertOne(new Document("encrypted", malformedCiphertext));
+        decryptionEvents.insertOne(new OldDocument("encrypted", malformedCiphertext));
         assertThrows(MongoClientException.class, () -> decryptionEvents
                 .aggregate(AGGREGATION_PIPELINE)
                 .first());
@@ -198,12 +198,12 @@ public abstract class AbstractClientSideEncryptionDecryptionEventsTest {
 
     @Test
     public void decryptSuccess() {
-        MongoCollection<Document> decryptionEvents = encryptedClient
+        MongoCollection<OldDocument> decryptionEvents = encryptedClient
                 .getDatabase(getDefaultDatabaseName())
                 .getCollection("decryption_events");
 
-        decryptionEvents.insertOne(new Document("encrypted", ciphertext));
-        Document document = assertDoesNotThrow(() -> decryptionEvents
+        decryptionEvents.insertOne(new OldDocument("encrypted", ciphertext));
+        OldDocument document = assertDoesNotThrow(() -> decryptionEvents
                 .aggregate(AGGREGATION_PIPELINE)
                 .first());
 

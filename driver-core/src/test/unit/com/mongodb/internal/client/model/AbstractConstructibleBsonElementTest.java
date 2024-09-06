@@ -17,7 +17,7 @@ package com.mongodb.internal.client.model;
 
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 
@@ -103,15 +103,15 @@ final class AbstractConstructibleBsonElementTest {
     @Test
     void tostring() {
         assertEquals(
-                new Document("name",
-                        new Document("double", 0.5)
-                        .append("doc", new Document("i", 42))
-                        .append("constructible", new Document("s", "")))
+                new OldDocument("name",
+                        new OldDocument("double", 0.5)
+                        .append("doc", new OldDocument("i", 42))
+                        .append("constructible", new OldDocument("s", "")))
                         .toString(),
-                AbstractConstructibleBsonElement.of(new Document("name",
-                        AbstractConstructibleBson.of(new Document("double", 0.5))
-                                .newAppended("doc", new Document("i", 42))))
-                        .newWithAppendedValue("constructible", AbstractConstructibleBson.of(AbstractConstructibleBson.of(new Document("s", ""))))
+                AbstractConstructibleBsonElement.of(new OldDocument("name",
+                        AbstractConstructibleBson.of(new OldDocument("double", 0.5))
+                                .newAppended("doc", new OldDocument("i", 42))))
+                        .newWithAppendedValue("constructible", AbstractConstructibleBson.of(AbstractConstructibleBson.of(new OldDocument("s", ""))))
                         .toString());
     }
 

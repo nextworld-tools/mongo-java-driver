@@ -38,7 +38,7 @@ import org.bson.BsonDouble
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.Decoder
 import org.bson.codecs.DocumentCodec
 
@@ -77,10 +77,10 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
     def 'should return default index on Collection that exists'() {
         given:
         def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec())
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
 
         when:
-        BatchCursor<Document> indexes = operation.execute(getBinding())
+        BatchCursor<OldDocument> indexes = operation.execute(getBinding())
 
         then:
         def firstBatch = indexes.next()
@@ -93,7 +93,7 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
     def 'should return default index on Collection that exists asynchronously'() {
         given:
         def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec())
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
 
         when:
         def cursor = executeAsync(operation)

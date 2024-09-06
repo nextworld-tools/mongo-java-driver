@@ -22,11 +22,11 @@ import spock.lang.Specification
 import static java.util.Arrays.asList
 
 class BsonDocumentWrapperSpecification extends Specification {
-    def document = new Document()
+    def document = new OldDocument()
             .append('a', 1)
             .append('b', 2)
             .append('c', asList('x', true))
-            .append('d', asList(new Document('y', false), 1))
+            .append('d', asList(new OldDocument('y', false), 1))
 
     def wrapper = new BsonDocumentWrapper(document, new DocumentCodec())
 

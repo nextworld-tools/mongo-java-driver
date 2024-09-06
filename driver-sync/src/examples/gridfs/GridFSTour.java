@@ -25,7 +25,7 @@ import com.mongodb.client.gridfs.GridFSDownloadStream;
 import com.mongodb.client.gridfs.GridFSUploadStream;
 import com.mongodb.client.gridfs.model.GridFSDownloadOptions;
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 
 import java.io.ByteArrayInputStream;
@@ -74,7 +74,7 @@ public final class GridFSTour {
         // Create some custom options
         GridFSUploadOptions options = new GridFSUploadOptions()
                 .chunkSizeBytes(1024)
-                .metadata(new Document("type", "presentation"));
+                .metadata(new OldDocument("type", "presentation"));
 
         ObjectId fileId = gridFSBucket.uploadFromStream("mongodb-tutorial", streamToUploadFrom, options);
         streamToUploadFrom.close();

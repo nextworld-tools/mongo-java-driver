@@ -23,7 +23,7 @@ import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,7 +59,7 @@ public class AtlasDataLakeKillCursorsProseTest {
     @Test
     public void testKillCursorsOnAtlasDataLake() {
         // Initiate find command
-        MongoCursor<Document> cursor = client.getDatabase(DATABASE_NAME).getCollection(COLLECTION_NAME).find().batchSize(2).cursor();
+        MongoCursor<OldDocument> cursor = client.getDatabase(DATABASE_NAME).getCollection(COLLECTION_NAME).find().batchSize(2).cursor();
         CommandSucceededEvent findCommandSucceededEvent = commandListener.getCommandSucceededEvent("find");
         BsonDocument findCommandResponse = findCommandSucceededEvent.getResponse();
         MongoNamespace cursorNamespace =

@@ -19,7 +19,7 @@
 package org.bson.types
 
 import org.bson.BsonRegularExpression
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import org.bson.json.JsonParseException
 import spock.lang.Specification
@@ -32,7 +32,7 @@ class DocumentSpecification extends Specification {
         ObjectId objectId = new ObjectId()
 
         when:
-        Document doc = new Document()
+        OldDocument doc = new OldDocument()
                 .append('int', 1).append('long', 2L).append('double', 3.0 as double).append('string', 'hi').append('boolean', true)
                 .append('objectId', objectId).append('date', date)
 
@@ -67,7 +67,7 @@ class DocumentSpecification extends Specification {
 
     def 'should return a list with elements of the specified class'() {
         when:
-        Document doc = Document.parse("{x: 1, y: ['two', 'three'], z: [{a: 'one'}, {b:2}], w: {a: ['One', 'Two']}}")
+        OldDocument doc = OldDocument.parse("{x: 1, y: ['two', 'three'], z: [{a: 'one'}, {b:2}], w: {a: ['One', 'Two']}}")
                 .append('numberList', [10, 20.5d, 30L])
                 .append('listWithNullElement', [10, null, 20])
         List<String> defaultList = ['a', 'b', 'c']
@@ -75,13 +75,13 @@ class DocumentSpecification extends Specification {
         then:
         doc.getList('y', String).get(0) == 'two'
         doc.getList('y', String).get(1) == 'three'
-        doc.getList('z', Document).get(0).getString('a') == 'one'
-        doc.getList('z', Document).get(1).getInteger('b') == 2
-        doc.get('w', Document).getList('a', String).get(0) == 'One'
-        doc.get('w', Document).getList('a', String).get(1) == 'Two'
-        doc.getList('invalidKey', Document, defaultList).get(0) == 'a'
-        doc.getList('invalidKey', Document, defaultList).get(1) == 'b'
-        doc.getList('invalidKey', Document, defaultList).get(2) == 'c'
+        doc.getList('z', OldDocument).get(0).getString('a') == 'one'
+        doc.getList('z', OldDocument).get(1).getInteger('b') == 2
+        doc.get('w', OldDocument).getList('a', String).get(0) == 'One'
+        doc.get('w', OldDocument).getList('a', String).get(1) == 'Two'
+        doc.getList('invalidKey', OldDocument, defaultList).get(0) == 'a'
+        doc.getList('invalidKey', OldDocument, defaultList).get(1) == 'b'
+        doc.getList('invalidKey', OldDocument, defaultList).get(2) == 'c'
         doc.getList('numberList', Number).get(0) == 10
         doc.getList('numberList', Number).get(1) == 20.5d
         doc.getList('numberList', Number).get(2) == 30L
@@ -92,7 +92,7 @@ class DocumentSpecification extends Specification {
 
     def 'should return null list when key is not found'() {
         when:
-        Document doc = Document.parse('{x: 1}')
+        OldDocument doc = OldDocument.parse('{x: 1}')
 
         then:
         doc.getList('a', String) == null
@@ -100,7 +100,7 @@ class DocumentSpecification extends Specification {
 
     def 'should return specified default value when key is not found'() {
         when:
-        Document doc = Document.parse('{x: 1}')
+        OldDocument doc = OldDocument.parse('{x: 1}')
         List<String> defaultList = ['a', 'b', 'c']
 
         then:
@@ -110,7 +110,7 @@ class DocumentSpecification extends Specification {
 
     def 'should throw an exception when the list elements are not objects of the specified class'() {
         given:
-        Document doc = Document.parse('{x: 1, y: [{a: 1}, {b: 2}], z: [1, 2]}')
+        OldDocument doc = OldDocument.parse('{x: 1, y: [{a: 1}, {b: 2}], z: [1, 2]}')
 
         when:
         doc.getList('x', String)
@@ -133,17 +133,17 @@ class DocumentSpecification extends Specification {
 
     def 'should return null when getting embedded value'() {
         when:
-        Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
+        OldDocument document = OldDocument.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
 
         then:
         document.getEmbedded(['notAKey'], String) == null
         document.getEmbedded(['b', 'y', 'notAKey'], String) == null
         document.getEmbedded(['b', 'b', 'm'], String) == null
-        Document.parse('{}').getEmbedded(['a', 'b'], Integer) == null
-        Document.parse('{b: 1}').getEmbedded(['a'], Integer) == null
-        Document.parse('{b: 1}').getEmbedded(['a', 'b'], Integer) == null
-        Document.parse('{a: {c: 1}}').getEmbedded(['a', 'b'], Integer) == null
-        Document.parse('{a: {c: 1}}').getEmbedded(['a', 'b', 'c'], Integer) == null
+        OldDocument.parse('{}').getEmbedded(['a', 'b'], Integer) == null
+        OldDocument.parse('{b: 1}').getEmbedded(['a'], Integer) == null
+        OldDocument.parse('{b: 1}').getEmbedded(['a', 'b'], Integer) == null
+        OldDocument.parse('{a: {c: 1}}').getEmbedded(['a', 'b'], Integer) == null
+        OldDocument.parse('{a: {c: 1}}').getEmbedded(['a', 'b', 'c'], Integer) == null
     }
 
     def 'should return embedded value'() {
@@ -152,12 +152,12 @@ class DocumentSpecification extends Specification {
         ObjectId objectId = new ObjectId()
 
         when:
-        Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
-                .append('l', new Document('long', 2L))
-                .append('d', new Document('double', 3.0 as double))
-                .append('t', new Document('boolean', true))
-                .append('o', new Document('objectId', objectId))
-                .append('n', new Document('date', date))
+        OldDocument document = OldDocument.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
+                .append('l', new OldDocument('long', 2L))
+                .append('d', new OldDocument('double', 3.0 as double))
+                .append('t', new OldDocument('boolean', true))
+                .append('o', new OldDocument('objectId', objectId))
+                .append('n', new OldDocument('date', date))
 
         then:
         document.getEmbedded(['a'], Integer) == 1
@@ -167,8 +167,8 @@ class DocumentSpecification extends Specification {
         document.getEmbedded(['b', 'y', 'm'], String) == 'one'
         document.getEmbedded(['b', 'y', 'len'], Integer) == 3
         document.getEmbedded(['a.b'], String) == 'two'
-        document.getEmbedded(['b', 'y'], Document).getString('m') == 'one'
-        document.getEmbedded(['b', 'y'], Document).getInteger('len') == 3
+        document.getEmbedded(['b', 'y'], OldDocument).getString('m') == 'one'
+        document.getEmbedded(['b', 'y'], OldDocument).getInteger('len') == 3
 
         document.getEmbedded(['l', 'long'], Long) == 2L
         document.getEmbedded(['d', 'double'], Double) == 3.0d
@@ -182,7 +182,7 @@ class DocumentSpecification extends Specification {
 
     def 'should throw an exception getting an embedded value'() {
         given:
-        Document document = Document.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
+        OldDocument document = OldDocument.parse("{a: 1, b: {x: [2, 3, 4], y: {m: 'one', len: 3}}, 'a.b': 'two'}")
 
         when:
         document.getEmbedded(null, String) == null
@@ -209,7 +209,7 @@ class DocumentSpecification extends Specification {
         thrown(ClassCastException)
 
         when:
-        document.getEmbedded(['b', 'x'], Document)
+        document.getEmbedded(['b', 'x'], OldDocument)
 
         then:
         thrown(ClassCastException)
@@ -229,7 +229,7 @@ class DocumentSpecification extends Specification {
 
     def 'should parse a valid JSON string to a Document'() {
         when:
-        Document document = Document.parse("{ 'int' : 1, 'string' : 'abc' }")
+        OldDocument document = OldDocument.parse("{ 'int' : 1, 'string' : 'abc' }")
 
         then:
         document != null
@@ -238,7 +238,7 @@ class DocumentSpecification extends Specification {
         document.getString('string') == 'abc'
 
         when:
-        document = Document.parse("{ 'int' : 1, 'string' : 'abc' }", new DocumentCodec())
+        document = OldDocument.parse("{ 'int' : 1, 'string' : 'abc' }", new DocumentCodec())
 
         then:
         document != null
@@ -249,7 +249,7 @@ class DocumentSpecification extends Specification {
 
     def 'test parse method with mode'() {
         when:
-        Document document = Document.parse("{'regex' : /abc/im }")
+        OldDocument document = OldDocument.parse("{'regex' : /abc/im }")
 
         then:
         document != null
@@ -262,7 +262,7 @@ class DocumentSpecification extends Specification {
 
     def 'should throw an exception when parsing an invalid JSON String'() {
         when:
-        Document.parse("{ 'int' : 1, 'string' : }")
+        OldDocument.parse("{ 'int' : 1, 'string' : }")
 
         then:
         thrown(JsonParseException)
@@ -270,7 +270,7 @@ class DocumentSpecification extends Specification {
 
     def 'should cast to correct type'() {
         given:
-        Document document = new Document('str', 'a string')
+        OldDocument document = new OldDocument('str', 'a string')
 
         when:
         String s = document.get('str', String)
@@ -281,7 +281,7 @@ class DocumentSpecification extends Specification {
 
     def 'should throw ClassCastException when value is the wrong type'() {
         given:
-        Document document = new Document('int', 'not an int')
+        OldDocument document = new OldDocument('int', 'not an int')
 
         when:
         document.get('int', Integer)

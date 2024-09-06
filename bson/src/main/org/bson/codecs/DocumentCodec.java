@@ -22,7 +22,7 @@ import org.bson.BsonReader;
 import org.bson.BsonType;
 import org.bson.BsonValue;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.Transformer;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -39,10 +39,10 @@ import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 /**
  * A Codec for Document instances.
  *
- * @see org.bson.Document
+ * @see OldDocument
  * @since 3.0
  */
-public class DocumentCodec implements CollectibleCodec<Document>, OverridableUuidRepresentationCodec<Document> {
+public class DocumentCodec implements CollectibleCodec<OldDocument>, OverridableUuidRepresentationCodec<OldDocument> {
 
     private static final String ID_FIELD_NAME = "_id";
     private static final CodecRegistry DEFAULT_REGISTRY = fromProviders(asList(new ValueCodecProvider(),
@@ -111,7 +111,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     }
 
     @Override
-    public Codec<Document> withUuidRepresentation(final UuidRepresentation uuidRepresentation) {
+    public Codec<OldDocument> withUuidRepresentation(final UuidRepresentation uuidRepresentation) {
         if (this.uuidRepresentation.equals(uuidRepresentation)) {
             return this;
         }
@@ -119,12 +119,12 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     }
 
     @Override
-    public boolean documentHasId(final Document document) {
+    public boolean documentHasId(final OldDocument document) {
         return document.containsKey(ID_FIELD_NAME);
     }
 
     @Override
-    public BsonValue getDocumentId(final Document document) {
+    public BsonValue getDocumentId(final OldDocument document) {
         if (!documentHasId(document)) {
             throw new IllegalStateException("The document does not contain an _id");
         }
@@ -144,7 +144,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     }
 
     @Override
-    public Document generateIdIfAbsentFromDocument(final Document document) {
+    public OldDocument generateIdIfAbsentFromDocument(final OldDocument document) {
         if (!documentHasId(document)) {
             document.put(ID_FIELD_NAME, idGenerator.generate());
         }
@@ -152,7 +152,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     }
 
     @Override
-    public void encode(final BsonWriter writer, final Document document, final EncoderContext encoderContext) {
+    public void encode(final BsonWriter writer, final OldDocument document, final EncoderContext encoderContext) {
         writer.writeStartDocument();
 
         beforeFields(writer, encoderContext, document);
@@ -168,8 +168,8 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     }
 
     @Override
-    public Document decode(final BsonReader reader, final DecoderContext decoderContext) {
-        Document document = new Document();
+    public OldDocument decode(final BsonReader reader, final DecoderContext decoderContext) {
+        OldDocument document = new OldDocument();
 
         reader.readStartDocument();
         while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
@@ -190,7 +190,7 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
     /**
      * Nextworld Mod
      */
-    public void checkAndHandleNwCurrency(Document document, String fieldName, Object readValue) {
+    public void checkAndHandleNwCurrency(OldDocument document, String fieldName, Object readValue) {
         if (readValue instanceof Number &&
                 fieldName !=null &&
                 (fieldName.equals("CurrencyValue") || fieldName.equals("CurrencyBigDecimalValue"))){
@@ -199,14 +199,14 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
                 document.put("CurrencyBigDecimalValue",((Decimal128) readValue).bigDecimalValue());
             }
             //generate the checksum and add to the document
-            long checksum = Document.generateCheckSum(readValue);
+            long checksum = OldDocument.generateCheckSum(readValue);
             document.put("$" + fieldName + "Checksum", checksum);
         }
     }
 
     @Override
-    public Class<Document> getEncoderClass() {
-        return Document.class;
+    public Class<OldDocument> getEncoderClass() {
+        return OldDocument.class;
     }
 
     private void beforeFields(final BsonWriter bsonWriter, final EncoderContext encoderContext, final Map<String, Object> document) {

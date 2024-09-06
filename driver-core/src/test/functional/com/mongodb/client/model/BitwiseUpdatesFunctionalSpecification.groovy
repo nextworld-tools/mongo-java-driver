@@ -17,7 +17,7 @@
 package com.mongodb.client.model
 
 import com.mongodb.OperationFunctionalSpecification
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Updates.bitwiseAnd
@@ -29,7 +29,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
     private static final int INT_MASK = 0x0ffffffff
     private static final int NUM = 13
 
-    def a = new Document('_id', 1).append('x', NUM)
+    def a = new OldDocument('_id', 1).append('x', NUM)
 
 
     def setup() {
@@ -37,12 +37,12 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
     }
 
     def find() {
-        getCollectionHelper().find(new Document('_id', 1))
+        getCollectionHelper().find(new OldDocument('_id', 1))
     }
 
 
     def updateOne(Bson update) {
-        getCollectionHelper().updateOne(new Document('_id', 1), update)
+        getCollectionHelper().updateOne(new OldDocument('_id', 1), update)
     }
 
     def 'integer bitwiseAnd'() {
@@ -50,7 +50,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseAnd('x', INT_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM & INT_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM & INT_MASK)]
     }
 
     def 'integer bitwiseOr'() {
@@ -58,7 +58,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseOr('x', INT_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM | INT_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM | INT_MASK)]
     }
 
     def 'integer bitwiseXor'() {
@@ -66,7 +66,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseXor('x', INT_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM ^ INT_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM ^ INT_MASK)]
     }
 
     def 'long bitwiseAnd'() {
@@ -74,7 +74,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseAnd('x', LONG_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM & LONG_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM & LONG_MASK)]
     }
 
     def 'long bitwiseOr'() {
@@ -82,7 +82,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseOr('x', LONG_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM | LONG_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM | LONG_MASK)]
     }
 
     def 'long bitwiseXor'() {
@@ -90,7 +90,7 @@ class BitwiseUpdatesFunctionalSpecification extends OperationFunctionalSpecifica
         updateOne(bitwiseXor('x', LONG_MASK))
 
         then:
-        find() == [new Document('_id', 1).append('x', NUM ^ LONG_MASK)]
+        find() == [new OldDocument('_id', 1).append('x', NUM ^ LONG_MASK)]
     }
 
 }

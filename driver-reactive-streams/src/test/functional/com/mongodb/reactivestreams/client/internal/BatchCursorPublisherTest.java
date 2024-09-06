@@ -23,7 +23,7 @@ import com.mongodb.internal.async.AsyncBatchCursor;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.internal.operation.AsyncOperations;
 import com.mongodb.internal.operation.AsyncReadOperation;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -59,26 +59,26 @@ public class BatchCursorPublisherTest {
     private static final String ERROR_RETURNING_RESULTS = "Error returning results";
 
     @Mock
-    private AsyncReadOperation<AsyncBatchCursor<Document>> readOperation;
+    private AsyncReadOperation<AsyncBatchCursor<OldDocument>> readOperation;
     @Mock
-    private AsyncBatchCursor<Document> batchCursor;
+    private AsyncBatchCursor<OldDocument>                     batchCursor;
 
     @Test
     public void testBatchCursor() {
-        List<Document> documents = IntStream.range(1, 20).boxed().map(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+        List<OldDocument> documents = IntStream.range(1, 20).boxed().map(i -> OldDocument.parse(format("{_id: %s}", i))).collect(toList());
 
         StepVerifier.create(createVerifiableBatchCursor(documents))
-                .expectNext(documents.toArray(new Document[0]))
+                .expectNext(documents.toArray(new OldDocument[0]))
                 .expectComplete()
                 .verify();
     }
 
     @Test
     public void testBatchCursorRespectsBatchSize() {
-        List<Document> documents = IntStream.range(1, 11).boxed().map(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+        List<OldDocument> documents = IntStream.range(1, 11).boxed().map(i -> OldDocument.parse(format("{_id: %s}", i))).collect(toList());
 
-        StepVerifier.Step<Document> verifier = StepVerifier.create(createVerifiableBatchCursor(documents, 2));
-        createBatches(documents, 2).forEach(b -> verifier.expectNext(b.toArray(new Document[0])));
+        StepVerifier.Step<OldDocument> verifier = StepVerifier.create(createVerifiableBatchCursor(documents, 2));
+        createBatches(documents, 2).forEach(b -> verifier.expectNext(b.toArray(new OldDocument[0])));
         verifier.expectComplete()
                 .verify();
 
@@ -94,7 +94,7 @@ public class BatchCursorPublisherTest {
 
     @Test
     public void testBatchCursorFirst() {
-        List<Document> documents = IntStream.range(1, 11).boxed().map(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+        List<OldDocument> documents = IntStream.range(1, 11).boxed().map(i -> OldDocument.parse(format("{_id: %s}", i))).collect(toList());
         StepVerifier.create(createVerifiableBatchCursor(documents).first())
                 .expectNext(documents.get(0))
                 .expectComplete()
@@ -117,10 +117,10 @@ public class BatchCursorPublisherTest {
 
     @Test
     public void testBatchCursorOnNextError() {
-        List<Document> documents = IntStream.range(1, 11).boxed().map(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+        List<OldDocument> documents = IntStream.range(1, 11).boxed().map(i -> OldDocument.parse(format("{_id: %s}", i))).collect(toList());
 
         StepVerifier.create(createVerifiableBatchCursorError(documents))
-                .expectNext(documents.toArray(new Document[0]))
+                .expectNext(documents.toArray(new OldDocument[0]))
                 .expectErrorMessage(ERROR_RETURNING_RESULTS)
                 .verify();
 
@@ -128,7 +128,7 @@ public class BatchCursorPublisherTest {
 
     @Test
     public void testCancellingSubscriptionBatchCursor() {
-        List<Document> documents = IntStream.range(1, 11).boxed().map(i -> Document.parse(format("{_id: %s}", i))).collect(toList());
+        List<OldDocument> documents = IntStream.range(1, 11).boxed().map(i -> OldDocument.parse(format("{_id: %s}", i))).collect(toList());
 
         StepVerifier.create(createVerifiableBatchCursor(documents, 2), 1)
                 .expectNext(documents.get(0))
@@ -139,23 +139,23 @@ public class BatchCursorPublisherTest {
                 .hasDiscarded(documents.get(3));
     }
 
-    BatchCursorPublisher<Document> createVerifiableBatchCursor(final List<Document> expected) {
+    BatchCursorPublisher<OldDocument> createVerifiableBatchCursor(final List<OldDocument> expected) {
         return createVerifiableBatchCursor(expected, 0);
     }
 
-    BatchCursorPublisher<Document> createVerifiableBatchCursor(final List<Document> expected, final int batchSize) {
+    BatchCursorPublisher<OldDocument> createVerifiableBatchCursor(final List<OldDocument> expected, final int batchSize) {
         return createVerifiableBatchCursor(expected, batchSize, false, false);
     }
 
-    BatchCursorPublisher<Document> createVerifiableBatchCursorError() {
+    BatchCursorPublisher<OldDocument> createVerifiableBatchCursorError() {
         return createVerifiableBatchCursor(emptyList(), 0, true, false);
     }
 
-    BatchCursorPublisher<Document> createVerifiableBatchCursorError(final List<Document> expected) {
+    BatchCursorPublisher<OldDocument> createVerifiableBatchCursorError(final List<OldDocument> expected) {
         return createVerifiableBatchCursor(expected, 0, false, true);
     }
 
-    List<List<Document>> createBatches(final List<Document> expected, final int batchSize) {
+    List<List<OldDocument>> createBatches(final List<OldDocument> expected, final int batchSize) {
         if (batchSize == 0) {
             return singletonList(expected);
         }
@@ -163,13 +163,13 @@ public class BatchCursorPublisherTest {
         return new ArrayList<>(expected.stream().collect(groupingBy(it -> counter.getAndIncrement() / batchSize)).values());
     }
 
-    BatchCursorPublisher<Document> createVerifiableBatchCursor(final List<Document> expected, final int batchSize,
+    BatchCursorPublisher<OldDocument> createVerifiableBatchCursor(final List<OldDocument> expected, final int batchSize,
                                                                     final boolean errorCreatingCursor, final boolean errorOnEmpty) {
 
-        BatchCursorPublisher<Document> publisher = new BatchCursorPublisher<Document>(
+        BatchCursorPublisher<OldDocument> publisher = new BatchCursorPublisher<OldDocument>(
                 null, OPERATION_PUBLISHER) {
             @Override
-            AsyncReadOperation<AsyncBatchCursor<Document>> asAsyncReadOperation(final int initialBatchSize) {
+            AsyncReadOperation<AsyncBatchCursor<OldDocument>> asAsyncReadOperation(final int initialBatchSize) {
                 return readOperation;
             }
 
@@ -202,11 +202,11 @@ public class BatchCursorPublisherTest {
                              eq(ReadConcern.DEFAULT),
                              eq(null));
 
-            Queue<List<Document>> queuedResults = new LinkedList<>(createBatches(expected, batchSize));
+            Queue<List<OldDocument>> queuedResults = new LinkedList<>(createBatches(expected, batchSize));
             AtomicBoolean isClosed = new AtomicBoolean(false);
             Mockito.lenient().doAnswer(i -> isClosed.get()).when(batchCursor).isClosed();
             Mockito.doAnswer(invocation -> {
-                List<Document> next = queuedResults.poll();
+                List<OldDocument> next = queuedResults.poll();
                 if (queuedResults.isEmpty()) {
                     if (!errorOnEmpty) {
                         isClosed.set(true);

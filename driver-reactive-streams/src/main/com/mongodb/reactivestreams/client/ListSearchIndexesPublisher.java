@@ -24,7 +24,7 @@ import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 
 import java.util.concurrent.TimeUnit;
@@ -128,7 +128,7 @@ public interface ListSearchIndexesPublisher<TResult> extends Publisher<TResult> 
      * @return the execution plan
      * @mongodb.driver.manual reference/command/explain/
      */
-    Publisher<Document> explain();
+    Publisher<OldDocument> explain();
 
     /**
      * Explain the execution plan for this operation with the given verbosity level
@@ -137,7 +137,7 @@ public interface ListSearchIndexesPublisher<TResult> extends Publisher<TResult> 
      * @return the execution plan
      * @mongodb.driver.manual reference/command/explain/
      */
-    Publisher<Document> explain(ExplainVerbosity verbosity);
+    Publisher<OldDocument> explain(ExplainVerbosity verbosity);
 
     /**
      * Explain the execution plan for this operation with the server's default verbosity level

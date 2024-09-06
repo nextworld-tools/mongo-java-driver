@@ -24,7 +24,7 @@ import org.bson.BsonBinarySubType
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.ObjectId
 import org.junit.Assert
 import spock.lang.IgnoreIf
@@ -282,9 +282,9 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
                 .build())
         try {
             for (int i = 0; i < 16; i++) {
-                Document document = new Document('_id', i)
+                OldDocument document = new OldDocument('_id', i)
                 collection.insertOne(clientSession, document)
-                Document foundDocument = collection
+                OldDocument foundDocument = collection
                         .withReadPreference(ReadPreference.secondaryPreferred()) // read from secondary if available
                         .withReadConcern(readConcern)
                         .find(clientSession, document)
@@ -315,7 +315,7 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
         def id = new ObjectId()
 
         when:
-        collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(new Document('_id', id))
+        collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(new OldDocument('_id', id))
 
         then:
         def insertEvent = commandListener.events.get(0) as CommandStartedEvent
@@ -334,7 +334,7 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
         when:
         getMongoClient().getDatabase(getDatabaseName()).getCollection(getCollectionName())
                 .withWriteConcern(WriteConcern.UNACKNOWLEDGED)
-                .insertOne(session, new Document())
+                .insertOne(session, new OldDocument())
 
         then:
         thrown(MongoClientException)
@@ -347,14 +347,14 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
     def 'should ignore unacknowledged write concern when in a transaction'() {
         given:
         def collection = getMongoClient().getDatabase(getDatabaseName()).getCollection(getCollectionName())
-        collection.insertOne(new Document())
+        collection.insertOne(new OldDocument())
 
         def session = getMongoClient().startSession()
         session.startTransaction()
 
         when:
         collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED)
-                .insertOne(session, new Document())
+                .insertOne(session, new OldDocument())
 
         then:
         noExceptionThrown()
@@ -363,8 +363,8 @@ class MongoClientSessionSpecification extends FunctionalSpecification {
         session.close()
     }
 
-    void waitForInsertAcknowledgement(MongoCollection<Document> collection, ObjectId id) {
-        Document document = collection.find(Filters.eq(id)).first()
+    void waitForInsertAcknowledgement(MongoCollection<OldDocument> collection, ObjectId id) {
+        OldDocument document = collection.find(Filters.eq(id)).first()
         while (document == null) {
             Thread.sleep(1)
             document = collection.find(Filters.eq(id)).first()

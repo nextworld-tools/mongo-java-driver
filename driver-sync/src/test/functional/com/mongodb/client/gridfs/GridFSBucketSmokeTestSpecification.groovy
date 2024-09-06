@@ -28,7 +28,7 @@ import com.mongodb.client.gridfs.model.GridFSUploadOptions
 import org.bson.BsonDocument
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.UuidRepresentation
 import org.bson.codecs.UuidCodec
 import org.bson.types.ObjectId
@@ -47,7 +47,7 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries
 class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
     protected MongoDatabase mongoDatabase
     protected MongoCollection<GridFSFile> filesCollection
-    protected MongoCollection<Document> chunksCollection
+    protected MongoCollection<OldDocument> chunksCollection
     protected GridFSBucket gridFSBucket
     def singleChunkString = 'GridFS'
     def multiChunkString = singleChunkString.padLeft(1024 * 255 * 5)
@@ -184,7 +184,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
     def 'should use custom uploadOptions when uploading' () {
         given:
         def chunkSize = 20
-        def metadata = new Document('archived', false)
+        def metadata = new OldDocument('archived', false)
         def options = new GridFSUploadOptions()
                 .chunkSizeBytes(chunkSize)
                 .metadata(metadata)
@@ -437,7 +437,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
     def 'should not create indexes if the files collection is not empty'() {
         when:
-        filesCollection.withDocumentClass(Document).insertOne(new Document('filename', 'bad file'))
+        filesCollection.withDocumentClass(OldDocument).insertOne(new OldDocument('filename', 'bad file'))
         def contentBytes = 'Hello GridFS' as byte[]
 
         then:
@@ -464,8 +464,8 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should not create if index is numerically the same'() {
         when:
-        filesCollection.createIndex(new Document('filename', indexValue1).append('uploadDate', indexValue2))
-        chunksCollection.createIndex(new Document('files_id', indexValue1).append('n', indexValue2))
+        filesCollection.createIndex(new OldDocument('filename', indexValue1).append('uploadDate', indexValue2))
+        chunksCollection.createIndex(new OldDocument('files_id', indexValue1).append('n', indexValue2))
         def contentBytes = 'Hello GridFS' as byte[]
 
         then:
@@ -551,14 +551,14 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         def database = client.getDatabase(getDefaultDatabaseName()).withCodecRegistry(codecRegistry)
         def uuid = UUID.randomUUID()
-        def fileMeta = new Document('uuid', uuid)
+        def fileMeta = new OldDocument('uuid', uuid)
         def gridFSBucket = GridFSBuckets.create(database)
 
         when:
         def fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(multiChunkString as byte[]),
                 new GridFSUploadOptions().metadata(fileMeta))
 
-        def file = gridFSBucket.find(new Document('_id', fileId)).first()
+        def file = gridFSBucket.find(new OldDocument('_id', fileId)).first()
 
         then:
         file.getMetadata() == fileMeta

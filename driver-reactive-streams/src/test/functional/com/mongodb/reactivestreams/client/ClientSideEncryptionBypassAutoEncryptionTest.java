@@ -27,7 +27,7 @@ import com.mongodb.reactivestreams.client.vault.ClientEncryption;
 import com.mongodb.reactivestreams.client.vault.ClientEncryptions;
 import org.bson.BsonBinary;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -98,13 +98,13 @@ public class ClientSideEncryptionBypassAutoEncryptionTest {
                 .subscribe(binarySubscriber);
         BsonBinary encryptedFieldValue = binarySubscriber.get().get(0);
 
-        MongoCollection<Document> collection = clientEncrypted.getDatabase(Fixture.getDefaultDatabaseName()).getCollection("test");
+        MongoCollection<OldDocument> collection = clientEncrypted.getDatabase(Fixture.getDefaultDatabaseName()).getCollection("test");
 
         ObservableSubscriber<InsertOneResult> insertSubscriber = new OperationSubscriber<>();
-        collection.insertOne(new Document("encryptedField", encryptedFieldValue)).subscribe(insertSubscriber);
+        collection.insertOne(new OldDocument("encryptedField", encryptedFieldValue)).subscribe(insertSubscriber);
         insertSubscriber.await();
 
-        ObservableSubscriber<Document> resultSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> resultSubscriber = new OperationSubscriber<>();
         collection.find().first().subscribe(resultSubscriber);
 
         assertEquals(fieldValue, resultSubscriber.get().get(0).getString("encryptedField"));

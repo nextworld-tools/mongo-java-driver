@@ -17,7 +17,7 @@
 package com.mongodb.client.model.mql;
 
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
@@ -124,10 +124,10 @@ class DocumentMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression(2007, ofDoc("{a: {'$date': '2007-12-03T10:15:30.005Z'}}")
                 .getDate("a", Instant.EPOCH).year(of("UTC")));
         // no convenience for arrays
-        assertExpression(Document.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
-                .getDocument("a", Document.parse("{z: 99}")));
-        assertExpression(Document.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
-                .getMap("a", Document.parse("{z: 99}")));
+        assertExpression(OldDocument.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
+                .getDocument("a", OldDocument.parse("{z: 99}")));
+        assertExpression(OldDocument.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
+                .getMap("a", OldDocument.parse("{z: 99}")));
 
         // normal
         assertExpression(true, ofDoc("{a: true}").getBoolean("a", of(false)));
@@ -137,10 +137,10 @@ class DocumentMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression(2007, ofDoc("{a: {'$date': '2007-12-03T10:15:30.005Z'}}")
                 .getDate("a", of(Instant.EPOCH)).year(of("UTC")));
         assertExpression(Arrays.asList(3, 2), ofDoc("{a: [3, 2]}").getArray("a", ofIntegerArray(99, 88)));
-        assertExpression(Document.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
-                .getDocument("a", of(Document.parse("{z: 99}"))));
-        assertExpression(Document.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
-                .getMap("a", ofMap(Document.parse("{z: 99}"))));
+        assertExpression(OldDocument.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
+                .getDocument("a", of(OldDocument.parse("{z: 99}"))));
+        assertExpression(OldDocument.parse("{b: 2}"), ofDoc("{a: {b: 2}}")
+                .getMap("a", ofMap(OldDocument.parse("{z: 99}"))));
 
         // right branch (missing field)
         assertExpression(false, ofDoc("{}").getBoolean("a", false));
@@ -153,10 +153,10 @@ class DocumentMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertExpression(1970, ofDoc("{}")
                 .getDate("a", Instant.EPOCH).year(of("UTC")));
         assertExpression(Arrays.asList(99, 88), ofDoc("{}").getArray("a", ofIntegerArray(99, 88)));
-        assertExpression(Document.parse("{z: 99}"), ofDoc("{}")
-                .getDocument("a", Document.parse("{z: 99}")));
-        assertExpression(Document.parse("{z: 99}"), ofDoc("{}")
-                .getMap("a", Document.parse("{z: 99}")));
+        assertExpression(OldDocument.parse("{z: 99}"), ofDoc("{}")
+                .getDocument("a", OldDocument.parse("{z: 99}")));
+        assertExpression(OldDocument.parse("{z: 99}"), ofDoc("{}")
+                .getMap("a", OldDocument.parse("{z: 99}")));
 
         // int vs num
         assertExpression(99, ofDoc("{a: 1.1}").getInteger("a", of(99)));

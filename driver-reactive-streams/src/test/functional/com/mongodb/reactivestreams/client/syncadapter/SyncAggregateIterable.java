@@ -22,7 +22,7 @@ import com.mongodb.client.model.Collation;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Mono;
 
@@ -119,12 +119,12 @@ class SyncAggregateIterable<T> extends SyncMongoIterable<T> implements Aggregate
     }
 
     @Override
-    public Document explain() {
+    public OldDocument explain() {
         return requireNonNull(Mono.from(wrapped.explain()).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
-    public Document explain(final ExplainVerbosity verbosity) {
+    public OldDocument explain(final ExplainVerbosity verbosity) {
         return requireNonNull(Mono.from(wrapped.explain(verbosity)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 

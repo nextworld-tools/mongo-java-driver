@@ -40,7 +40,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.RawBsonDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
@@ -154,7 +154,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when documents match the query, a remove of one should remove one of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new DeleteRequest(new BsonDocument('x', BsonBoolean.TRUE)).multi(false)],
                                              ordered, ACKNOWLEDGED, false)
@@ -172,8 +172,8 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when documents match the query, a remove should remove all of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true),
-                                              new Document('x', false))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true),
+                                              new OldDocument('x', false))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new DeleteRequest(new BsonDocument('x', BsonBoolean.TRUE))],
                                              ordered, ACKNOWLEDGED, false)
@@ -191,7 +191,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when multiple document match the query, update of one should update only one of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new UpdateRequest(new BsonDocument('x', BsonBoolean.TRUE),
                                                                 new BsonDocument('$set', new BsonDocument('y', new BsonInt32(1))),
@@ -203,7 +203,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 1, expectedModifiedCount(1), [], [])
-        getCollectionHelper().count(new Document('y', 1)) == 1
+        getCollectionHelper().count(new OldDocument('y', 1)) == 1
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -211,7 +211,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when documents match the query, update multi should update all of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                 [new UpdateRequest(new BsonDocument('x', BsonBoolean.TRUE),
                         new BsonDocument('$set', new BsonDocument('y', new BsonInt32(1))),
@@ -222,7 +222,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 2, expectedModifiedCount(2), [], [])
-        getCollectionHelper().count(new Document('y', 1)) == 2
+        getCollectionHelper().count(new OldDocument('y', 1)) == 2
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -241,7 +241,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 0, expectedModifiedCount(0), [new BulkWriteUpsert(0, new BsonObjectId(id))], [])
-        getCollectionHelper().find().first() == new Document('_id', query.getObjectId('_id').getValue()).append('x', 2)
+        getCollectionHelper().find().first() == new OldDocument('_id', query.getObjectId('_id').getValue()).append('x', 2)
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -262,7 +262,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 0, expectedModifiedCount(0),
                 [new BulkWriteUpsert(0, new BsonObjectId(id))], [])
-        getCollectionHelper().find().first() == new Document('_id', query.getObjectId('_id').getValue()).append('x', 2)
+        getCollectionHelper().find().first() == new OldDocument('_id', query.getObjectId('_id').getValue()).append('x', 2)
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -270,7 +270,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when documents matches the query, update one with upsert should update only one of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new UpdateRequest(new BsonDocument('x', BsonBoolean.TRUE),
                                                                 new BsonDocument('$set', new BsonDocument('y', new BsonInt32(1))),
@@ -282,7 +282,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 1, expectedModifiedCount(1), [], [])
-        getCollectionHelper().count(new Document('y', 1)) == 1
+        getCollectionHelper().count(new OldDocument('y', 1)) == 1
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -290,7 +290,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when documents match the query, update multi with upsert should update all of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new UpdateRequest(new BsonDocument('x', BsonBoolean.TRUE),
                                                                 new BsonDocument('$set', new BsonDocument('y', new BsonInt32(1))),
@@ -302,7 +302,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 2, expectedModifiedCount(2), [], [])
-        getCollectionHelper().count(new Document('y', 1)) == 2
+        getCollectionHelper().count(new OldDocument('y', 1)) == 2
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -432,7 +432,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 0, expectedModifiedCount(0), [new BulkWriteUpsert(0, new BsonObjectId(id))], [])
-        getCollectionHelper().find().first() == new Document('_id', id).append('x', 2)
+        getCollectionHelper().find().first() == new OldDocument('_id', id).append('x', 2)
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -502,7 +502,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
     def 'when multiple documents match the query, replace should replace only one of them'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', true), new Document('x', true))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', true), new OldDocument('x', true))
 
         def operation = new MixedBulkWriteOperation(getNamespace(),
                                              [new UpdateRequest(new BsonDocument('x', BsonBoolean.TRUE),
@@ -515,7 +515,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result == BulkWriteResult.acknowledged(UPDATE, 1, expectedModifiedCount(1), [], [])
-        getCollectionHelper().count(new Document('x', false)) == 1
+        getCollectionHelper().count(new OldDocument('x', false)) == 1
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -524,7 +524,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
     @Slow
     def 'when a replacement document is 16MB, the document is still replaced'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('_id', 1))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('_id', 1))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                 [new UpdateRequest(new BsonDocument('_id', new BsonInt32(1)),
                         new BsonDocument('_id', new BsonInt32(1))
@@ -545,7 +545,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
     @Slow
     def 'when two update documents together exceed 16MB, the documents are still updated'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('_id', 1), new Document('_id', 2))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('_id', 1), new OldDocument('_id', 2))
         def operation = new MixedBulkWriteOperation(getNamespace(),
                 [new UpdateRequest(new BsonDocument('_id', new BsonInt32(1)),
                         new BsonDocument('_id', new BsonInt32(1))
@@ -621,14 +621,14 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
 
         then:
         result.wasAcknowledged()
-        getCollectionHelper().find(new Document('_id', 1)).first() == new Document('_id', 1).append('x', 2)
-        getCollectionHelper().find(new Document('_id', 2)).first() == new Document('_id', 2).append('x', 3)
-        getCollectionHelper().find(new Document('_id', 3)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 4)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 5)).first() == new Document('_id', 5).append('x', 4)
-        getCollectionHelper().find(new Document('_id', 6)).first() == new Document('_id', 6).append('x', 5)
-        getCollectionHelper().find(new Document('_id', 7)).first() == new Document('_id', 7)
-        getCollectionHelper().find(new Document('_id', 8)).first() == new Document('_id', 8)
+        getCollectionHelper().find(new OldDocument('_id', 1)).first() == new OldDocument('_id', 1).append('x', 2)
+        getCollectionHelper().find(new OldDocument('_id', 2)).first() == new OldDocument('_id', 2).append('x', 3)
+        getCollectionHelper().find(new OldDocument('_id', 3)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 4)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 5)).first() == new OldDocument('_id', 5).append('x', 4)
+        getCollectionHelper().find(new OldDocument('_id', 6)).first() == new OldDocument('_id', 6).append('x', 5)
+        getCollectionHelper().find(new OldDocument('_id', 7)).first() == new OldDocument('_id', 7)
+        getCollectionHelper().find(new OldDocument('_id', 8)).first() == new OldDocument('_id', 8)
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -649,14 +649,14 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
         then:
         !result.wasAcknowledged()
         acknowledgeWrite(binding)
-        getCollectionHelper().find(new Document('_id', 1)).first() == new Document('_id', 1).append('x', 2)
-        getCollectionHelper().find(new Document('_id', 2)).first() == new Document('_id', 2).append('x', 3)
-        getCollectionHelper().find(new Document('_id', 3)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 4)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 5)).first() == new Document('_id', 5).append('x', 4)
-        getCollectionHelper().find(new Document('_id', 6)).first() == new Document('_id', 6).append('x', 5)
-        getCollectionHelper().find(new Document('_id', 7)).first() == new Document('_id', 7)
-        getCollectionHelper().find(new Document('_id', 8)).first() == new Document('_id', 8)
+        getCollectionHelper().find(new OldDocument('_id', 1)).first() == new OldDocument('_id', 1).append('x', 2)
+        getCollectionHelper().find(new OldDocument('_id', 2)).first() == new OldDocument('_id', 2).append('x', 3)
+        getCollectionHelper().find(new OldDocument('_id', 3)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 4)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 5)).first() == new OldDocument('_id', 5).append('x', 4)
+        getCollectionHelper().find(new OldDocument('_id', 6)).first() == new OldDocument('_id', 6).append('x', 5)
+        getCollectionHelper().find(new OldDocument('_id', 7)).first() == new OldDocument('_id', 7)
+        getCollectionHelper().find(new OldDocument('_id', 8)).first() == new OldDocument('_id', 8)
 
         where:
         [async, ordered] << [[true, false], [true, false]].combinations()
@@ -990,8 +990,8 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
     @IgnoreIf({ serverVersionAtLeast(3, 4) })
     def 'should throw an exception when using an unsupported Collation'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('x', 1), new Document('y', 1),
-                new Document('z', 1))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('x', 1), new OldDocument('y', 1),
+                new OldDocument('z', 1))
         def operation = new MixedBulkWriteOperation(namespace, requests, false, ACKNOWLEDGED, false)
 
         when:
@@ -1019,7 +1019,7 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         given:
-        getCollectionHelper().insertDocuments(Document.parse('{str: "foo"}'), Document.parse('{str: "bar"}'))
+        getCollectionHelper().insertDocuments(OldDocument.parse('{str: "foo"}'), OldDocument.parse('{str: "bar"}'))
         def requests = [new DeleteRequest(BsonDocument.parse('{str: "FOO"}}')).collation(caseInsensitiveCollation),
                         new UpdateRequest(BsonDocument.parse('{str: "BAR"}}'), BsonDocument.parse('{str: "bar"}}'), REPLACE)
                                 .collation(caseInsensitiveCollation)]
@@ -1058,14 +1058,14 @@ class MixedBulkWriteOperationSpecification extends OperationFunctionalSpecificat
         result.getUpserts().isEmpty()
 
         then:
-        getCollectionHelper().find(new Document('_id', 1)).first() == new Document('_id', 1).append('x', 2)
-        getCollectionHelper().find(new Document('_id', 2)).first() == new Document('_id', 2).append('x', 3)
-        getCollectionHelper().find(new Document('_id', 3)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 4)).isEmpty()
-        getCollectionHelper().find(new Document('_id', 5)).first() == new Document('_id', 5).append('x', 4)
-        getCollectionHelper().find(new Document('_id', 6)).first() == new Document('_id', 6).append('x', 5)
-        getCollectionHelper().find(new Document('_id', 7)).first() == new Document('_id', 7)
-        getCollectionHelper().find(new Document('_id', 8)).first() == new Document('_id', 8)
+        getCollectionHelper().find(new OldDocument('_id', 1)).first() == new OldDocument('_id', 1).append('x', 2)
+        getCollectionHelper().find(new OldDocument('_id', 2)).first() == new OldDocument('_id', 2).append('x', 3)
+        getCollectionHelper().find(new OldDocument('_id', 3)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 4)).isEmpty()
+        getCollectionHelper().find(new OldDocument('_id', 5)).first() == new OldDocument('_id', 5).append('x', 4)
+        getCollectionHelper().find(new OldDocument('_id', 6)).first() == new OldDocument('_id', 6).append('x', 5)
+        getCollectionHelper().find(new OldDocument('_id', 7)).first() == new OldDocument('_id', 7)
+        getCollectionHelper().find(new OldDocument('_id', 8)).first() == new OldDocument('_id', 8)
 
         cleanup:
         disableOnPrimaryTransactionalWriteFailPoint()

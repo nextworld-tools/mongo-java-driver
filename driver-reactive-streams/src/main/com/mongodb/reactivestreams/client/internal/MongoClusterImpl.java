@@ -31,7 +31,7 @@ import com.mongodb.reactivestreams.client.ListDatabasesPublisher;
 import com.mongodb.reactivestreams.client.MongoCluster;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import com.mongodb.reactivestreams.client.internal.crypt.Crypt;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -51,12 +51,12 @@ final class MongoClusterImpl implements MongoCluster {
     private final Crypt crypt;
     private final OperationExecutor operationExecutor;
     private final ServerSessionPool serverSessionPool;
-    private final ClientSessionHelper clientSessionHelper;
-    private final MongoOperationPublisher<Document> mongoOperationPublisher;
+    private final ClientSessionHelper                  clientSessionHelper;
+    private final MongoOperationPublisher<OldDocument> mongoOperationPublisher;
 
     MongoClusterImpl(final Cluster cluster, @Nullable final Crypt crypt, final OperationExecutor operationExecutor,
             final ServerSessionPool serverSessionPool, final ClientSessionHelper clientSessionHelper,
-            final MongoOperationPublisher<Document> mongoOperationPublisher) {
+            final MongoOperationPublisher<OldDocument> mongoOperationPublisher) {
 
         this.cluster = cluster;
         this.crypt = crypt;
@@ -139,7 +139,7 @@ final class MongoClusterImpl implements MongoCluster {
         return serverSessionPool;
     }
 
-    public MongoOperationPublisher<Document> getMongoOperationPublisher() {
+    public MongoOperationPublisher<OldDocument> getMongoOperationPublisher() {
         return mongoOperationPublisher;
     }
 
@@ -175,8 +175,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ListDatabasesPublisher<Document> listDatabases() {
-        return listDatabases(Document.class);
+    public ListDatabasesPublisher<OldDocument> listDatabases() {
+        return listDatabases(OldDocument.class);
     }
 
     @Override
@@ -185,8 +185,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ListDatabasesPublisher<Document> listDatabases(final ClientSession clientSession) {
-        return listDatabases(clientSession, Document.class);
+    public ListDatabasesPublisher<OldDocument> listDatabases(final ClientSession clientSession) {
+        return listDatabases(clientSession, OldDocument.class);
     }
 
     @Override
@@ -195,7 +195,7 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch() {
+    public ChangeStreamPublisher<OldDocument> watch() {
         return watch(Collections.emptyList());
     }
 
@@ -205,8 +205,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final List<? extends Bson> pipeline) {
+        return watch(pipeline, OldDocument.class);
     }
 
     @Override
@@ -216,8 +216,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession) {
-        return watch(clientSession, Collections.emptyList(), Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession) {
+        return watch(clientSession, Collections.emptyList(), OldDocument.class);
     }
 
     @Override
@@ -226,8 +226,8 @@ final class MongoClusterImpl implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return watch(clientSession, pipeline, OldDocument.class);
     }
 
     @Override

@@ -18,7 +18,7 @@ package org.bson.codecs
 
 import org.bson.BsonBinaryReader
 import org.bson.BsonWriter
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.CodeWithScope
 import spock.lang.Specification
 import spock.lang.Subject
@@ -34,7 +34,7 @@ class CodeWithScopeSpecification extends Specification {
     def 'should encode code with scope as java script followed by document of scope'() {
         given:
         String javascriptCode = '<javascript code>'
-        CodeWithScope codeWithScope = new CodeWithScope(javascriptCode, new Document('the', 'scope'))
+        CodeWithScope codeWithScope = new CodeWithScope(javascriptCode, new OldDocument('the', 'scope'))
 
         when:
         codeWithScopeCodec.encode(bsonWriter, codeWithScope, EncoderContext.builder().build())
@@ -53,7 +53,7 @@ class CodeWithScopeSpecification extends Specification {
 
     def 'should decode code with scope'() {
         given:
-        CodeWithScope codeWithScope = new CodeWithScope('{javascript code}', new Document('the', 'scope'))
+        CodeWithScope codeWithScope = new CodeWithScope('{javascript code}', new OldDocument('the', 'scope'))
         BsonBinaryReader reader = prepareReaderWithObjectToBeDecoded(codeWithScope)
 
         when:

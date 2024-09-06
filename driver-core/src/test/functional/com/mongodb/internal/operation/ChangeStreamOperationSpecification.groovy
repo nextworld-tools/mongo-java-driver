@@ -45,7 +45,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
@@ -68,7 +68,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
 
     def 'should have the correct defaults'() {
         when:
-        ChangeStreamOperation operation = new ChangeStreamOperation<Document>(getNamespace(),
+        ChangeStreamOperation operation = new ChangeStreamOperation<OldDocument>(getNamespace(),
                 FullDocument.DEFAULT, FullDocumentBeforeChange.DEFAULT, [], new DocumentCodec())
 
         then:
@@ -81,7 +81,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
 
     def 'should set optional values correctly'() {
         when:
-        ChangeStreamOperation operation = new ChangeStreamOperation<Document>(getNamespace(),
+        ChangeStreamOperation operation = new ChangeStreamOperation<OldDocument>(getNamespace(),
                 FullDocument.UPDATE_LOOKUP, FullDocumentBeforeChange.DEFAULT, [], new DocumentCodec())
                 .batchSize(5)
                 .collation(defaultCollation)
@@ -111,7 +111,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
                 .append('cursor', new BsonDocument('id', new BsonInt64(0)).append('ns', new BsonString('db.coll'))
                 .append('firstBatch', new BsonArrayWrapper([])))
 
-        def operation = new ChangeStreamOperation<Document>(namespace, FullDocument.DEFAULT,
+        def operation = new ChangeStreamOperation<OldDocument>(namespace, FullDocument.DEFAULT,
                 FullDocumentBeforeChange.DEFAULT, pipeline, new DocumentCodec(), changeStreamLevel as ChangeStreamLevel)
                 .batchSize(5)
                 .collation(defaultCollation)
@@ -756,7 +756,7 @@ class ChangeStreamOperationSpecification extends OperationFunctionalSpecificatio
 
     private final static CODEC = new BsonDocumentCodec()
 
-    private CollectionHelper<Document> getHelper() {
+    private CollectionHelper<OldDocument> getHelper() {
         def helper = getCollectionHelper()
         helper.create(helper.getNamespace().getCollectionName(), new CreateCollectionOptions())
         helper

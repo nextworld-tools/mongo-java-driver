@@ -36,7 +36,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -62,7 +62,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should have the correct defaults and passed values'() {
         when:
         def update = new BsonDocument('update', new BsonInt32(1))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
 
         then:
@@ -81,7 +81,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should have the correct defaults and passed values using update pipelines'() {
         when:
         def updatePipeline = new BsonArray(singletonList(new BsonDocument('update', new BsonInt32(1))))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, updatePipeline)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, updatePipeline)
 
         then:
         operation.getNamespace() == getNamespace()
@@ -102,7 +102,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         def projection = new BsonDocument('projection', new BsonInt32(1))
 
         when:
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(),
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(),
                 ACKNOWLEDGED, false, documentCodec, new BsonDocument('update', new BsonInt32(1)))
                 .filter(filter)
                 .sort(sort)
@@ -129,7 +129,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         def projection = new BsonDocument('projection', new BsonInt32(1))
 
         when:
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, new BsonArray(singletonList(new BsonDocument('update', new BsonInt32(1)))))
                 .filter(filter)
                 .sort(sort)
@@ -150,18 +150,18 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should update single document'() {
         given:
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
-        Document pete = new Document('name', 'Pete').append('numberOfJobs', 3)
-        Document sam = new Document('name', 'Sam').append('numberOfJobs', 5)
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(documentCodec, getNamespace())
+        OldDocument pete = new OldDocument('name', 'Pete').append('numberOfJobs', 3)
+        OldDocument sam = new OldDocument('name', 'Sam').append('numberOfJobs', 5)
 
         helper.insertDocuments(new DocumentCodec(), pete, sam)
 
         when:
         def update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
-        Document returnedDocument = execute(operation, async)
+        OldDocument returnedDocument = execute(operation, async)
 
         then:
         returnedDocument.getInteger('numberOfJobs') == 3
@@ -170,7 +170,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
-        operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
                 .returnOriginal(false)
@@ -186,18 +186,18 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(4, 2) })
     def 'should add field using update pipeline'() {
         given:
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
-        Document pete = new Document('name', 'Pete').append('numberOfJobs', 3)
-        Document sam = new Document('name', 'Sam').append('numberOfJobs', 5)
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(documentCodec, getNamespace())
+        OldDocument pete = new OldDocument('name', 'Pete').append('numberOfJobs', 3)
+        OldDocument sam = new OldDocument('name', 'Sam').append('numberOfJobs', 5)
 
         helper.insertDocuments(new DocumentCodec(), pete, sam)
 
         when:
         def update = new BsonArray(singletonList(new BsonDocument('$addFields', new BsonDocument('foo', new BsonInt32(1)))))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
                 .returnOriginal(false)
-        Document returnedDocument = execute(operation, false)
+        OldDocument returnedDocument = execute(operation, false)
 
         then:
         returnedDocument.getInteger('numberOfJobs') == 3
@@ -205,7 +205,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         update = new BsonArray(singletonList(new BsonDocument('$addFields', new BsonDocument('foo', new BsonInt32(1)))))
-        operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
                 .returnOriginal(false)
         returnedDocument = execute(operation, false)
@@ -253,18 +253,18 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(4, 2) })
     def 'should update using pipeline when using custom codecs'() {
         given:
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
-        Document pete = new Document('name', 'Pete').append('numberOfJobs', 3)
-        Document sam = new Document('name', 'Sam').append('numberOfJobs', 5)
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(documentCodec, getNamespace())
+        OldDocument pete = new OldDocument('name', 'Pete').append('numberOfJobs', 3)
+        OldDocument sam = new OldDocument('name', 'Sam').append('numberOfJobs', 5)
 
         helper.insertDocuments(new DocumentCodec(), pete, sam)
 
         when:
         def update = new BsonArray(singletonList(new BsonDocument('$project', new BsonDocument('name', new BsonInt32(1)))))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
                 .returnOriginal(false)
-        Document returnedDocument = execute(operation, async)
+        OldDocument returnedDocument = execute(operation, async)
 
         then:
         returnedDocument.getString('name') == 'Pete'
@@ -277,9 +277,9 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should return null if query fails to match'() {
         when:
         def update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
-        Document returnedDocument = execute(operation, async)
+        OldDocument returnedDocument = execute(operation, async)
 
         then:
         returnedDocument == null
@@ -291,7 +291,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should throw an exception if update contains fields that are not update operators'() {
         given:
         def update = new BsonDocument('x', new BsonInt32(1))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
 
         when:
@@ -309,7 +309,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should throw an exception if update pipeline contains operations that are not supported'() {
         when:
         def update = new BsonArray(singletonList(new BsonDocument('$foo', new BsonDocument('x', new BsonInt32(1)))))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
         execute(operation, async)
 
         then:
@@ -317,7 +317,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         update = singletonList(new BsonInt32(1))
-        operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
+        operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false, documentCodec, update)
         execute(operation, async)
 
         then:
@@ -338,7 +338,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         def update = new BsonDocument('$inc', new BsonDocument('level', new BsonInt32(-1)))
-        def operation = new FindAndUpdateOperation<Document>(namespace, ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(namespace, ACKNOWLEDGED, false,
                 documentCodec, update)
         execute(operation, async)
 
@@ -354,7 +354,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         operation.bypassDocumentValidation(true).returnOriginal(false)
-        Document returnedDocument = execute(operation, async)
+        OldDocument returnedDocument = execute(operation, async)
 
         then:
         notThrown(MongoCommandException)
@@ -370,11 +370,11 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 2) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('name', 'Pete'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('name', 'Pete'))
         def update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
 
         when:
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(),
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(),
                 new WriteConcern(5, 1), false, documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
         execute(operation, async)
@@ -388,7 +388,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         ex.writeResult.upsertedId == null
 
         when:
-        operation = new FindAndUpdateOperation<Document>(getNamespace(), new WriteConcern(5, 1), false,
+        operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), new WriteConcern(5, 1), false,
                 documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Bob')))
                 .upsert(true)
@@ -407,8 +407,8 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 8) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error on multiple failpoint'() {
         given:
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
-        helper.insertDocuments(new DocumentCodec(), new Document('name', 'Pete'))
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(documentCodec, getNamespace())
+        helper.insertDocuments(new DocumentCodec(), new OldDocument('name', 'Pete'))
 
         def failPoint = BsonDocument.parse('''{
             "configureFailPoint": "failCommand",
@@ -418,7 +418,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         configureFailPoint(failPoint)
 
         def update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
 
@@ -446,7 +446,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         def includeWriteConcern = writeConcern.isAcknowledged() && !writeConcern.isServerDefault()
         def cannedResult = new BsonDocument('value', new BsonDocumentWrapper(BsonDocument.parse('{}'), new BsonDocumentCodec()))
         def update = BsonDocument.parse('{ update: 1}')
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), writeConcern, retryWrites, documentCodec, update)
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), writeConcern, retryWrites, documentCodec, update)
         def expectedCommand = new BsonDocument('findAndModify', new BsonString(getNamespace().getCollectionName()))
                 .append('update', update)
         if (includeWriteConcern) {
@@ -495,21 +495,21 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 6) || !isDiscoverableReplicaSet() })
     def 'should support retryable writes'() {
         given:
-        CollectionHelper<Document> helper = new CollectionHelper<Document>(documentCodec, getNamespace())
-        Document pete = new Document('name', 'Pete').append('numberOfJobs', 3)
-        Document sam = new Document('name', 'Sam').append('numberOfJobs', 5)
+        CollectionHelper<OldDocument> helper = new CollectionHelper<OldDocument>(documentCodec, getNamespace())
+        OldDocument pete = new OldDocument('name', 'Pete').append('numberOfJobs', 3)
+        OldDocument sam = new OldDocument('name', 'Sam').append('numberOfJobs', 5)
 
         helper.insertDocuments(new DocumentCodec(), pete, sam)
 
         when:
         def update = new BsonDocument('$inc', new BsonDocument('numberOfJobs', new BsonInt32(1)))
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, true,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, true,
                 documentCodec, update)
                 .filter(new BsonDocument('name', new BsonString('Pete')))
 
         enableOnPrimaryTransactionalWriteFailPoint(BsonDocument.parse('{times: 1}'))
 
-        Document returnedDocument = executeWithSession(operation, async)
+        OldDocument returnedDocument = executeWithSession(operation, async)
 
         then:
         returnedDocument.getInteger('numberOfJobs') == 3
@@ -527,7 +527,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         when:
         def cannedResult = new BsonDocument('value', new BsonDocumentWrapper(BsonDocument.parse('{}'), new BsonDocumentCodec()))
         def update = BsonDocument.parse('{ update: 1}')
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, true,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, true,
                 documentCodec, update)
         def expectedCommand = new BsonDocument('findAndModify', new BsonString(getNamespace().getCollectionName()))
                 .append('update', update)
@@ -544,7 +544,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     def 'should throw original error when retrying and failing'() {
         given:
         def update = BsonDocument.parse('{ update: 1}')
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, true,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, true,
                 documentCodec, update)
         def originalException = new MongoSocketException('Some failure', new ServerAddress())
 
@@ -571,10 +571,10 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         given:
-        def document = Document.parse('{_id: 1, str: "foo"}')
+        def document = OldDocument.parse('{_id: 1, str: "foo"}')
         getCollectionHelper().insertDocuments(document)
         def update = BsonDocument.parse('{ $set: {str: "bar"}}')
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
                 .filter(BsonDocument.parse('{str: "FOO"}'))
                 .collation(caseInsensitiveCollation)
@@ -592,12 +592,12 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
     @IgnoreIf({ serverVersionLessThan(3, 6) })
     def 'should support array filters'() {
         given:
-        def documentOne = Document.parse('{_id: 1, y: [ {b: 3}, {b: 1}]}')
-        def documentTwo = Document.parse('{_id: 2, y: [ {b: 0}, {b: 1}]}')
+        def documentOne = OldDocument.parse('{_id: 1, y: [ {b: 3}, {b: 1}]}')
+        def documentTwo = OldDocument.parse('{_id: 2, y: [ {b: 0}, {b: 1}]}')
         getCollectionHelper().insertDocuments(documentOne, documentTwo)
         def update = BsonDocument.parse('{ $set: {"y.$[i].b": 2}}')
         def arrayFilters = [BsonDocument.parse('{"i.b": 3}')]
-        def operation = new FindAndUpdateOperation<Document>(getNamespace(), ACKNOWLEDGED, false,
+        def operation = new FindAndUpdateOperation<OldDocument>(getNamespace(), ACKNOWLEDGED, false,
                 documentCodec, update)
                 .returnOriginal(false)
                 .arrayFilters(arrayFilters)
@@ -606,7 +606,7 @@ class FindAndUpdateOperationSpecification extends OperationFunctionalSpecificati
         def result = execute(operation, async)
 
         then:
-        result == Document.parse('{_id: 1, y: [ {b: 2}, {b: 1}]}')
+        result == OldDocument.parse('{_id: 1, y: [ {b: 2}, {b: 1}]}')
 
         where:
         async << [true, false]

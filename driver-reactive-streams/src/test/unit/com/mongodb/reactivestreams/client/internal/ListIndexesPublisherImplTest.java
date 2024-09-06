@@ -20,7 +20,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
 import com.mongodb.internal.operation.ListIndexesOperation;
 import com.mongodb.reactivestreams.client.ListIndexesPublisher;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -40,10 +40,10 @@ public class ListIndexesPublisherImplTest extends TestHelper {
         configureBatchCursor();
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        ListIndexesPublisher<Document> publisher = new ListIndexesPublisherImpl<>(null, createMongoOperationPublisher(executor));
+        ListIndexesPublisher<OldDocument> publisher = new ListIndexesPublisherImpl<>(null, createMongoOperationPublisher(executor));
 
-        ListIndexesOperation<Document> expectedOperation =
-                new ListIndexesOperation<>(NAMESPACE, getDefaultCodecRegistry().get(Document.class))
+        ListIndexesOperation<OldDocument> expectedOperation =
+                new ListIndexesOperation<>(NAMESPACE, getDefaultCodecRegistry().get(OldDocument.class))
                         .batchSize(Integer.MAX_VALUE)
                         .retryReads(true);
 
@@ -58,7 +58,7 @@ public class ListIndexesPublisherImplTest extends TestHelper {
                 .maxTime(100, MILLISECONDS);
 
         expectedOperation =
-                new ListIndexesOperation<>(NAMESPACE, getDefaultCodecRegistry().get(Document.class))
+                new ListIndexesOperation<>(NAMESPACE, getDefaultCodecRegistry().get(OldDocument.class))
                         .batchSize(100)
                         .retryReads(true);
 

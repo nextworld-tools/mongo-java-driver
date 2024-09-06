@@ -18,7 +18,7 @@ package com.mongodb.client;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,8 +37,8 @@ import static org.junit.Assume.assumeTrue;
 
 // See https://github.com/mongodb/specifications/blob/master/source/transactions/tests/README.rst#mongos-pinning-prose-tests
 public class TransactionProseTest {
-    private MongoClient client;
-    private MongoCollection<Document> collection;
+    private MongoClient                  client;
+    private MongoCollection<OldDocument> collection;
 
     @Before
     public void setUp() {
@@ -70,17 +70,17 @@ public class TransactionProseTest {
     public void testNewTransactionUnpinsSession() throws MongoException {
         ClientSession session = null;
         try {
-            collection.insertOne(Document.parse("{}"));
+            collection.insertOne(OldDocument.parse("{}"));
             session = client.startSession();
             session.startTransaction();
-            collection.insertOne(session, Document.parse("{ _id : 1 }"));
+            collection.insertOne(session, OldDocument.parse("{ _id : 1 }"));
             session.commitTransaction();
 
-            Set<FindIterable<Document>> addresses = new HashSet<>();
+            Set<FindIterable<OldDocument>> addresses = new HashSet<>();
             int iterations = 50;
             while (iterations-- > 0) {
                 session.startTransaction();
-                addresses.add(collection.find(session, Document.parse("{}")));
+                addresses.add(collection.find(session, OldDocument.parse("{}")));
                 session.commitTransaction();
             }
             assertTrue(addresses.size() > 1);
@@ -99,15 +99,15 @@ public class TransactionProseTest {
     public void testNonTransactionOpsUnpinsSession() throws MongoException {
         ClientSession session = null;
         try {
-            collection.insertOne(Document.parse("{}"));
+            collection.insertOne(OldDocument.parse("{}"));
             session = client.startSession();
             session.startTransaction();
-            collection.insertOne(session, Document.parse("{ _id : 1 }"));
+            collection.insertOne(session, OldDocument.parse("{ _id : 1 }"));
 
-            Set<FindIterable<Document>> addresses = new HashSet<>();
+            Set<FindIterable<OldDocument>> addresses = new HashSet<>();
             int iterations = 50;
             while (iterations-- > 0) {
-                addresses.add(collection.find(session, Document.parse("{}")));
+                addresses.add(collection.find(session, OldDocument.parse("{}")));
             }
             assertTrue(addresses.size() > 1);
         } finally {

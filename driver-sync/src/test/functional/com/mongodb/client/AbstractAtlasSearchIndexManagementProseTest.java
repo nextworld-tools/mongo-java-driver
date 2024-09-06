@@ -25,7 +25,7 @@ import com.mongodb.client.model.SearchIndexType;
 import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -70,16 +70,16 @@ public abstract class AbstractAtlasSearchIndexManagementProseTest {
     private static final int WAIT_INTERVAL_SECONDS = 5;
 
     private static final String TEST_SEARCH_INDEX_NAME_1 = "test-search-index";
-    private static final String TEST_SEARCH_INDEX_NAME_2 = "test-search-index-2";
-    private static final Document NOT_DYNAMIC_MAPPING_DEFINITION = Document.parse(
+    private static final String      TEST_SEARCH_INDEX_NAME_2       = "test-search-index-2";
+    private static final OldDocument NOT_DYNAMIC_MAPPING_DEFINITION = OldDocument.parse(
                       "{"
                     + "  mappings: { dynamic: false }"
                     + "}");
-    private static final Document DYNAMIC_MAPPING_DEFINITION = Document.parse(
+    private static final OldDocument DYNAMIC_MAPPING_DEFINITION     = OldDocument.parse(
                       "{"
                     + "  mappings: { dynamic: true }"
                     + "}");
-    private static final Document VECTOR_SEARCH_DEFINITION = Document.parse(
+    private static final OldDocument VECTOR_SEARCH_DEFINITION       = OldDocument.parse(
                       "{"
                     + "  fields: ["
                     + "     {"
@@ -92,8 +92,8 @@ public abstract class AbstractAtlasSearchIndexManagementProseTest {
                     + "}");
 
     private MongoClient client = createMongoClient(getMongoClientSettings());
-    private MongoDatabase db;
-    private MongoCollection<Document> collection;
+    private MongoDatabase                db;
+    private MongoCollection<OldDocument> collection;
 
     protected abstract MongoClient createMongoClient(MongoClientSettings settings);
 
@@ -288,28 +288,28 @@ public abstract class AbstractAtlasSearchIndexManagementProseTest {
         }
     }
 
-    private void assertIndexesChanges(final Predicate<Document> indexStatus, final SearchIndexModel... searchIndexModels)
+    private void assertIndexesChanges(final Predicate<OldDocument> indexStatus, final SearchIndexModel... searchIndexModels)
             throws InterruptedException {
 
-        Map<String, Document> createdIndexes = awaitIndexChanges(indexStatus, searchIndexModels);
+        Map<String, OldDocument> createdIndexes = awaitIndexChanges(indexStatus, searchIndexModels);
         Assertions.assertEquals(searchIndexModels.length, createdIndexes.size());
 
         for (SearchIndexModel searchIndexModel : searchIndexModels) {
             Bson mappings = searchIndexModel.getDefinition();
             String searchIndexName = searchIndexModel.getName();
 
-            Document createdIndex = createdIndexes.get(searchIndexName);
+            OldDocument createdIndex = createdIndexes.get(searchIndexName);
             Assertions.assertNotNull(createdIndex);
             Assertions.assertEquals(createdIndex.get("latestDefinition"), mappings);
         }
     }
 
 
-    private Map<String, Document> awaitIndexChanges(final Predicate<Document> indexStatus, final SearchIndexModel... searchIndexModels)
+    private Map<String, OldDocument> awaitIndexChanges(final Predicate<OldDocument> indexStatus, final SearchIndexModel... searchIndexModels)
             throws InterruptedException {
         int attempts = MAX_WAIT_ATTEMPTS;
         while (checkAttempt(attempts--)) {
-            Map<String, Document> existingIndexes = StreamSupport.stream(collection.listSearchIndexes().spliterator(), false)
+            Map<String, OldDocument> existingIndexes = StreamSupport.stream(collection.listSearchIndexes().spliterator(), false)
                     .filter(indexStatus)
                     .collect(Collectors.toMap(document -> document.getString("name"), Function.identity()));
 
@@ -321,20 +321,20 @@ public abstract class AbstractAtlasSearchIndexManagementProseTest {
         return Assertions.fail();
     }
 
-    private Predicate<Document> isQueryable() {
+    private Predicate<OldDocument> isQueryable() {
         return document -> document.getBoolean("queryable");
     }
 
-    private Predicate<Document> isReady() {
+    private Predicate<OldDocument> isReady() {
         return document -> "READY".equals(document.getString("status"));
     }
 
 
-    private Predicate<Document> hasSearchIndexType() {
+    private Predicate<OldDocument> hasSearchIndexType() {
         return document -> "search".equals(document.getString("type"));
     }
 
-    private Predicate<Document> hasVectorSearchIndexType() {
+    private Predicate<OldDocument> hasVectorSearchIndexType() {
         return document -> "vectorSearch".equals(document.getString("type"));
     }
 
@@ -349,7 +349,7 @@ public abstract class AbstractAtlasSearchIndexManagementProseTest {
         TimeUnit.SECONDS.sleep(WAIT_INTERVAL_SECONDS);
     }
 
-    private static boolean checkNames(final Map<String, Document> existingIndexes, final SearchIndexModel... searchIndexModels) {
+    private static boolean checkNames(final Map<String, OldDocument> existingIndexes, final SearchIndexModel... searchIndexModels) {
         for (SearchIndexModel searchIndexModel : searchIndexModels) {
             String searchIndexName = searchIndexModel.getName();
             if (!existingIndexes.containsKey(searchIndexName)) {

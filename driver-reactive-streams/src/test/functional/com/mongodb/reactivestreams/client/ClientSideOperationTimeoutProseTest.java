@@ -35,7 +35,7 @@ import com.mongodb.reactivestreams.client.syncadapter.SyncGridFSBucket;
 import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -237,7 +237,7 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
                 .timeout(rtt + 500, TimeUnit.MILLISECONDS))) {
 
             MongoNamespace namespace = generateNamespace();
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
 
             collectionHelper.runAdminCommand("{"
@@ -251,8 +251,8 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
                     + "}");
 
             //when
-            ChangeStreamPublisher<Document> documentChangeStreamPublisher = collection.watch(
-                            singletonList(Document.parse("{ '$match': {'operationType': 'insert'}}")));
+            ChangeStreamPublisher<OldDocument> documentChangeStreamPublisher = collection.watch(
+                            singletonList(OldDocument.parse("{ '$match': {'operationType': 'insert'}}")));
 
             Assertions.assertThrows(MongoOperationTimeoutException.class,
                     () -> Flux.from(documentChangeStreamPublisher).blockFirst(TIMEOUT_DURATION));
@@ -292,10 +292,10 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
                 .timeout(rtt + 200, TimeUnit.MILLISECONDS))) {
 
             MongoNamespace namespace = generateNamespace();
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
-            ChangeStreamPublisher<Document> documentChangeStreamPublisher = collection.watch(
-                            singletonList(Document.parse("{ '$match': {'operationType': 'insert'}}")))
+            ChangeStreamPublisher<OldDocument> documentChangeStreamPublisher = collection.watch(
+                            singletonList(OldDocument.parse("{ '$match': {'operationType': 'insert'}}")))
                     .fullDocument(FullDocument.UPDATE_LOOKUP);
 
             collectionHelper.runAdminCommand("{"
@@ -344,7 +344,7 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
         try (MongoClient client = createReactiveClient(getMongoClientSettingsBuilder()
                 .timeout(rtt + 300, TimeUnit.MILLISECONDS))) {
 
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
 
             collectionHelper.runAdminCommand("{"
@@ -368,7 +368,7 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
                     BsonDocument.parse("{x: 6}"));
 
             //when
-            ChangeStreamPublisher<Document> documentChangeStreamPublisher = collection.watch()
+            ChangeStreamPublisher<OldDocument> documentChangeStreamPublisher = collection.watch()
                     .startAtOperationTime(startTime);
             StepVerifier.create(documentChangeStreamPublisher, 2)
             //then
@@ -412,7 +412,7 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
         try (MongoClient client = createReactiveClient(getMongoClientSettingsBuilder()
                 .timeout(rtt + 300, TimeUnit.MILLISECONDS))) {
 
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName())
                     .withReadPreference(ReadPreference.primary());
 
@@ -435,7 +435,7 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
                     BsonDocument.parse("{x: 4}"));
 
             //when
-            ChangeStreamPublisher<Document> documentChangeStreamPublisher = collection.watch()
+            ChangeStreamPublisher<OldDocument> documentChangeStreamPublisher = collection.watch()
                     .maxAwaitTime(1, TimeUnit.MILLISECONDS)
                     .startAtOperationTime(startTime);
             StepVerifier.create(documentChangeStreamPublisher, 2)
@@ -470,11 +470,11 @@ public final class ClientSideOperationTimeoutProseTest extends AbstractClientSid
         try (MongoClient client = createReactiveClient(getMongoClientSettingsBuilder()
                 .timeout(rtt + 2500, TimeUnit.MILLISECONDS))) {
 
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
 
             //when
-            ChangeStreamPublisher<Document> documentChangeStreamPublisher = collection.watch();
+            ChangeStreamPublisher<OldDocument> documentChangeStreamPublisher = collection.watch();
             StepVerifier.create(documentChangeStreamPublisher, 2)
             //then
                     .expectError(MongoOperationTimeoutException.class)

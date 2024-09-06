@@ -24,13 +24,13 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 class GridFSUploadStreamSpecification extends Specification {
     def fileId = new BsonObjectId()
     def filename = 'filename'
-    def metadata = new Document()
+    def metadata = new OldDocument()
 
     def 'should return the file id'() {
         when:
@@ -100,7 +100,7 @@ class GridFSUploadStreamSpecification extends Specification {
         def filesCollection = Mock(MongoCollection)
         def chunksCollection = Mock(MongoCollection)
         def content = 'file content ' as byte[]
-        def metadata = new Document('contentType', 'text/txt')
+        def metadata = new OldDocument('contentType', 'text/txt')
         def uploadStream = new GridFSUploadStreamImpl(clientSession, filesCollection, chunksCollection, fileId, filename, 255,
                 metadata, null)
         def filesId = fileId
@@ -188,9 +188,9 @@ class GridFSUploadStreamSpecification extends Specification {
 
         then:
         if (clientSession != null) {
-            1 * chunksCollection.deleteMany(clientSession, new Document('files_id', fileId))
+            1 * chunksCollection.deleteMany(clientSession, new OldDocument('files_id', fileId))
         } else {
-            1 * chunksCollection.deleteMany(new Document('files_id', fileId))
+            1 * chunksCollection.deleteMany(new OldDocument('files_id', fileId))
         }
 
         where:

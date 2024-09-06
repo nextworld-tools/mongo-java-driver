@@ -27,7 +27,7 @@ import org.bson.BsonDocumentReader;
 import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
 import util.Hex;
@@ -215,7 +215,7 @@ final class UnifiedGridFSHelper extends UnifiedHelper{
         }
     }
 
-    Document asDocument(final BsonDocument bsonDocument) {
+    OldDocument asDocument(final BsonDocument bsonDocument) {
         return new DocumentCodec().decode(new BsonDocumentReader(bsonDocument), DecoderContext.builder().build());
     }
 

@@ -19,7 +19,7 @@ package com.mongodb.client.internal
 import com.mongodb.ServerAddress
 import com.mongodb.ServerCursor
 import com.mongodb.client.MongoCursor
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 class MongoMappingCursorSpecification extends Specification {
@@ -76,8 +76,8 @@ class MongoMappingCursorSpecification extends Specification {
     def 'should map next'() {
         given:
         def cursor = Stub(MongoCursor)
-        cursor.next() >> new Document('_id', 1)
-        def mappingCursor = new MongoMappingCursor(cursor, { Document d -> d.get('_id') })
+        cursor.next() >> new OldDocument('_id', 1)
+        def mappingCursor = new MongoMappingCursor(cursor, { OldDocument d -> d.get('_id') })
 
         expect:
         mappingCursor.next() == 1
@@ -86,8 +86,8 @@ class MongoMappingCursorSpecification extends Specification {
     def 'should map try next'() {
         given:
         def cursor = Stub(MongoCursor)
-        cursor.tryNext() >>> [new Document('_id', 1), null]
-        def mappingCursor = new MongoMappingCursor(cursor, { Document d -> d.get('_id') })
+        cursor.tryNext() >>> [new OldDocument('_id', 1), null]
+        def mappingCursor = new MongoMappingCursor(cursor, { OldDocument d -> d.get('_id') })
 
         expect:
         mappingCursor.tryNext() == 1

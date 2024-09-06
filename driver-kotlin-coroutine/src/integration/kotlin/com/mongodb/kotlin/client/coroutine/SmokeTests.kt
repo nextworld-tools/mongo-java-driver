@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.toSet
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -45,10 +45,10 @@ class SmokeTests {
     fun testDistinctNullable() = runTest {
         collection!!.insertMany(
             listOf(
-                Document.parse("{_id: 1, a: 0}"),
-                Document.parse("{_id: 2, a: 1}"),
-                Document.parse("{_id: 3, a: 0}"),
-                Document.parse("{_id: 4, a: null}")))
+                OldDocument.parse("{_id: 1, a: 0}"),
+                OldDocument.parse("{_id: 2, a: 1}"),
+                OldDocument.parse("{_id: 3, a: 0}"),
+                OldDocument.parse("{_id: 4, a: null}")))
 
         // nulls are auto excluded in reactive streams!
         val actual = collection!!.distinct<Int>("a").toSet()
@@ -60,10 +60,10 @@ class SmokeTests {
     fun testMongoIterableMap() = runTest {
         collection!!.insertMany(
             listOf(
-                Document.parse("{_id: 1, a: 0}"),
-                Document.parse("{_id: 2, a: 1}"),
-                Document.parse("{_id: 3, a: 0}"),
-                Document.parse("{_id: 4, a: null}")))
+                OldDocument.parse("{_id: 1, a: 0}"),
+                OldDocument.parse("{_id: 2, a: 1}"),
+                OldDocument.parse("{_id: 3, a: 0}"),
+                OldDocument.parse("{_id: 4, a: null}")))
 
         val actual = collection!!.find().map { it["a"] as Int? }.toList()
         assertContentEquals(listOf(0, 1, 0, null), actual)
@@ -73,7 +73,7 @@ class SmokeTests {
 
         private var mongoClient: MongoClient? = null
         private var database: MongoDatabase? = null
-        private var collection: MongoCollection<Document>? = null
+        private var collection: MongoCollection<OldDocument>? = null
 
         @BeforeAll
         @JvmStatic

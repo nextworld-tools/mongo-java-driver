@@ -19,7 +19,7 @@ package com.mongodb.client.internal
 import com.mongodb.ServerAddress
 import com.mongodb.ServerCursor
 import com.mongodb.internal.operation.BatchCursor
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 
@@ -80,8 +80,8 @@ class MongoBatchCursorAdapterSpecification extends Specification {
 
     def 'should get next from batch cursor'() {
         given:
-        def firstBatch = [new Document('x', 1), new Document('x', 1)]
-        def secondBatch = [new Document('x', 2)]
+        def firstBatch = [new OldDocument('x', 1), new OldDocument('x', 1)]
+        def secondBatch = [new OldDocument('x', 2)]
 
         def batchCursor = Stub(BatchCursor)
 
@@ -102,8 +102,8 @@ class MongoBatchCursorAdapterSpecification extends Specification {
 
     def 'should try next from batch cursor'() {
         given:
-        def firstBatch = [new Document('x', 1), new Document('x', 1)]
-        def secondBatch = [new Document('x', 2)]
+        def firstBatch = [new OldDocument('x', 1), new OldDocument('x', 1)]
+        def secondBatch = [new OldDocument('x', 2)]
 
         def batchCursor = Stub(BatchCursor)
 
@@ -121,8 +121,8 @@ class MongoBatchCursorAdapterSpecification extends Specification {
 
     def 'should report available documents'() {
         given:
-        def firstBatch = [new Document('x', 1), new Document('x', 1)]
-        def secondBatch = [new Document('x', 2)]
+        def firstBatch = [new OldDocument('x', 1), new OldDocument('x', 1)]
+        def secondBatch = [new OldDocument('x', 2)]
 
         def batchCursor = Stub(BatchCursor)
 
@@ -187,7 +187,7 @@ class MongoBatchCursorAdapterSpecification extends Specification {
 
     def 'should close cursor in forEachRemaining if there is an exception'() {
         given:
-        def firstBatch = [new Document('x', 1)]
+        def firstBatch = [new OldDocument('x', 1)]
 
         def batchCursor = Mock(BatchCursor)
         batchCursor.hasNext() >>> [true, true]

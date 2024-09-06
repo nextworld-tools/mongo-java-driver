@@ -30,7 +30,7 @@ import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
@@ -194,13 +194,13 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
     }
 
     @Override
-    public Publisher<Document> explain() {
-        return publishExplain(Document.class, null);
+    public Publisher<OldDocument> explain() {
+        return publishExplain(OldDocument.class, null);
     }
 
     @Override
-    public Publisher<Document> explain(final ExplainVerbosity verbosity) {
-        return publishExplain(Document.class, notNull("verbosity", verbosity));
+    public Publisher<OldDocument> explain(final ExplainVerbosity verbosity) {
+        return publishExplain(OldDocument.class, notNull("verbosity", verbosity));
     }
 
     @Override

@@ -24,7 +24,7 @@ import com.mongodb.client.result.UpdateResult;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonType;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Before;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
@@ -62,7 +62,7 @@ import static java.util.Collections.singletonList;
 
 public final class DocumentationSamples {
 
-    private final MongoCollection<Document> collection =
+    private final MongoCollection<OldDocument> collection =
             getMongoClient().getDatabase(getDefaultDatabaseName()).getCollection("inventory");
 
     @Before
@@ -76,11 +76,11 @@ public final class DocumentationSamples {
     public void testInsert() {
 
         // Start Example 1
-        Document canvas = new Document("item", "canvas")
+        OldDocument canvas = new OldDocument("item", "canvas")
                 .append("qty", 100)
                 .append("tags", singletonList("cotton"));
 
-        Document size = new Document("h", 28)
+        OldDocument size = new OldDocument("h", 28)
                 .append("w", 35.5)
                 .append("uom", "cm");
         canvas.put("size", size);
@@ -92,37 +92,37 @@ public final class DocumentationSamples {
         // End Example 1
 
         // Start Example 2
-        FindPublisher<Document> findPublisher = collection.find(eq("item", "canvas"));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("item", "canvas"));
         // End Example 2
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
         // Start Example 3
-        Document journal = new Document("item", "journal")
+        OldDocument journal = new OldDocument("item", "journal")
                 .append("qty", 25)
                 .append("tags", asList("blank", "red"));
 
-        Document journalSize = new Document("h", 14)
+        OldDocument journalSize = new OldDocument("h", 14)
                 .append("w", 21)
                 .append("uom", "cm");
         journal.put("size", journalSize);
 
-        Document mat = new Document("item", "mat")
+        OldDocument mat = new OldDocument("item", "mat")
                 .append("qty", 85)
                 .append("tags", singletonList("gray"));
 
-        Document matSize = new Document("h", 27.9)
+        OldDocument matSize = new OldDocument("h", 27.9)
                 .append("w", 35.5)
                 .append("uom", "cm");
         mat.put("size", matSize);
 
-        Document mousePad = new Document("item", "mousePad")
+        OldDocument mousePad = new OldDocument("item", "mousePad")
                 .append("qty", 25)
                 .append("tags", asList("gel", "blue"));
 
-        Document mousePadSize = new Document("h", 19)
+        OldDocument mousePadSize = new OldDocument("h", 19)
                 .append("w", 22.85)
                 .append("uom", "cm");
         mousePad.put("size", mousePadSize);
@@ -143,11 +143,11 @@ public final class DocumentationSamples {
         // Start Example 6
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 6
@@ -158,10 +158,10 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         // Start Example 7
-        FindPublisher<Document> findPublisher = collection.find(new Document());
+        FindPublisher<OldDocument> findPublisher = collection.find(new OldDocument());
         // End Example 7
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
@@ -223,11 +223,11 @@ public final class DocumentationSamples {
         // Start Example 14
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 14
@@ -237,15 +237,15 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         // Start Example 15
-        FindPublisher<Document> findPublisher = collection.find(eq("size", Document.parse("{ h: 14, w: 21, uom: 'cm' }")));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("size", OldDocument.parse("{ h: 14, w: 21, uom: 'cm' }")));
         // End Example 15
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
         // Start Example 16
-        findPublisher = collection.find(eq("size", Document.parse("{ w: 21, h: 14, uom: 'cm' }")));
+        findPublisher = collection.find(eq("size", OldDocument.parse("{ w: 21, h: 14, uom: 'cm' }")));
         // End Example 16
 
         findSubscriber = new OperationSubscriber<>();
@@ -287,11 +287,11 @@ public final class DocumentationSamples {
         //Start Example 20
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
        collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, tags: ['blank', 'red'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'notebook', qty: 50, tags: ['red', 'blank'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'paper', qty: 100, tags: ['red', 'blank', 'plain'], dim_cm: [ 14, 21 ] }"),
-                Document.parse("{ item: 'planner', qty: 75, tags: ['blank', 'red'], dim_cm: [ 22.85, 30 ] }"),
-                Document.parse("{ item: 'postcard', qty: 45, tags: ['blue'], dim_cm: [ 10, 15.25 ] }"))
+                OldDocument.parse("{ item: 'journal', qty: 25, tags: ['blank', 'red'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, tags: ['red', 'blank'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, tags: ['red', 'blank', 'plain'], dim_cm: [ 14, 21 ] }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, tags: ['blank', 'red'], dim_cm: [ 22.85, 30 ] }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, tags: ['blue'], dim_cm: [ 10, 15.25 ] }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 20
@@ -301,7 +301,7 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         //Start Example 21
-        FindPublisher<Document> findPublisher = collection.find(eq("tags", asList("red", "blank")));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("tags", asList("red", "blank")));
         //End Example 21
 
         ObservableSubscriber<Object> findSubscriber = new OperationSubscriber<>();
@@ -341,7 +341,7 @@ public final class DocumentationSamples {
         findSubscriber.await();
 
         //Start Example 26
-        findPublisher = collection.find(elemMatch("dim_cm", Document.parse("{ $gt: 22, $lt: 30 }")));
+        findPublisher = collection.find(elemMatch("dim_cm", OldDocument.parse("{ $gt: 22, $lt: 30 }")));
         //End Example 26
 
         findSubscriber = new OperationSubscriber<>();
@@ -371,11 +371,11 @@ public final class DocumentationSamples {
         //Start Example 29
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', instock: [ { warehouse: 'A', qty: 5 }, { warehouse: 'C', qty: 15 } ] }"),
-                Document.parse("{ item: 'notebook', instock: [ { warehouse: 'C', qty: 5 } ] }"),
-                Document.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 15 } ] }"),
-                Document.parse("{ item: 'planner', instock: [ { warehouse: 'A', qty: 40 }, { warehouse: 'B', qty: 5 } ] }"),
-                Document.parse("{ item: 'postcard', instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }"))
+                OldDocument.parse("{ item: 'journal', instock: [ { warehouse: 'A', qty: 5 }, { warehouse: 'C', qty: 15 } ] }"),
+                OldDocument.parse("{ item: 'notebook', instock: [ { warehouse: 'C', qty: 5 } ] }"),
+                OldDocument.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 15 } ] }"),
+                OldDocument.parse("{ item: 'planner', instock: [ { warehouse: 'A', qty: 40 }, { warehouse: 'B', qty: 5 } ] }"),
+                OldDocument.parse("{ item: 'postcard', instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 29
@@ -385,15 +385,15 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         //Start Example 30
-        FindPublisher<Document> findPublisher = collection.find(eq("instock", Document.parse("{ warehouse: 'A', qty: 5 }")));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("instock", OldDocument.parse("{ warehouse: 'A', qty: 5 }")));
         //End Example 30
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
         //Start Example 31
-        findPublisher = collection.find(eq("instock", Document.parse("{ qty: 5, warehouse: 'A' }")));
+        findPublisher = collection.find(eq("instock", OldDocument.parse("{ qty: 5, warehouse: 'A' }")));
         //End Example 31
 
         findSubscriber = new OperationSubscriber<>();
@@ -417,7 +417,7 @@ public final class DocumentationSamples {
         findSubscriber.await();
 
         //Start Example 34
-        findPublisher = collection.find(elemMatch("instock", Document.parse("{ qty: 5, warehouse: 'A' }")));
+        findPublisher = collection.find(elemMatch("instock", OldDocument.parse("{ qty: 5, warehouse: 'A' }")));
         //End Example 34
 
         findSubscriber = new OperationSubscriber<>();
@@ -425,7 +425,7 @@ public final class DocumentationSamples {
         findSubscriber.await();
 
         //Start Example 35
-        findPublisher = collection.find(elemMatch("instock", Document.parse("{ qty: { $gt: 10, $lte: 20 } }")));
+        findPublisher = collection.find(elemMatch("instock", OldDocument.parse("{ qty: { $gt: 10, $lte: 20 } }")));
         //End Example 35
 
         findSubscriber = new OperationSubscriber<>();
@@ -454,8 +454,8 @@ public final class DocumentationSamples {
         //Start Example 38
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{'_id': 1, 'item': null}"),
-                Document.parse("{'_id': 2}"))
+                OldDocument.parse("{'_id': 1, 'item': null}"),
+                OldDocument.parse("{'_id': 2}"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 38
@@ -465,10 +465,10 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         //Start Example 39
-        FindPublisher<Document> findPublisher = collection.find(eq("item", null));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("item", null));
         //End Example 39
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
@@ -495,11 +495,11 @@ public final class DocumentationSamples {
         //Start Example 42
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-            Document.parse("{ item: 'journal', status: 'A', size: { h: 14, w: 21, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 5 }]}"),
-            Document.parse("{ item: 'notebook', status: 'A',  size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'C', qty: 5}]}"),
-            Document.parse("{ item: 'paper', status: 'D', size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'A', qty: 60 }]}"),
-            Document.parse("{ item: 'planner', status: 'D', size: { h: 22.85, w: 30, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 40}]}"),
-            Document.parse("{ item: 'postcard', status: 'A', size: { h: 10, w: 15.25, uom: 'cm' }, "
+            OldDocument.parse("{ item: 'journal', status: 'A', size: { h: 14, w: 21, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 5 }]}"),
+            OldDocument.parse("{ item: 'notebook', status: 'A',  size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'C', qty: 5}]}"),
+            OldDocument.parse("{ item: 'paper', status: 'D', size: { h: 8.5, w: 11, uom: 'in' }, instock: [ { warehouse: 'A', qty: 60 }]}"),
+            OldDocument.parse("{ item: 'planner', status: 'D', size: { h: 22.85, w: 30, uom: 'cm' }, instock: [ { warehouse: 'A', qty: 40}]}"),
+            OldDocument.parse("{ item: 'postcard', status: 'A', size: { h: 10, w: 15.25, uom: 'cm' }, "
                     + "instock: [ { warehouse: 'B', qty: 15 }, { warehouse: 'C', qty: 35 } ] }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
@@ -510,10 +510,10 @@ public final class DocumentationSamples {
         countSubscriber.await();
 
         //Start Example 43
-        FindPublisher<Document> findPublisher = collection.find(eq("status", "A"));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("status", "A"));
         //End Example 43
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
@@ -581,16 +581,16 @@ public final class DocumentationSamples {
         //Start Example 51
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{ item: 'canvas', qty: 100, size: { h: 28, w: 35.5, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'mat', qty: 85, size: { h: 27.9, w: 35.5, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'mousepad', qty: 25, size: { h: 19, w: 22.85, uom: 'cm' }, status: 'P' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'P' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'sketchbook', qty: 80, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'sketch pad', qty: 95, size: { h: 22.85, w: 30.5, uom: 'cm' }, status: 'A' }"))
+                OldDocument.parse("{ item: 'canvas', qty: 100, size: { h: 28, w: 35.5, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'mat', qty: 85, size: { h: 27.9, w: 35.5, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'mousepad', qty: 25, size: { h: 19, w: 22.85, uom: 'cm' }, status: 'P' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'P' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'sketchbook', qty: 80, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'sketch pad', qty: 95, size: { h: 22.85, w: 30.5, uom: 'cm' }, status: 'A' }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 51
@@ -607,9 +607,9 @@ public final class DocumentationSamples {
         updateSubscriber.await();
         //End Example 52
 
-        FindPublisher<Document> findPublisher = collection.find(eq("item", "paper"));
+        FindPublisher<OldDocument> findPublisher = collection.find(eq("item", "paper"));
 
-        ObservableSubscriber<Document> findSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> findSubscriber = new OperationSubscriber<>();
         findPublisher.subscribe(findSubscriber);
         findSubscriber.await();
 
@@ -630,7 +630,7 @@ public final class DocumentationSamples {
         //Start Example 54
         updateSubscriber = new OperationSubscriber<>();
         collection.replaceOne(eq("item", "paper"),
-                Document.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"))
+                OldDocument.parse("{ item: 'paper', instock: [ { warehouse: 'A', qty: 60 }, { warehouse: 'B', qty: 40 } ] }"))
                 .subscribe(updateSubscriber);
         updateSubscriber.await();
         //End Example 54
@@ -648,11 +648,11 @@ public final class DocumentationSamples {
         //Start Example 55
         ObservableSubscriber<InsertManyResult> insertManySubscriber = new OperationSubscriber<>();
         collection.insertMany(asList(
-                Document.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
-                Document.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
-                Document.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
-                Document.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
-                Document.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
+                OldDocument.parse("{ item: 'journal', qty: 25, size: { h: 14, w: 21, uom: 'cm' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'notebook', qty: 50, size: { h: 8.5, w: 11, uom: 'in' }, status: 'A' }"),
+                OldDocument.parse("{ item: 'paper', qty: 100, size: { h: 8.5, w: 11, uom: 'in' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'planner', qty: 75, size: { h: 22.85, w: 30, uom: 'cm' }, status: 'D' }"),
+                OldDocument.parse("{ item: 'postcard', qty: 45, size: { h: 10, w: 15.25, uom: 'cm' }, status: 'A' }"))
         ).subscribe(insertManySubscriber);
         insertManySubscriber.await();
         // End Example 55
@@ -685,7 +685,7 @@ public final class DocumentationSamples {
 
         //Start Example 56
         deleteSubscriber = new OperationSubscriber<>();
-        collection.deleteMany(new Document())
+        collection.deleteMany(new OldDocument())
                 .subscribe(deleteSubscriber);
         deleteSubscriber.await();
         //End Example 56

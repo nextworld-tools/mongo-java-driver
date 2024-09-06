@@ -73,7 +73,7 @@ import org.bson.BsonNull;
 import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.ObjectId;
 import util.Hex;
 
@@ -266,7 +266,7 @@ public class JsonPoweredCrudTestHelper {
     }
 
     private boolean indexExists(final String databaseName, final String collectionName, final String indexName) {
-        List<Document> indexes = getMongoClient()
+        List<OldDocument> indexes = getMongoClient()
                 .getDatabase(databaseName)
                 .getCollection(collectionName)
                 .listIndexes()
@@ -1146,7 +1146,7 @@ public class JsonPoweredCrudTestHelper {
             options.chunkSizeBytes(rawOptions.getInt32("chunkSizeBytes").getValue());
         }
         if (rawOptions.containsKey("metadata")) {
-            options.metadata(Document.parse(rawOptions.getDocument("metadata").toJson()));
+            options.metadata(OldDocument.parse(rawOptions.getDocument("metadata").toJson()));
         }
 
         return new BsonDocument("objectId", new BsonObjectId(gridFSUploadBucket.uploadFromStream(filename, input, options)));
@@ -1156,7 +1156,7 @@ public class JsonPoweredCrudTestHelper {
 
     BsonDocument getClientWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
                                       @Nullable final ClientSession clientSession) {
-        MongoCursor<ChangeStreamDocument<Document>> cursor = mongoClient.watch().iterator();
+        MongoCursor<ChangeStreamDocument<OldDocument>> cursor = mongoClient.watch().iterator();
         //noinspection TryFinallyCanBeTryWithResources
         try {
             return new BsonDocument("ok", new BsonInt32(1));
@@ -1178,7 +1178,7 @@ public class JsonPoweredCrudTestHelper {
 
     BsonDocument getDatabaseWatchResult(final BsonDocument collectionOptions, final BsonDocument rawArguments,
                                         @Nullable final ClientSession clientSession) {
-        MongoCursor<ChangeStreamDocument<Document>> cursor = database.watch().iterator();
+        MongoCursor<ChangeStreamDocument<OldDocument>> cursor = database.watch().iterator();
         //noinspection TryFinallyCanBeTryWithResources
         try {
             return new BsonDocument("ok", new BsonInt32(1));
@@ -1345,7 +1345,7 @@ public class JsonPoweredCrudTestHelper {
         return document;
     }
 
-    public static final Document LEGACY_HELLO_COMMAND = Document.parse("{isMaster: 1}");
+    public static final OldDocument LEGACY_HELLO_COMMAND = OldDocument.parse("{isMaster: 1}");
     boolean isSharded() {
         return database.runCommand(LEGACY_HELLO_COMMAND).get("msg", "").equals("isdbgrid");
     }

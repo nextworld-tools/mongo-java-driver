@@ -16,7 +16,8 @@
 
 package com.mongodb
 
-import org.bson.Document
+
+import org.bson.OldDocument
 import spock.lang.Specification
 
 
@@ -36,15 +37,15 @@ class DocumentToDBRefTransformerSpecification extends Specification {
         transformer.transform(doc).is(doc)
 
         where:
-        doc << [new Document(),
-                new Document('foo', 'bar'),
-                new Document('$ref', 'bar'),
-                new Document('$id', 'bar')]
+        doc << [new OldDocument(),
+                new OldDocument('foo', 'bar'),
+                new OldDocument('$ref', 'bar'),
+                new OldDocument('$id', 'bar')]
     }
 
     def 'should transform a Document that has both $ref and $id fields to a DBRef'() {
         when:
-        def doc = new Document('$ref', 'foo').append('$id', 1)
+        def doc = new OldDocument('$ref', 'foo').append('$id', 1)
 
         then:
         transformer.transform(doc) == new DBRef('foo', 1)
@@ -52,7 +53,7 @@ class DocumentToDBRefTransformerSpecification extends Specification {
 
     def 'should transform a Document that has $ref and $id and $db fields to a DBRef'() {
         when:
-        def doc = new Document('$ref', 'foo').append('$id', 1).append('$db', 'mydb')
+        def doc = new OldDocument('$ref', 'foo').append('$id', 1).append('$db', 'mydb')
 
         then:
         transformer.transform(doc) == new DBRef('mydb', 'foo', 1)

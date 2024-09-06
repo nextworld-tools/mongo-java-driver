@@ -65,12 +65,12 @@ import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentati
  * @mongodb.driver.manual core/document document
  * @since 3.0.0
  */
-public class Document implements Map<String, Object>, Serializable, Bson {
-    private static final Codec<Document> DEFAULT_CODEC =
+public class OldDocument implements Map<String, Object>, Serializable, Bson {
+    private static final Codec<OldDocument> DEFAULT_CODEC =
             withUuidRepresentation(fromProviders(asList(new ValueCodecProvider(),
                     new CollectionCodecProvider(), new IterableCodecProvider(),
                     new BsonValueCodecProvider(), new DocumentCodecProvider(), new MapCodecProvider())), UuidRepresentation.STANDARD)
-                    .get(Document.class);
+                    .get(OldDocument.class);
 
     private static final long serialVersionUID = 6297731997167536582L;
 
@@ -83,7 +83,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     /**
      * Creates an empty Document instance.
      */
-    public Document() {
+    public OldDocument() {
         documentAsMap = new LinkedHashMap<>();
     }
 
@@ -93,7 +93,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param key   key
      * @param value value
      */
-    public Document(final String key, final Object value) {
+    public OldDocument(final String key, final Object value) {
         documentAsMap = new LinkedHashMap<>();
         documentAsMap.put(key, value);
     }
@@ -103,7 +103,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param map initial map
      */
-    public Document(final Map<String, ?> map) {
+    public OldDocument(final Map<String, ?> map) {
         documentAsMap = new LinkedHashMap<>(map);
     }
 
@@ -116,7 +116,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @see org.bson.json.JsonReader
      * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
      */
-    public static Document parse(final String json) {
+    public static OldDocument parse(final String json) {
         return parse(json, DEFAULT_CODEC);
     }
 
@@ -129,7 +129,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @see org.bson.json.JsonReader
      * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
      */
-    public static Document parse(final String json, final Decoder<Document> decoder) {
+    public static OldDocument parse(final String json, final Decoder<OldDocument> decoder) {
         notNull("codec", decoder);
         JsonReader bsonReader = new JsonReader(json);
         return decoder.decode(bsonReader, DecoderContext.builder().build());
@@ -137,7 +137,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
 
     @Override
     public <C> BsonDocument toBsonDocument(final Class<C> documentClass, final CodecRegistry codecRegistry) {
-        return new BsonDocumentWrapper<>(this, codecRegistry.get(Document.class));
+        return new BsonDocumentWrapper<>(this, codecRegistry.get(OldDocument.class));
     }
 
     /**
@@ -149,7 +149,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param value value
      * @return this
      */
-    public Document append(final String key, final Object value) {
+    public OldDocument append(final String key, final Object value) {
         documentAsMap.put(key, value);
         return this;
     }
@@ -245,8 +245,8 @@ public class Document implements Map<String, Object>, Serializable, Bson {
         Iterator<?> keyIterator = keys.iterator();
         while (keyIterator.hasNext()) {
             Object key = keyIterator.next();
-            value = ((Document) value).get(key);
-            if (!(value instanceof Document)) {
+            value = ((OldDocument) value).get(key);
+            if (!(value instanceof OldDocument)) {
                 if (value == null) {
                     return defaultValue;
                 } else if (keyIterator.hasNext()) {
@@ -446,7 +446,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @return a JSON representation of this document
      * @throws org.bson.codecs.configuration.CodecConfigurationException if the registry does not contain a codec for the document values.
      */
-    public String toJson(final Encoder<Document> encoder) {
+    public String toJson(final Encoder<OldDocument> encoder) {
         return toJson(JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build(), encoder);
     }
 
@@ -458,7 +458,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @return a JSON representation of this document
      * @throws org.bson.codecs.configuration.CodecConfigurationException if the registry does not contain a codec for the document values.
      */
-    public String toJson(final JsonWriterSettings writerSettings, final Encoder<Document> encoder) {
+    public String toJson(final JsonWriterSettings writerSettings, final Encoder<OldDocument> encoder) {
         JsonWriter writer = new JsonWriter(new StringWriter(), writerSettings);
         encoder.encode(writer, this, EncoderContext.builder().build());
         return writer.getWriter().toString();
@@ -535,7 +535,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
             return false;
         }
 
-        Document document = (Document) o;
+        OldDocument document = (OldDocument) o;
 
         if (!documentAsMap.equals(document.documentAsMap)) {
             return false;
@@ -617,10 +617,10 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param key the key to get
      * @return Document
      */
-    public Document getDocument (String key){
+    public OldDocument getDocument (String key){
         Object obj = get(key);
-        if (obj instanceof Document) {
-            return (Document) obj;
+        if (obj instanceof OldDocument) {
+            return (OldDocument) obj;
         } else {
             return null;
         }
@@ -631,10 +631,10 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @return List<Document> the List<Document> to return
      */
     @SuppressWarnings("unchecked")
-    public List<Document> getDocumentList (String key){
+    public List<OldDocument> getDocumentList (String key){
         Object obj = this.get(key);
         if (obj instanceof List) {
-            return (List<Document>) obj;
+            return (List<OldDocument>) obj;
         } else {
             return null;
         }

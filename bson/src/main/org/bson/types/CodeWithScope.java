@@ -16,7 +16,7 @@
 
 package org.bson.types;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.util.Objects;
 
@@ -30,7 +30,7 @@ public class CodeWithScope extends Code {
     /**
      * The scope document.
      */
-    private final Document scope;
+    private final OldDocument scope;
 
     private static final long serialVersionUID = -6284832275113680002L;
 
@@ -40,7 +40,7 @@ public class CodeWithScope extends Code {
      * @param code the code
      * @param scope the scope
      */
-    public CodeWithScope(final String code, final Document scope) {
+    public CodeWithScope(final String code, final OldDocument scope) {
         super(code);
         this.scope = scope;
     }
@@ -50,7 +50,7 @@ public class CodeWithScope extends Code {
      *
      * @return the scope
      */
-    public Document getScope() {
+    public OldDocument getScope() {
         return scope;
     }
 

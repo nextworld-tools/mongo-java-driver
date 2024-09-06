@@ -21,7 +21,7 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -43,12 +43,12 @@ final class SearchConstructibleBson extends AbstractConstructibleBson<SearchCons
         super(base);
     }
 
-    private SearchConstructibleBson(final Bson base, final Document appended) {
+    private SearchConstructibleBson(final Bson base, final OldDocument appended) {
         super(base, appended);
     }
 
     @Override
-    protected SearchConstructibleBson newSelf(final Bson base, final Document appended) {
+    protected SearchConstructibleBson newSelf(final Bson base, final OldDocument appended) {
         return new SearchConstructibleBson(base, appended);
     }
 

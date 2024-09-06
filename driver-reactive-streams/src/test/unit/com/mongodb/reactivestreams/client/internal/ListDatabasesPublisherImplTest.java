@@ -21,7 +21,7 @@ import com.mongodb.internal.operation.ListDatabasesOperation;
 import com.mongodb.reactivestreams.client.ListDatabasesPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -39,10 +39,10 @@ public class ListDatabasesPublisherImplTest extends TestHelper {
         configureBatchCursor();
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        ListDatabasesPublisher<Document> publisher = new ListDatabasesPublisherImpl<>(null, createMongoOperationPublisher(executor));
+        ListDatabasesPublisher<OldDocument> publisher = new ListDatabasesPublisherImpl<>(null, createMongoOperationPublisher(executor));
 
-        ListDatabasesOperation<Document> expectedOperation = new ListDatabasesOperation<>(
-                getDefaultCodecRegistry().get(Document.class))
+        ListDatabasesOperation<OldDocument> expectedOperation = new ListDatabasesOperation<>(
+                getDefaultCodecRegistry().get(OldDocument.class))
                 .retryReads(true);
 
         // default input should be as expected
@@ -54,12 +54,12 @@ public class ListDatabasesPublisherImplTest extends TestHelper {
         // Should apply settings
         publisher
                 .authorizedDatabasesOnly(true)
-                .filter(new Document("filter", 1))
+                .filter(new OldDocument("filter", 1))
                 .maxTime(100, MILLISECONDS)
                 .batchSize(100);
 
         expectedOperation = new ListDatabasesOperation<>(
-                getDefaultCodecRegistry().get(Document.class))
+                getDefaultCodecRegistry().get(OldDocument.class))
                 .retryReads(true)
                 .authorizedDatabasesOnly(true)
                 .filter(new BsonDocument("filter", new BsonInt32(1)));

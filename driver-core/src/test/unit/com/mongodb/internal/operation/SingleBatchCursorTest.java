@@ -17,7 +17,7 @@
 package com.mongodb.internal.operation;
 
 import com.mongodb.ServerAddress;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -36,14 +36,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SingleBatchCursorTest {
 
-    private static final List<Document> SINGLE_BATCH = asList(new Document("a", 1), new Document("b", 2));
-    private static final ServerAddress SERVER_ADDRESS = new ServerAddress();
+    private static final List<OldDocument> SINGLE_BATCH   = asList(new OldDocument("a", 1), new OldDocument("b", 2));
+    private static final ServerAddress     SERVER_ADDRESS = new ServerAddress();
 
     @Test
     @DisplayName("should work as expected")
     void shouldWorkAsExpected() {
 
-        try (SingleBatchCursor<Document> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
+        try (SingleBatchCursor<OldDocument> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
             assertEquals(SERVER_ADDRESS, cursor.getServerAddress());
             assertEquals(1, cursor.available());
             assertNull(cursor.getServerCursor());
@@ -60,7 +60,7 @@ class SingleBatchCursorTest {
     @Test
     @DisplayName("should work as expected emptyCursor")
     void shouldWorkAsExpectedEmptyCursor() {
-        try (SingleBatchCursor<Document> cursor = createEmptySingleBatchCursor(SERVER_ADDRESS, 0)) {
+        try (SingleBatchCursor<OldDocument> cursor = createEmptySingleBatchCursor(SERVER_ADDRESS, 0)) {
             assertEquals(SERVER_ADDRESS, cursor.getServerAddress());
             assertEquals(0, cursor.available());
             assertNull(cursor.getServerCursor());
@@ -73,7 +73,7 @@ class SingleBatchCursorTest {
     @Test
     @DisplayName("should work as expected with try methods")
     void shouldWorkAsExpectedWithTryMethods() {
-        try (SingleBatchCursor<Document> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
+        try (SingleBatchCursor<OldDocument> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
             assertIterableEquals(SINGLE_BATCH, cursor.tryNext());
             assertNull(cursor.tryNext());
         }
@@ -82,7 +82,7 @@ class SingleBatchCursorTest {
     @Test
     @DisplayName("should not support setting batch size")
     void shouldNotSupportSettingBatchSize() {
-        try (SingleBatchCursor<Document> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
+        try (SingleBatchCursor<OldDocument> cursor = new SingleBatchCursor<>(SINGLE_BATCH, 0, SERVER_ADDRESS)) {
             assertEquals(0, cursor.getBatchSize());
 
             cursor.setBatchSize(1);

@@ -31,7 +31,7 @@ import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.ListDatabasesPublisher;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -51,8 +51,8 @@ public class MongoClientImplTest extends TestHelper {
     @Mock
     private ClientSession clientSession;
 
-    private final MongoClientImpl mongoClient = createMongoClient();
-    private final MongoOperationPublisher<Document> mongoOperationPublisher = mongoClient.getMongoOperationPublisher();
+    private final MongoClientImpl                      mongoClient             = createMongoClient();
+    private final MongoOperationPublisher<OldDocument> mongoOperationPublisher = mongoClient.getMongoOperationPublisher();
 
     @Test
     void testListDatabases() {
@@ -63,12 +63,12 @@ public class MongoClientImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class,
                                                      () -> mongoClient.listDatabases(clientSession, null))),
                   () -> {
-                      ListDatabasesPublisher<Document> expected =
+                      ListDatabasesPublisher<OldDocument> expected =
                               new ListDatabasesPublisherImpl<>(null, mongoOperationPublisher);
                       assertPublisherIsTheSameAs(expected, mongoClient.listDatabases(), "Default");
                   },
                   () -> {
-                      ListDatabasesPublisher<Document> expected =
+                      ListDatabasesPublisher<OldDocument> expected =
                               new ListDatabasesPublisherImpl<>(clientSession, mongoOperationPublisher);
                       assertPublisherIsTheSameAs(expected, mongoClient.listDatabases(clientSession), "With session");
                   },
@@ -94,13 +94,13 @@ public class MongoClientImplTest extends TestHelper {
                   () -> assertAll("check validation",
                                   () -> assertThrows(IllegalArgumentException.class, () -> mongoClient.listDatabaseNames(null))),
                   () -> {
-                      ListDatabasesPublisher<Document> expected =
+                      ListDatabasesPublisher<OldDocument> expected =
                               new ListDatabasesPublisherImpl<>(null, mongoOperationPublisher).nameOnly(true);
 
                       assertPublisherIsTheSameAs(expected, mongoClient.listDatabaseNames(), "Default");
                   },
                   () -> {
-                      ListDatabasesPublisher<Document> expected =
+                      ListDatabasesPublisher<OldDocument> expected =
                               new ListDatabasesPublisherImpl<>(clientSession, mongoOperationPublisher).nameOnly(true);
 
                       assertPublisherIsTheSameAs(expected, mongoClient.listDatabaseNames(clientSession), "With session");
@@ -119,18 +119,18 @@ public class MongoClientImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class, () -> mongoClient.watch((ClientSession) null)),
                                   () -> assertThrows(IllegalArgumentException.class, () -> mongoClient.watch(null, pipeline)),
                                   () -> assertThrows(IllegalArgumentException.class,
-                                                     () -> mongoClient.watch(null, pipeline, Document.class))
+                                                     () -> mongoClient.watch(null, pipeline, OldDocument.class))
                   ),
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
+                      ChangeStreamPublisher<OldDocument> expected =
                               new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher.withDatabase("admin"),
-                                                              Document.class, emptyList(), ChangeStreamLevel.CLIENT);
+                                                              OldDocument.class, emptyList(), ChangeStreamLevel.CLIENT);
                       assertPublisherIsTheSameAs(expected, mongoClient.watch(), "Default");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
+                      ChangeStreamPublisher<OldDocument> expected =
                               new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher.withDatabase("admin"),
-                                                              Document.class, pipeline, ChangeStreamLevel.CLIENT);
+                                                              OldDocument.class, pipeline, ChangeStreamLevel.CLIENT);
                       assertPublisherIsTheSameAs(expected, mongoClient.watch(pipeline), "With pipeline");
                   },
                   () -> {
@@ -148,15 +148,15 @@ public class MongoClientImplTest extends TestHelper {
                                                  "With pipeline & result class");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
+                      ChangeStreamPublisher<OldDocument> expected =
                               new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher.withDatabase("admin"),
-                                                              Document.class, emptyList(), ChangeStreamLevel.CLIENT);
+                                                              OldDocument.class, emptyList(), ChangeStreamLevel.CLIENT);
                       assertPublisherIsTheSameAs(expected, mongoClient.watch(clientSession), "with session");
                   },
                   () -> {
-                      ChangeStreamPublisher<Document> expected =
+                      ChangeStreamPublisher<OldDocument> expected =
                               new ChangeStreamPublisherImpl<>(clientSession, mongoOperationPublisher.withDatabase("admin"),
-                                                              Document.class, pipeline, ChangeStreamLevel.CLIENT);
+                                                              OldDocument.class, pipeline, ChangeStreamLevel.CLIENT);
                       assertPublisherIsTheSameAs(expected, mongoClient.watch(clientSession, pipeline), "With session & pipeline");
                   },
                   () -> {

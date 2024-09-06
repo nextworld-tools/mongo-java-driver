@@ -40,7 +40,7 @@ import org.bson.BsonDouble
 import org.bson.BsonInt64
 import org.bson.BsonRegularExpression
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.Decoder
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -92,8 +92,8 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         def helper = getCollectionHelper()
         def helper2 = getCollectionHelper(new MongoNamespace(databaseName, 'collection2'))
         def codec = new DocumentCodec()
-        helper.insertDocuments(codec, ['a': 1] as Document)
-        helper2.insertDocuments(codec, ['a': 1] as Document)
+        helper.insertDocuments(codec, ['a': 1] as OldDocument)
+        helper2.insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = operation.execute(getBinding())
@@ -126,8 +126,8 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         def helper = getCollectionHelper()
         def helper2 = getCollectionHelper(new MongoNamespace(databaseName, 'collection2'))
         def codec = new DocumentCodec()
-        helper.insertDocuments(codec, ['a': 1] as Document)
-        helper2.insertDocuments(codec, ['a': 1] as Document)
+        helper.insertDocuments(codec, ['a': 1] as OldDocument)
+        helper2.insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = operation.execute(getBinding())
@@ -146,7 +146,7 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         def helper = getCollectionHelper()
         getCollectionHelper().create('collection3', new CreateCollectionOptions().capped(true).sizeInBytes(1000))
         def codec = new DocumentCodec()
-        helper.insertDocuments(codec, ['a': 1] as Document)
+        helper.insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = operation.execute(getBinding())
@@ -240,8 +240,8 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         def helper = getCollectionHelper()
         def helper2 = getCollectionHelper(new MongoNamespace(databaseName, 'collection2'))
         def codec = new DocumentCodec()
-        helper.insertDocuments(codec, ['a': 1] as Document)
-        helper2.insertDocuments(codec, ['a': 1] as Document)
+        helper.insertDocuments(codec, ['a': 1] as OldDocument)
+        helper2.insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = executeAsync(operation)
@@ -351,11 +351,11 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         given:
         def operation = new ListCollectionsOperation(databaseName, new DocumentCodec()).batchSize(2)
         def codec = new DocumentCodec()
-        getCollectionHelper().insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection2')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection3')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection4')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection5')).insertDocuments(codec, ['a': 1] as Document)
+        getCollectionHelper().insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection2')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection3')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection4')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection5')).insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = operation.execute(getBinding())
@@ -383,11 +383,11 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
         given:
         def operation = new ListCollectionsOperation(databaseName, new DocumentCodec()).batchSize(2)
         def codec = new DocumentCodec()
-        getCollectionHelper().insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection2')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection3')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection4')).insertDocuments(codec, ['a': 1] as Document)
-        getCollectionHelper(new MongoNamespace(databaseName, 'collection5')).insertDocuments(codec, ['a': 1] as Document)
+        getCollectionHelper().insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection2')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection3')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection4')).insertDocuments(codec, ['a': 1] as OldDocument)
+        getCollectionHelper(new MongoNamespace(databaseName, 'collection5')).insertDocuments(codec, ['a': 1] as OldDocument)
 
         when:
         def cursor = executeAsync(operation)
@@ -482,13 +482,13 @@ class ListCollectionsOperationSpecification extends OperationFunctionalSpecifica
 
     private void addSeveralIndexes() {
         getCollectionHelper().create(getCollectionName(), new CreateCollectionOptions())
-        getCollectionHelper().createIndex(['a': 1] as Document)
-        getCollectionHelper().createIndex(['b': 1] as Document)
-        getCollectionHelper().createIndex(['c': 1] as Document)
-        getCollectionHelper().createIndex(['d': 1] as Document)
-        getCollectionHelper().createIndex(['e': 1] as Document)
-        getCollectionHelper().createIndex(['f': 1] as Document)
-        getCollectionHelper().createIndex(['g': 1] as Document)
+        getCollectionHelper().createIndex(['a': 1] as OldDocument)
+        getCollectionHelper().createIndex(['b': 1] as OldDocument)
+        getCollectionHelper().createIndex(['c': 1] as OldDocument)
+        getCollectionHelper().createIndex(['d': 1] as OldDocument)
+        getCollectionHelper().createIndex(['e': 1] as OldDocument)
+        getCollectionHelper().createIndex(['f': 1] as OldDocument)
+        getCollectionHelper().createIndex(['g': 1] as OldDocument)
     }
 
     def cursorToListWithNext(BatchCursor cursor) {

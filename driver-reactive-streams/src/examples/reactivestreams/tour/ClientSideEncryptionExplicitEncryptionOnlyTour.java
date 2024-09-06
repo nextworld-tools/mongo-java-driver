@@ -35,7 +35,7 @@ import com.mongodb.reactivestreams.client.MongoClients;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonBinary;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.OperationSubscriber;
 
@@ -84,7 +84,7 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
         MongoClient mongoClient = MongoClients.create(clientSettings);
 
         // Set up the key vault for this example
-        MongoCollection<Document> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
+        MongoCollection<OldDocument> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
                 .getCollection(keyVaultNamespace.getCollectionName());
 
         ObservableSubscriber<Void> successSubscriber = new OperationSubscriber<>();
@@ -99,7 +99,7 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
                 .subscribe(indexSubscriber);
         indexSubscriber.await();
 
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
         successSubscriber = new OperationSubscriber<>();
         collection.drop().subscribe(successSubscriber);
         successSubscriber.await();
@@ -120,13 +120,13 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
                 new EncryptOptions("AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic").keyId(dataKeyId));
 
         ObservableSubscriber<InsertOneResult> insertOneSubscriber = new OperationSubscriber<>();
-        collection.insertOne(new Document("encryptedField", encryptedFieldValue)).subscribe(insertOneSubscriber);
+        collection.insertOne(new OldDocument("encryptedField", encryptedFieldValue)).subscribe(insertOneSubscriber);
         insertOneSubscriber.await();
 
-        ObservableSubscriber<Document> documentSubscriber = new OperationSubscriber<>();
+        ObservableSubscriber<OldDocument> documentSubscriber = new OperationSubscriber<>();
         collection.find().first().subscribe(documentSubscriber);
 
-        Document doc = documentSubscriber.get().get(0);
+        OldDocument doc = documentSubscriber.get().get(0);
         System.out.println(doc.toJson());
 
         // release resources

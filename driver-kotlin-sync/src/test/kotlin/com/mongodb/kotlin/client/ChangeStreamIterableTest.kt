@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -45,7 +45,7 @@ class ChangeStreamIterableTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JChangeStreamIterable<Document> = mock()
+        val wrapped: JChangeStreamIterable<OldDocument> = mock()
         val iterable = ChangeStreamIterable(wrapped)
 
         val batchSize = 10

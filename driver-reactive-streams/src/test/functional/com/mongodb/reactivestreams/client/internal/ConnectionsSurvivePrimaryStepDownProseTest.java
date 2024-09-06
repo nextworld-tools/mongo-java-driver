@@ -29,7 +29,7 @@ import com.mongodb.reactivestreams.client.MongoClient;
 import com.mongodb.reactivestreams.client.MongoClients;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.After;
 import org.junit.Before;
@@ -56,10 +56,10 @@ import static org.junit.Assume.assumeTrue;
 public class ConnectionsSurvivePrimaryStepDownProseTest {
     private static final String COLLECTION_NAME = "step-down";
 
-    private TestConnectionPoolListener connectionPoolListener;
-    private CollectionHelper<Document> collectionHelper;
-    private MongoClient client;
-    private MongoCollection<Document> collection;
+    private TestConnectionPoolListener    connectionPoolListener;
+    private CollectionHelper<OldDocument> collectionHelper;
+    private MongoClient                   client;
+    private MongoCollection<OldDocument>  collection;
 
     @Before
     public void setUp() {
@@ -96,13 +96,13 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
     public void testGetMoreIteration() {
         assumeTrue(serverVersionAtLeast(4, 2));
 
-        List<Document> documents = asList(Document.parse("{_id: 1}"), Document.parse("{_id: 2}"), Document.parse("{_id: 3}"),
-                                          Document.parse("{_id: 4}"), Document.parse("{_id: 5}"));
+        List<OldDocument> documents = asList(OldDocument.parse("{_id: 1}"), OldDocument.parse("{_id: 2}"), OldDocument.parse("{_id: 3}"),
+                                          OldDocument.parse("{_id: 4}"), OldDocument.parse("{_id: 5}"));
         Mono.from(collection.withWriteConcern(WriteConcern.MAJORITY).insertMany(documents)).block(TIMEOUT_DURATION);
 
         int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
-        BatchCursor<Document> cursor = ((FindPublisherImpl<Document>) collection.find().batchSize(2)).batchCursor(2)
+        BatchCursor<OldDocument> cursor = ((FindPublisherImpl<OldDocument>) collection.find().batchSize(2)).batchCursor(2)
                 .block(TIMEOUT_DURATION);
         assertNotNull(cursor);
         assertEquals(asList(documents.get(0), documents.get(1)), Mono.from(cursor.next()).block(TIMEOUT_DURATION));
@@ -123,13 +123,13 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
-            Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+            Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
             fail();
         } catch (MongoException e) {
             assertEquals(10107, e.getCode());
         }
 
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         assertEquals(connectionCount, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
@@ -142,14 +142,14 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
-            Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+            Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
             fail();
         } catch (MongoException e) {
             assertEquals(10107, e.getCode());
         }
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
 
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
@@ -160,12 +160,12 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
-            Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+            Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         } catch (MongoException e) {
             assertEquals(11600, e.getCode());
         }
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
@@ -176,13 +176,13 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
-            Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+            Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         } catch (MongoException e) {
             assertEquals(91, e.getCode());
         }
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
 
-        Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
+        Mono.from(collection.insertOne(new OldDocument())).block(TIMEOUT_DURATION);
         assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 

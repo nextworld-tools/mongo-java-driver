@@ -17,7 +17,7 @@
 package com.mongodb.reactivestreams.client;
 
 import com.mongodb.client.model.Filters;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -30,7 +30,7 @@ import static com.mongodb.reactivestreams.client.MongoFixture.getMongoClient;
 import static com.mongodb.reactivestreams.client.MongoFixture.run;
 import static java.lang.String.format;
 
-public class ListDatabasesPublisherVerification extends PublisherVerification<Document> {
+public class ListDatabasesPublisherVerification extends PublisherVerification<OldDocument> {
 
     public ListDatabasesPublisherVerification() {
         super(new TestEnvironment(DEFAULT_TIMEOUT_MILLIS), PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS);
@@ -38,7 +38,7 @@ public class ListDatabasesPublisherVerification extends PublisherVerification<Do
 
 
     @Override
-    public Publisher<Document> createPublisher(final long elements) {
+    public Publisher<OldDocument> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
 
         cleanDatabases();
@@ -50,7 +50,7 @@ public class ListDatabasesPublisherVerification extends PublisherVerification<Do
     }
 
     @Override
-    public Publisher<Document> createFailedPublisher() {
+    public Publisher<OldDocument> createFailedPublisher() {
         return null;
     }
 

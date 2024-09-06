@@ -37,7 +37,7 @@ import com.mongodb.internal.operation.DropDatabaseOperation
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodecProvider
 import org.bson.codecs.UuidCodec
@@ -191,7 +191,7 @@ class MongoDatabaseSpecification extends Specification {
 
         when:
         execute(runCommandMethod, session, command)
-         executor.getReadOperation() as CommandReadOperation<Document>
+         executor.getReadOperation() as CommandReadOperation<OldDocument>
 
         then:
         executor.getClientSession() == session
@@ -199,7 +199,7 @@ class MongoDatabaseSpecification extends Specification {
 
         when:
         execute(runCommandMethod, session, command, primaryPreferred())
-        executor.getReadOperation() as CommandReadOperation<Document>
+        executor.getReadOperation() as CommandReadOperation<OldDocument>
 
         then:
         executor.getClientSession() == session
@@ -257,7 +257,7 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect listCollectionIterable, isTheSameAs(new ListCollectionsIterableImpl<>(session, name, false,
-                Document, codecRegistry, primary(), executor, false, TIMEOUT_SETTINGS))
+                OldDocument, codecRegistry, primary(), executor, false, TIMEOUT_SETTINGS))
 
         when:
         listCollectionIterable = execute(listCollectionsMethod, session, BsonDocument)
@@ -330,7 +330,7 @@ class MongoDatabaseSpecification extends Specification {
         given:
         def viewName = 'view1'
         def viewOn = 'col1'
-        def pipeline = [new Document('$match', new Document('x', true))]
+        def pipeline = [new OldDocument('$match', new OldDocument('x', true))]
         def writeConcern = WriteConcern.JOURNALED
         def executor = new TestOperationExecutor([null, null])
         def database = new MongoDatabaseImpl(name, codecRegistry, readPreference, writeConcern, false, false,
@@ -392,23 +392,23 @@ class MongoDatabaseSpecification extends Specification {
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [], Document, ChangeStreamLevel.DATABASE, false, TIMEOUT_SETTINGS),
+                readPreference, readConcern, executor, [], OldDocument, ChangeStreamLevel.DATABASE, false, TIMEOUT_SETTINGS),
                 ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)])
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)])
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], Document,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], OldDocument,
                 ChangeStreamLevel.DATABASE, false, TIMEOUT_SETTINGS), ['codec'])
 
         when:
-        changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)], BsonDocument)
+        changeStreamIterable = execute(watchMethod, session, [new OldDocument('$match', 1)], BsonDocument)
 
         then:
         expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [new Document('$match', 1)], BsonDocument,
+                readPreference, readConcern, executor, [new OldDocument('$match', 1)], BsonDocument,
                 ChangeStreamLevel.DATABASE, false, TIMEOUT_SETTINGS), ['codec'])
 
         where:
@@ -445,24 +445,24 @@ class MongoDatabaseSpecification extends Specification {
         def aggregateIterable = execute(aggregateMethod, session, [])
 
         then:
-        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, Document, Document,
+        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, OldDocument, OldDocument,
                 codecRegistry, readPreference, readConcern, writeConcern, executor, [], AggregationLevel.DATABASE,
                 false, TIMEOUT_SETTINGS), ['codec'])
 
         when:
-        aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)])
+        aggregateIterable = execute(aggregateMethod, session, [new OldDocument('$match', 1)])
 
         then:
-        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, Document, Document,
-                codecRegistry, readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)],
+        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, OldDocument, OldDocument,
+                codecRegistry, readPreference, readConcern, writeConcern, executor, [new OldDocument('$match', 1)],
                 AggregationLevel.DATABASE, false, TIMEOUT_SETTINGS), ['codec'])
 
         when:
-        aggregateIterable = execute(aggregateMethod, session, [new Document('$match', 1)], BsonDocument)
+        aggregateIterable = execute(aggregateMethod, session, [new OldDocument('$match', 1)], BsonDocument)
 
         then:
-        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, Document, BsonDocument,
-                codecRegistry, readPreference, readConcern, writeConcern, executor, [new Document('$match', 1)],
+        expect aggregateIterable, isTheSameAs(new AggregateIterableImpl<>(session, name, OldDocument, BsonDocument,
+                codecRegistry, readPreference, readConcern, writeConcern, executor, [new OldDocument('$match', 1)],
                 AggregationLevel.DATABASE, false, TIMEOUT_SETTINGS), ['codec'])
 
         where:
@@ -507,7 +507,7 @@ class MongoDatabaseSpecification extends Specification {
         expect collection, isTheSameAs(expectedCollection)
 
         where:
-        expectedCollection = new MongoCollectionImpl<Document>(new MongoNamespace('databaseName', 'collectionName'), Document,
+        expectedCollection = new MongoCollectionImpl<OldDocument>(new MongoNamespace('databaseName', 'collectionName'), OldDocument,
                 fromProviders([new ValueCodecProvider(), new DocumentCodecProvider(), new BsonValueCodecProvider()]), secondary(),
                 WriteConcern.MAJORITY, true, true, ReadConcern.MAJORITY, JAVA_LEGACY, null, TIMEOUT_SETTINGS,
                 new TestOperationExecutor([]))
@@ -525,7 +525,7 @@ class MongoDatabaseSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        database.createView(null, 'newView', [Document.parse('{$match: {}}')])
+        database.createView(null, 'newView', [OldDocument.parse('{$match: {}}')])
 
         then:
         thrown(IllegalArgumentException)
@@ -549,7 +549,7 @@ class MongoDatabaseSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        database.runCommand(null, Document.parse('{}'))
+        database.runCommand(null, OldDocument.parse('{}'))
 
         then:
         thrown(IllegalArgumentException)

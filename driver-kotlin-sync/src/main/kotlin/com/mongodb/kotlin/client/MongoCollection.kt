@@ -48,7 +48,7 @@ import com.mongodb.client.result.InsertOneResult
 import com.mongodb.client.result.UpdateResult
 import java.util.concurrent.TimeUnit
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -1207,7 +1207,7 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @see [List search indexes](https://www.mongodb.com/docs/manual/reference/operator/aggregation/listSearchIndexes)
      */
     @JvmName("listSearchIndexesAsDocument")
-    public fun listSearchIndexes(): ListSearchIndexesIterable<Document> = listSearchIndexes<Document>()
+    public fun listSearchIndexes(): ListSearchIndexesIterable<OldDocument> = listSearchIndexes<OldDocument>()
 
     /**
      * Get all the Atlas Search indexes in this collection.
@@ -1288,7 +1288,7 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @return the list indexes iterable interface
      * @see [List indexes](https://www.mongodb.com/docs/manual/reference/command/listIndexes/)
      */
-    @JvmName("listIndexesAsDocument") public fun listIndexes(): ListIndexesIterable<Document> = listIndexes<Document>()
+    @JvmName("listIndexesAsDocument") public fun listIndexes(): ListIndexesIterable<OldDocument> = listIndexes<OldDocument>()
 
     /**
      * Get all the indexes in this collection.
@@ -1298,8 +1298,8 @@ public class MongoCollection<T : Any>(private val wrapped: JMongoCollection<T>) 
      * @see [List indexes](https://www.mongodb.com/docs/manual/reference/command/listIndexes/)
      */
     @JvmName("listIndexesAsDocumentWithSession")
-    public fun listIndexes(clientSession: ClientSession): ListIndexesIterable<Document> =
-        listIndexes<Document>(clientSession)
+    public fun listIndexes(clientSession: ClientSession): ListIndexesIterable<OldDocument> =
+        listIndexes<OldDocument>(clientSession)
 
     /**
      * Get all the indexes in this collection.

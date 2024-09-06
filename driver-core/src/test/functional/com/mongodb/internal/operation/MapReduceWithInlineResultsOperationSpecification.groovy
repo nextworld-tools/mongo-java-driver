@@ -40,7 +40,7 @@ import org.bson.BsonInt32
 import org.bson.BsonJavaScript
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -64,9 +64,9 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
 
     def setup() {
         CollectionHelper<BsonDocument> helper = new CollectionHelper<BsonDocument>(bsonDocumentCodec, getNamespace())
-        Document pete = new Document('name', 'Pete').append('job', 'handyman')
-        Document sam = new Document('name', 'Sam').append('job', 'plumber')
-        Document pete2 = new Document('name', 'Pete').append('job', 'electrician')
+        OldDocument pete = new OldDocument('name', 'Pete').append('job', 'handyman')
+        OldDocument sam = new OldDocument('name', 'Sam').append('job', 'plumber')
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('job', 'electrician')
         helper.insertDocuments(new DocumentCodec(), pete, sam, pete2)
     }
 
@@ -138,7 +138,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
 
     def 'should use the ReadBindings readPreference to set secondaryOk'() {
         when:
-        def operation = new MapReduceWithInlineResultsOperation<Document>(helper.namespace,
+        def operation = new MapReduceWithInlineResultsOperation<OldDocument>(helper.namespace,
                 new BsonJavaScript('function(){ }'), new BsonJavaScript('function(key, values){ }'), bsonDocumentCodec)
 
         then:
@@ -150,7 +150,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
 
     def 'should create the expected command'() {
         when:
-        def operation = new MapReduceWithInlineResultsOperation<Document>(helper.namespace,
+        def operation = new MapReduceWithInlineResultsOperation<OldDocument>(helper.namespace,
                 new BsonJavaScript('function(){ }'), new BsonJavaScript('function(key, values){ }'), bsonDocumentCodec)
         def expectedCommand = new BsonDocument('mapReduce', new BsonString(helper.namespace.getCollectionName()))
             .append('map', operation.getMapFunction())
@@ -197,7 +197,7 @@ class MapReduceWithInlineResultsOperationSpecification extends OperationFunction
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         given:
-        def document = Document.parse('{_id: 1, str: "foo"}')
+        def document = OldDocument.parse('{_id: 1, str: "foo"}')
         getCollectionHelper().insertDocuments(document)
         def operation = new MapReduceWithInlineResultsOperation<BsonDocument>(namespace,
                 new BsonJavaScript('function(){ emit( this.str, 1 ); }'),

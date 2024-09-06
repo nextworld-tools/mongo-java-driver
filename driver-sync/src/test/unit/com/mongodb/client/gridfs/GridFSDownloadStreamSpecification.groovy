@@ -26,12 +26,12 @@ import org.bson.BsonBinary
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.ObjectId
 import spock.lang.Specification
 
 class GridFSDownloadStreamSpecification extends Specification {
-    def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 3L, 2, new Date(), new Document())
+    def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 3L, 2, new Date(), new OldDocument())
 
     def 'should return the file info'() {
         when:
@@ -196,7 +196,7 @@ class GridFSDownloadStreamSpecification extends Specification {
     def 'should skip to the correct point'() {
         given:
         def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 4194297L, 32,
-                new Date(), new Document())
+                new Date(), new OldDocument())
 
         def firstChunkBytes = 1..32 as byte[]
         def lastChunkBytes = 33 .. 57 as byte[]
@@ -282,7 +282,7 @@ class GridFSDownloadStreamSpecification extends Specification {
 
     def 'should mark and reset to the correct point'() {
         given:
-        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 25L, 25, new Date(), new Document())
+        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 25L, 25, new Date(), new OldDocument())
 
         def expected10Bytes = 11 .. 20 as byte[]
         def firstChunkBytes = 1..25 as byte[]
@@ -347,7 +347,7 @@ class GridFSDownloadStreamSpecification extends Specification {
 
     def 'should mark and reset across chunks'() {
         given:
-        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 50L, 25, new Date(), new Document())
+        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 50L, 25, new Date(), new OldDocument())
 
         def firstChunkBytes = 1..25 as byte[]
         def secondChunkBytes = 26 .. 50 as byte[]
@@ -430,7 +430,7 @@ class GridFSDownloadStreamSpecification extends Specification {
 
     def 'should validate next chunk when marked and reset at eof'() {
         given:
-        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 25L, 25, new Date(), new Document())
+        def fileInfo = new GridFSFile(new BsonObjectId(new ObjectId()), 'filename', 25L, 25, new Date(), new OldDocument())
 
         def chunkBytes = 1..25 as byte[]
         def chunkDocument = new BsonDocument('files_id', fileInfo.getId())

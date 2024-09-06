@@ -27,7 +27,7 @@ import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -97,7 +97,7 @@ public abstract class AbstractClientSideEncryptionAwsCredentialFromEnvironmentTe
                     .build())) {
                 // If this succeeds, then it means credentials have been fetched from the environment as expected
                 client.getDatabase("test").getCollection("coll")
-                        .insertOne(new Document("encryptedField", "encryptMe"));
+                        .insertOne(new OldDocument("encryptedField", "encryptMe"));
             }
         }
     }
@@ -144,7 +144,7 @@ public abstract class AbstractClientSideEncryptionAwsCredentialFromEnvironmentTe
                     .build())) {
                 // If this succeeds, then it means credentials have been fetched from the supplier as expected
                 client.getDatabase("test").getCollection("coll")
-                        .insertOne(new Document("encryptedField", "encryptMe"));
+                        .insertOne(new OldDocument("encryptedField", "encryptMe"));
             }
         }
     }

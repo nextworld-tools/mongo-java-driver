@@ -19,7 +19,7 @@ package primer;
 import org.junit.jupiter.api.Test;
 
 // @import: start
-import org.bson.Document;
+import org.bson.OldDocument;
 // @import: end
 
 public class RemovePrimer extends PrimerTestCase {
@@ -28,7 +28,7 @@ public class RemovePrimer extends PrimerTestCase {
     public void removeMatchingDocuments() {
         // @begin: remove-matching-documents
         // @code: start
-        db.getCollection("restaurants").deleteMany(new Document("borough", "Manhattan"));
+        db.getCollection("restaurants").deleteMany(new OldDocument("borough", "Manhattan"));
         // @code: end
 
         /*
@@ -44,7 +44,7 @@ public class RemovePrimer extends PrimerTestCase {
     public void removeAllDocuments() {
         // @begin: remove-all-documents
         // @code: start
-        db.getCollection("restaurants").deleteMany(new Document());
+        db.getCollection("restaurants").deleteMany(new OldDocument());
         // @code: end
 
         /*

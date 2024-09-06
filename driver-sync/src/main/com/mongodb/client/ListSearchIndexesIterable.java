@@ -24,7 +24,7 @@ import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.util.concurrent.TimeUnit;
 /**
@@ -121,7 +121,7 @@ public interface ListSearchIndexesIterable<TResult> extends MongoIterable<TResul
      * @return the execution plan.
      * @mongodb.driver.manual reference/command/explain/
      */
-    Document explain();
+    OldDocument explain();
 
     /**
      * Explain the execution plan for this operation with the given verbosity level.
@@ -130,7 +130,7 @@ public interface ListSearchIndexesIterable<TResult> extends MongoIterable<TResul
      * @return the execution plan.
      * @mongodb.driver.manual reference/command/explain/
      */
-    Document explain(ExplainVerbosity verbosity);
+    OldDocument explain(ExplainVerbosity verbosity);
 
     /**
      * Explain the execution plan for this operation with the server's default verbosity level.

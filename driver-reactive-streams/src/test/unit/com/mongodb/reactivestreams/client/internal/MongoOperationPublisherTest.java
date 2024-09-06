@@ -22,7 +22,7 @@ import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
 import com.mongodb.WriteConcern;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -51,8 +51,8 @@ public class MongoOperationPublisherTest {
     }
     private static final MongoNamespace MONGO_NAMESPACE = new MongoNamespace("a.b");
 
-    private static final MongoOperationPublisher<Document> DEFAULT_MOP = new MongoOperationPublisher<>(
-            MONGO_NAMESPACE, Document.class, MongoClientSettings.getDefaultCodecRegistry(), ReadPreference.primary(),
+    private static final MongoOperationPublisher<OldDocument> DEFAULT_MOP = new MongoOperationPublisher<>(
+            MONGO_NAMESPACE, OldDocument.class, MongoClientSettings.getDefaultCodecRegistry(), ReadPreference.primary(),
             ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED, true, true, UuidRepresentation.STANDARD,
             null, TIMEOUT_SETTINGS_WITH_TIMEOUT, OPERATION_EXECUTOR);
 
@@ -70,7 +70,7 @@ public class MongoOperationPublisherTest {
 
     @Test
     public void withDocumentClass() {
-        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withDocumentClass(Document.class));
+        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withDocumentClass(OldDocument.class));
         assertEquals(BsonDocument.class, DEFAULT_MOP.withDocumentClass(BsonDocument.class).getDocumentClass());
     }
 
@@ -83,7 +83,7 @@ public class MongoOperationPublisherTest {
 
     @Test
     public void withNamespaceAndDocumentClass() {
-        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withNamespaceAndDocumentClass(new MongoNamespace("a.b"), Document.class));
+        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withNamespaceAndDocumentClass(new MongoNamespace("a.b"), OldDocument.class));
 
         MongoOperationPublisher<BsonDocument> alternative = DEFAULT_MOP.withNamespaceAndDocumentClass(new MongoNamespace("c.d"),
                 BsonDocument.class);
@@ -94,7 +94,7 @@ public class MongoOperationPublisherTest {
 
     @Test
     public void withNamespace() {
-        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withNamespaceAndDocumentClass(new MongoNamespace("a.b"), Document.class));
+        assertEquals(DEFAULT_MOP, DEFAULT_MOP.withNamespaceAndDocumentClass(new MongoNamespace("a.b"), OldDocument.class));
         assertEquals(new MongoNamespace("c.d"), DEFAULT_MOP.withNamespace(new MongoNamespace("c.d")).getNamespace());
     }
 

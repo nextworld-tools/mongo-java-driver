@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -47,7 +47,7 @@ class AggregateFlowTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: AggregatePublisher<Document> = mock()
+        val wrapped: AggregatePublisher<OldDocument> = mock()
         val flow = AggregateFlow(wrapped)
 
         val batchSize = 10
@@ -55,7 +55,7 @@ class AggregateFlowTest {
         val bsonComment = BsonString("a comment")
         val collation = Collation.builder().locale("en").build()
         val comment = "comment"
-        val hint = Document("h", 1)
+        val hint = OldDocument("h", 1)
         val hintString = "hintString"
         val verbosity = ExplainVerbosity.QUERY_PLANNER
 
@@ -89,23 +89,23 @@ class AggregateFlowTest {
         verify(wrapped).let(bson)
         verify(wrapped).timeoutMode(TimeoutMode.ITERATION)
 
-        whenever(wrapped.explain(Document::class.java)).doReturn(Mono.fromCallable { Document() })
-        whenever(wrapped.explain(Document::class.java, verbosity)).doReturn(Mono.fromCallable { Document() })
+        whenever(wrapped.explain(OldDocument::class.java)).doReturn(Mono.fromCallable { OldDocument() })
+        whenever(wrapped.explain(OldDocument::class.java, verbosity)).doReturn(Mono.fromCallable { OldDocument() })
         whenever(wrapped.explain(BsonDocument::class.java, verbosity)).doReturn(Mono.fromCallable { BsonDocument() })
         whenever(wrapped.toCollection()).doReturn(Mono.empty())
 
         runBlocking {
             flow.explain()
             flow.explain(verbosity)
-            flow.explain(Document::class.java)
+            flow.explain(OldDocument::class.java)
             flow.explain(BsonDocument::class.java, verbosity)
-            flow.explain<Document>()
+            flow.explain<OldDocument>()
             flow.explain<BsonDocument>(verbosity)
             flow.toCollection()
         }
 
-        verify(wrapped, times(3)).explain(Document::class.java)
-        verify(wrapped, times(1)).explain(Document::class.java, verbosity)
+        verify(wrapped, times(3)).explain(OldDocument::class.java)
+        verify(wrapped, times(1)).explain(OldDocument::class.java, verbosity)
         verify(wrapped, times(2)).explain(BsonDocument::class.java, verbosity)
         verify(wrapped).toCollection()
 

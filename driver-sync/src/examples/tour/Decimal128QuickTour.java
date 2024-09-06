@@ -21,7 +21,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 
 import java.math.BigDecimal;
@@ -51,13 +51,13 @@ public class Decimal128QuickTour {
 
 
         // get a handle to the "test" collection
-        MongoCollection<Document> collection = database.getCollection("test");
+        MongoCollection<OldDocument> collection = database.getCollection("test");
 
         // drop all the data in it
         collection.drop();
 
         // make a document and insert it
-        Document doc = new Document("name", "MongoDB")
+        OldDocument doc = new OldDocument("name", "MongoDB")
                                .append("amount1", Decimal128.parse(".10"))
                                .append("amount2", new Decimal128(42L))
                                .append("amount3", new Decimal128(new BigDecimal(".200")));
@@ -65,7 +65,7 @@ public class Decimal128QuickTour {
         collection.insertOne(doc);
 
 
-        Document first = collection.find().filter(Filters.eq("amount1", new Decimal128(new BigDecimal(".10")))).first();
+        OldDocument first = collection.find().filter(Filters.eq("amount1", new Decimal128(new BigDecimal(".10")))).first();
 
         Decimal128 amount3 = (Decimal128) first.get("amount3");
         BigDecimal amount2AsBigDecimal = amount3.bigDecimalValue();

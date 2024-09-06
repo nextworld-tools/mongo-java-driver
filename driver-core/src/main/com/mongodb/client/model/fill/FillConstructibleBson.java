@@ -16,7 +16,7 @@
 package com.mongodb.client.model.fill;
 
 import com.mongodb.internal.client.model.AbstractConstructibleBson;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -29,12 +29,12 @@ final class FillConstructibleBson extends AbstractConstructibleBson<FillConstruc
         super(base);
     }
 
-    private FillConstructibleBson(final Bson base, final Document appended) {
+    private FillConstructibleBson(final Bson base, final OldDocument appended) {
         super(base, appended);
     }
 
     @Override
-    protected FillConstructibleBson newSelf(final Bson base, final Document appended) {
+    protected FillConstructibleBson newSelf(final Bson base, final OldDocument appended) {
         return new FillConstructibleBson(base, appended);
     }
 

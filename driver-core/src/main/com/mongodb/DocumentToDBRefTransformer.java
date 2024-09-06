@@ -16,7 +16,7 @@
 
 package com.mongodb;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.Transformer;
 
 /**
@@ -29,8 +29,8 @@ import org.bson.Transformer;
 public final class DocumentToDBRefTransformer implements Transformer {
     @Override
     public Object transform(final Object value) {
-        if (value instanceof Document) {
-            Document document = (Document) value;
+        if (value instanceof OldDocument) {
+            OldDocument document = (OldDocument) value;
             if (document.containsKey("$id") && document.containsKey("$ref")) {
                 return new DBRef((String) document.get("$db"), (String) document.get("$ref"), document.get("$id"));
             }

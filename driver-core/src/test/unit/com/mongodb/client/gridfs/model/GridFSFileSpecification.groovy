@@ -19,7 +19,7 @@ package com.mongodb.client.gridfs.model
 import com.mongodb.MongoGridFSException
 import org.bson.BsonObjectId
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.ObjectId
 import spock.lang.Specification
 
@@ -32,7 +32,7 @@ class GridFSFileSpecification extends Specification {
         def length = 100L
         def chunkSize = 255
         def uploadDate = new Date()
-        def metadata = new Document('id', id)
+        def metadata = new OldDocument('id', id)
 
         when:
         def gridFSFile = new GridFSFile(id, filename, length, chunkSize, uploadDate, metadata)

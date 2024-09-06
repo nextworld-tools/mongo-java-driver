@@ -45,7 +45,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonDocumentCodec
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
@@ -70,15 +70,15 @@ import static com.mongodb.internal.operation.ServerVersionHelper.MIN_WIRE_VERSIO
 class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def setup() {
-        Document pete = new Document('name', 'Pete').append('job', 'handyman')
-        Document sam = new Document('name', 'Sam').append('job', 'plumber')
-        Document pete2 = new Document('name', 'Pete').append('job', 'electrician')
+        OldDocument pete = new OldDocument('name', 'Pete').append('job', 'handyman')
+        OldDocument sam = new OldDocument('name', 'Sam').append('job', 'plumber')
+        OldDocument pete2 = new OldDocument('name', 'Pete').append('job', 'electrician')
         getCollectionHelper().insertDocuments(new DocumentCodec(), pete, sam, pete2)
     }
 
     def 'should have the correct defaults'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
 
         then:
         operation.getAllowDiskUse() == null
@@ -92,7 +92,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
         def hint = BsonDocument.parse('{a: 1}')
 
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
                 .allowDiskUse(true)
                 .batchSize(10)
                 .collation(defaultCollation)
@@ -108,7 +108,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
     def 'should throw when using invalid hint'() {
         given:
         def hint = new BsonString('ok')
-        def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec()).hint(hint)
+        def operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec()).hint(hint)
 
         when:
         operation.getHint()
@@ -132,7 +132,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
     def 'should create the expected command'() {
         when:
         def pipeline = [new BsonDocument('$match', new BsonDocument('a', new BsonString('A')))]
-        def operation = new AggregateOperation<Document>(helper.namespace, pipeline, new DocumentCodec())
+        def operation = new AggregateOperation<OldDocument>(helper.namespace, pipeline, new DocumentCodec())
 
         def expectedCommand = new BsonDocument('aggregate', new BsonString(helper.namespace.getCollectionName()))
                 .append('pipeline', new BsonArray(pipeline))
@@ -142,7 +142,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
         testOperation(operation, [3, 4, 0], expectedCommand, async, helper.cursorResult)
 
         when:
-        operation = new AggregateOperation<Document>(helper.namespace, pipeline, new DocumentCodec())
+        operation = new AggregateOperation<OldDocument>(helper.namespace, pipeline, new DocumentCodec())
                 .allowDiskUse(true)
                 .batchSize(10)
                 .collation(defaultCollation)
@@ -211,7 +211,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should be able to aggregate'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
         def batchCursor = execute(operation, async)
         def results = collectCursorResults(batchCursor)*.getString('name')
 
@@ -233,7 +233,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 .execute(getBinding(getCluster()))
 
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(viewNamespace, [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(viewNamespace, [], new DocumentCodec())
         def batchCursor = execute(operation, async)
         def results = collectCursorResults(batchCursor)*.getString('name')
 
@@ -251,7 +251,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should be able to aggregate with pipeline'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(),
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(),
                 [new BsonDocument('$match', new BsonDocument('job', new BsonString('plumber')))], new DocumentCodec())
         def batchCursor = execute(operation, async)
         def results = collectCursorResults(batchCursor)*.getString('name')
@@ -266,7 +266,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should allow disk usage'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
                 .allowDiskUse(allowDiskUse)
         def cursor = operation.execute(getBinding())
 
@@ -279,7 +279,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should allow batch size'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
                 .batchSize(batchSize)
         def cursor = operation.execute(getBinding())
 
@@ -310,7 +310,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
     @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should be able to aggregate with collation'() {
         when:
-        AggregateOperation operation = new AggregateOperation<Document>(getNamespace(),
+        AggregateOperation operation = new AggregateOperation<OldDocument>(getNamespace(),
                 [BsonDocument.parse('{$match: {job : "plumber"}}')], new DocumentCodec()
         ).collation(options)
         def batchCursor = execute(operation, async)
@@ -331,7 +331,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
         def index = new BsonDocument('a', new BsonInt32(1))
         collectionHelper.createIndex(index)
 
-        def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        def operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
                 .hint(hint)
 
         when:
@@ -352,15 +352,15 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
         new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(2)),
                 new BsonDocumentCodec()).execute(getBinding())
         def expectedComment = 'this is a comment'
-        def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        def operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
                 .comment(new BsonString(expectedComment))
 
         when:
         execute(operation, async)
 
         then:
-        Document profileDocument = profileCollectionHelper.find(Filters.exists('command.aggregate')).get(0)
-        ((Document) profileDocument.get('command')).get('comment') == expectedComment
+        OldDocument profileDocument = profileCollectionHelper.find(Filters.exists('command.aggregate')).get(0)
+        ((OldDocument) profileDocument.get('command')).get('comment') == expectedComment
 
         cleanup:
         new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(0)),
@@ -388,7 +388,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 .append('cursor', new BsonDocument())
         appendReadConcernToCommand(operationContext.getSessionContext(), MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        def operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
 
         when:
         operation.execute(binding)
@@ -429,7 +429,7 @@ class AggregateOperationSpecification extends OperationFunctionalSpecification {
                 .append('cursor', new BsonDocument())
         appendReadConcernToCommand(sessionContext, MIN_WIRE_VERSION, commandDocument)
 
-        def operation = new AggregateOperation<Document>(getNamespace(), [], new DocumentCodec())
+        def operation = new AggregateOperation<OldDocument>(getNamespace(), [], new DocumentCodec())
 
         when:
         executeAsync(operation, binding)

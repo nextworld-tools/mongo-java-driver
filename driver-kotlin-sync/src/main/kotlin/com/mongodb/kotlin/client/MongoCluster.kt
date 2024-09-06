@@ -23,7 +23,7 @@ import com.mongodb.annotations.Alpha
 import com.mongodb.annotations.Reason
 import com.mongodb.client.MongoCluster as JMongoCluster
 import java.util.concurrent.TimeUnit
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -178,7 +178,7 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @return the list databases iterable interface
      */
     @JvmName("listDatabasesAsDocument")
-    public fun listDatabases(): ListDatabasesIterable<Document> = listDatabases<Document>()
+    public fun listDatabases(): ListDatabasesIterable<OldDocument> = listDatabases<OldDocument>()
 
     /**
      * Gets the list of databases
@@ -187,8 +187,8 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @return the list databases iterable interface
      */
     @JvmName("listDatabasesAsDocumentWithSession")
-    public fun listDatabases(clientSession: ClientSession): ListDatabasesIterable<Document> =
-        listDatabases<Document>(clientSession)
+    public fun listDatabases(clientSession: ClientSession): ListDatabasesIterable<OldDocument> =
+        listDatabases<OldDocument>(clientSession)
 
     /**
      * Gets the list of databases
@@ -237,7 +237,7 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocument")
-    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamIterable<Document> = watch<Document>(pipeline)
+    public fun watch(pipeline: List<Bson> = emptyList()): ChangeStreamIterable<OldDocument> = watch<OldDocument>(pipeline)
 
     /**
      * Creates a change stream for this client.
@@ -248,8 +248,8 @@ public open class MongoCluster protected constructor(private val wrapped: JMongo
      * @see [Change Streams](https://dochub.mongodb.org/changestreams]
      */
     @JvmName("watchAsDocumentWithSession")
-    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamIterable<Document> =
-        watch<Document>(clientSession, pipeline)
+    public fun watch(clientSession: ClientSession, pipeline: List<Bson> = emptyList()): ChangeStreamIterable<OldDocument> =
+        watch<OldDocument>(clientSession, pipeline)
 
     /**
      * Creates a change stream for this client.

@@ -17,7 +17,7 @@
 package com.mongodb.client.model
 
 import com.mongodb.OperationFunctionalSpecification
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Filters.geoWithinBox
@@ -28,17 +28,17 @@ import static com.mongodb.client.model.Filters.near
 import static com.mongodb.client.model.Filters.nearSphere
 
 class GeoFiltersFunctionalSpecification extends OperationFunctionalSpecification {
-    def firstPoint = new Document('_id', 1).append('geo', [1d, 1d])
-    def secondPoint = new Document('_id', 2).append('geo', [45d, 2d])
-    def thirdPoint = new Document('_id', 3).append('geo', [3d, 3d])
+    def firstPoint = new OldDocument('_id', 1).append('geo', [1d, 1d])
+    def secondPoint = new OldDocument('_id', 2).append('geo', [45d, 2d])
+    def thirdPoint = new OldDocument('_id', 3).append('geo', [3d, 3d])
 
     def setup() {
-        getCollectionHelper().createIndex(new Document('geo', '2d'))
+        getCollectionHelper().createIndex(new OldDocument('geo', '2d'))
         getCollectionHelper().insertDocuments(firstPoint, secondPoint, thirdPoint)
     }
 
     def 'find'(Bson filter) {
-        getCollectionHelper().find(filter, new Document('_id', 1)) // sort by _id
+        getCollectionHelper().find(filter, new OldDocument('_id', 1)) // sort by _id
     }
 
     def '$near'() {

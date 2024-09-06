@@ -31,7 +31,7 @@ import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import com.mongodb.reactivestreams.client.ListCollectionsPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -52,9 +52,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 public final class MongoDatabaseImpl implements MongoDatabase {
-    private final MongoOperationPublisher<Document> mongoOperationPublisher;
+    private final MongoOperationPublisher<OldDocument> mongoOperationPublisher;
 
-    MongoDatabaseImpl(final MongoOperationPublisher<Document> mongoOperationPublisher) {
+    MongoDatabaseImpl(final MongoOperationPublisher<OldDocument> mongoOperationPublisher) {
         this.mongoOperationPublisher = notNull("publisherHelper", mongoOperationPublisher);
         checkDatabaseNameValidity(getName());
     }
@@ -90,7 +90,7 @@ public final class MongoDatabaseImpl implements MongoDatabase {
         return timeoutMS == null ? null : notNull("timeUnit", timeUnit).convert(timeoutMS, MILLISECONDS);
     }
 
-    MongoOperationPublisher<Document> getMongoOperationPublisher() {
+    MongoOperationPublisher<OldDocument> getMongoOperationPublisher() {
         return mongoOperationPublisher;
     }
 
@@ -120,8 +120,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public MongoCollection<Document> getCollection(final String collectionName) {
-        return getCollection(collectionName, Document.class);
+    public MongoCollection<OldDocument> getCollection(final String collectionName) {
+        return getCollection(collectionName, OldDocument.class);
     }
 
     @Override
@@ -131,13 +131,13 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public Publisher<Document> runCommand(final Bson command) {
-        return runCommand(command, Document.class);
+    public Publisher<OldDocument> runCommand(final Bson command) {
+        return runCommand(command, OldDocument.class);
     }
 
     @Override
-    public Publisher<Document> runCommand(final Bson command, final ReadPreference readPreference) {
-        return runCommand(command, readPreference, Document.class);
+    public Publisher<OldDocument> runCommand(final Bson command, final ReadPreference readPreference) {
+        return runCommand(command, readPreference, OldDocument.class);
     }
 
     @Override
@@ -151,13 +151,13 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public Publisher<Document> runCommand(final ClientSession clientSession, final Bson command) {
-        return runCommand(clientSession, command, Document.class);
+    public Publisher<OldDocument> runCommand(final ClientSession clientSession, final Bson command) {
+        return runCommand(clientSession, command, OldDocument.class);
     }
 
     @Override
-    public Publisher<Document> runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
-        return runCommand(clientSession, command, readPreference, Document.class);
+    public Publisher<OldDocument> runCommand(final ClientSession clientSession, final Bson command, final ReadPreference readPreference) {
+        return runCommand(clientSession, command, readPreference, OldDocument.class);
     }
 
     @Override
@@ -193,8 +193,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsPublisher<Document> listCollections() {
-        return listCollections(Document.class);
+    public ListCollectionsPublisher<OldDocument> listCollections() {
+        return listCollections(OldDocument.class);
     }
 
     @Override
@@ -203,8 +203,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ListCollectionsPublisher<Document> listCollections(final ClientSession clientSession) {
-        return listCollections(clientSession, Document.class);
+    public ListCollectionsPublisher<OldDocument> listCollections(final ClientSession clientSession) {
+        return listCollections(clientSession, OldDocument.class);
     }
 
     @Override
@@ -260,7 +260,7 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch() {
+    public ChangeStreamPublisher<OldDocument> watch() {
         return watch(Collections.emptyList());
     }
 
@@ -270,8 +270,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final List<? extends Bson> pipeline) {
+        return watch(pipeline, OldDocument.class);
     }
 
     @Override
@@ -280,8 +280,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession) {
-        return watch(clientSession, Collections.emptyList(), Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession) {
+        return watch(clientSession, Collections.emptyList(), OldDocument.class);
     }
 
     @Override
@@ -290,8 +290,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return watch(clientSession, pipeline, OldDocument.class);
     }
 
     @Override
@@ -302,8 +302,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public AggregatePublisher<Document> aggregate(final List<? extends Bson> pipeline) {
-        return aggregate(pipeline, Document.class);
+    public AggregatePublisher<OldDocument> aggregate(final List<? extends Bson> pipeline) {
+        return aggregate(pipeline, OldDocument.class);
     }
 
     @Override
@@ -313,8 +313,8 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public AggregatePublisher<Document> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return aggregate(clientSession, pipeline, Document.class);
+    public AggregatePublisher<OldDocument> aggregate(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return aggregate(clientSession, pipeline, OldDocument.class);
     }
 
     @Override

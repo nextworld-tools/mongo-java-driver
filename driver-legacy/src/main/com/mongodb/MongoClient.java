@@ -47,7 +47,7 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
@@ -498,7 +498,7 @@ public class MongoClient implements Closeable {
      * @return the list of databases
      * @since 3.0
      */
-    public ListDatabasesIterable<Document> listDatabases() {
+    public ListDatabasesIterable<OldDocument> listDatabases() {
         return delegate.listDatabases();
     }
 
@@ -522,7 +522,7 @@ public class MongoClient implements Closeable {
      * @mongodb.server.release 3.6
      * @since 3.6
      */
-    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
+    public ListDatabasesIterable<OldDocument> listDatabases(final ClientSession clientSession) {
         return delegate.listDatabases(clientSession);
     }
 
@@ -584,7 +584,7 @@ public class MongoClient implements Closeable {
      * @mongodb.driver.dochub core/changestreams Change Streams
      * @since 3.8
      */
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return delegate.watch();
     }
 
@@ -611,7 +611,7 @@ public class MongoClient implements Closeable {
      * @mongodb.driver.dochub core/changestreams Change Streams
      * @since 3.8
      */
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
         return delegate.watch(pipeline);
     }
 
@@ -639,7 +639,7 @@ public class MongoClient implements Closeable {
      * @mongodb.driver.dochub core/changestreams Change Streams
      * @since 3.8
      */
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
         return delegate.watch(clientSession);
     }
 
@@ -668,7 +668,7 @@ public class MongoClient implements Closeable {
      * @mongodb.driver.dochub core/changestreams Change Streams
      * @since 3.8
      */
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return delegate.watch(clientSession, pipeline);
     }
 

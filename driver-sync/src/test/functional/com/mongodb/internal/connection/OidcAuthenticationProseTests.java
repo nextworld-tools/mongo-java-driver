@@ -35,7 +35,7 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -390,7 +390,7 @@ public class OidcAuthenticationProseTests {
         mongoClient
                 .getDatabase("test")
                 .getCollection("test")
-                .insertOne(Document.parse("{ x: 1 }"));
+                .insertOne(OldDocument.parse("{ x: 1 }"));
     }
 
     @Test

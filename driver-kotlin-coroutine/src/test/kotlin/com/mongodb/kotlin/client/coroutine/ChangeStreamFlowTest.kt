@@ -26,7 +26,7 @@ import kotlinx.coroutines.runBlocking
 import org.bson.BsonDocument
 import org.bson.BsonString
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -47,7 +47,7 @@ class ChangeStreamFlowTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: ChangeStreamPublisher<Document> = mock()
+        val wrapped: ChangeStreamPublisher<OldDocument> = mock()
         val flow = ChangeStreamFlow(wrapped)
 
         val batchSize = 10

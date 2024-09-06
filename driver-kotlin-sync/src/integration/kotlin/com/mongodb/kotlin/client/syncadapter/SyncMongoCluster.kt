@@ -27,7 +27,7 @@ import com.mongodb.client.MongoDatabase
 import com.mongodb.client.MongoIterable
 import com.mongodb.kotlin.client.MongoCluster
 import java.util.concurrent.TimeUnit
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -69,9 +69,9 @@ internal open class SyncMongoCluster(open val wrapped: MongoCluster) : JMongoClu
     override fun listDatabaseNames(clientSession: ClientSession): MongoIterable<String> =
         SyncMongoIterable(wrapped.listDatabaseNames(clientSession.unwrapped()))
 
-    override fun listDatabases(): ListDatabasesIterable<Document> = SyncListDatabasesIterable(wrapped.listDatabases())
+    override fun listDatabases(): ListDatabasesIterable<OldDocument> = SyncListDatabasesIterable(wrapped.listDatabases())
 
-    override fun listDatabases(clientSession: ClientSession): ListDatabasesIterable<Document> =
+    override fun listDatabases(clientSession: ClientSession): ListDatabasesIterable<OldDocument> =
         SyncListDatabasesIterable(wrapped.listDatabases(clientSession.unwrapped()))
 
     override fun <T : Any> listDatabases(resultClass: Class<T>): ListDatabasesIterable<T> =
@@ -83,24 +83,24 @@ internal open class SyncMongoCluster(open val wrapped: MongoCluster) : JMongoClu
     ): ListDatabasesIterable<T> =
         SyncListDatabasesIterable(wrapped.listDatabases(clientSession.unwrapped(), resultClass))
 
-    override fun watch(): ChangeStreamIterable<Document> = SyncChangeStreamIterable(wrapped.watch())
+    override fun watch(): ChangeStreamIterable<OldDocument> = SyncChangeStreamIterable(wrapped.watch())
 
     override fun <T : Any> watch(resultClass: Class<T>): ChangeStreamIterable<T> =
         SyncChangeStreamIterable(wrapped.watch(resultClass = resultClass))
 
-    override fun watch(pipeline: MutableList<out Bson>): ChangeStreamIterable<Document> =
+    override fun watch(pipeline: MutableList<out Bson>): ChangeStreamIterable<OldDocument> =
         SyncChangeStreamIterable(wrapped.watch(pipeline))
 
     override fun <T : Any> watch(pipeline: MutableList<out Bson>, resultClass: Class<T>): ChangeStreamIterable<T> =
         SyncChangeStreamIterable(wrapped.watch(pipeline, resultClass))
 
-    override fun watch(clientSession: ClientSession): ChangeStreamIterable<Document> =
+    override fun watch(clientSession: ClientSession): ChangeStreamIterable<OldDocument> =
         SyncChangeStreamIterable(wrapped.watch(clientSession.unwrapped()))
 
     override fun <T : Any> watch(clientSession: ClientSession, resultClass: Class<T>): ChangeStreamIterable<T> =
         SyncChangeStreamIterable(wrapped.watch(clientSession.unwrapped(), resultClass = resultClass))
 
-    override fun watch(clientSession: ClientSession, pipeline: MutableList<out Bson>): ChangeStreamIterable<Document> =
+    override fun watch(clientSession: ClientSession, pipeline: MutableList<out Bson>): ChangeStreamIterable<OldDocument> =
         SyncChangeStreamIterable(wrapped.watch(clientSession.unwrapped(), pipeline))
 
     override fun <T : Any> watch(

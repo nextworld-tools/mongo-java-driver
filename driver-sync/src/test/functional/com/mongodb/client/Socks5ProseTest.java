@@ -23,7 +23,7 @@ import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterListener;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -155,7 +155,7 @@ class Socks5ProseTest {
     }
 
     private static void runHelloCommand(final MongoClient mongoClient) {
-        mongoClient.getDatabase("test").runCommand(new Document("hello", 1));
+        mongoClient.getDatabase("test").runCommand(new OldDocument("hello", 1));
     }
 
     private static ConnectionString buildConnectionString(final String uriPrefix, final String uriParameters) {

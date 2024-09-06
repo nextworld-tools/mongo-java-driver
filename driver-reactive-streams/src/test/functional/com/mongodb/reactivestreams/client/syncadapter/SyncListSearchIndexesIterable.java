@@ -22,7 +22,7 @@ import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
 import com.mongodb.reactivestreams.client.ListSearchIndexesPublisher;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import reactor.core.publisher.Mono;
 
 import java.util.concurrent.TimeUnit;
@@ -88,12 +88,12 @@ final class SyncListSearchIndexesIterable<T> extends SyncMongoIterable<T> implem
     }
 
     @Override
-    public Document explain() {
+    public OldDocument explain() {
         return requireNonNull(Mono.from(wrapped.explain()).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
-    public Document explain(final ExplainVerbosity verbosity) {
+    public OldDocument explain(final ExplainVerbosity verbosity) {
         return requireNonNull(Mono.from(wrapped.explain(verbosity)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 

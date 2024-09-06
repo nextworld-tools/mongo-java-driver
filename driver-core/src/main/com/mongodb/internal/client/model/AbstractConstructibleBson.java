@@ -17,7 +17,7 @@ package com.mongodb.internal.client.model;
 
 import com.mongodb.annotations.Immutable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -31,7 +31,7 @@ import static org.bson.internal.BsonUtil.mutableDeepCopy;
 
 /**
  * A {@link Bson} that allows constructing new instances via {@link #newAppended(String, Object)} instead of mutating {@code this}.
- * See {@link #AbstractConstructibleBson(Bson, Document)} for the note on mutability.
+ * See {@link #AbstractConstructibleBson(Bson, OldDocument)} for the note on mutability.
  *
  * <p>This class is not part of the public API and may be removed or changed at any time</p>
  *
@@ -39,17 +39,17 @@ import static org.bson.internal.BsonUtil.mutableDeepCopy;
  * @see AbstractConstructibleBsonElement
  */
 public abstract class AbstractConstructibleBson<S extends AbstractConstructibleBson<S>> implements Bson, ToMap {
-    private static final Document EMPTY_DOC = new Document();
+    private static final OldDocument                  EMPTY_DOC       = new OldDocument();
     /**
      * An {@linkplain Immutable immutable} {@link BsonDocument#isEmpty() empty} instance.
      */
-    public static final AbstractConstructibleBson<?> EMPTY_IMMUTABLE = AbstractConstructibleBson.of(EMPTY_DOC);
+    public static final  AbstractConstructibleBson<?> EMPTY_IMMUTABLE = AbstractConstructibleBson.of(EMPTY_DOC);
 
-    private final Bson base;
-    private final Document appended;
+    private final Bson        base;
+    private final OldDocument appended;
 
     /**
-     * This constructor is equivalent to {@link #AbstractConstructibleBson(Bson, Document)} with
+     * This constructor is equivalent to {@link #AbstractConstructibleBson(Bson, OldDocument)} with
      * {@link #EMPTY_IMMUTABLE} being the second argument.
      */
     protected AbstractConstructibleBson(final Bson base) {
@@ -62,12 +62,12 @@ public abstract class AbstractConstructibleBson<S extends AbstractConstructibleB
      * Otherwise, the created instance while being unmodifiable,
      * may be mutated by mutating the result of {@link #toBsonDocument(Class, CodecRegistry)}.
      */
-    protected AbstractConstructibleBson(final Bson base, final Document appended) {
+    protected AbstractConstructibleBson(final Bson base, final OldDocument appended) {
         this.base = base;
         this.appended = appended;
     }
 
-    protected abstract S newSelf(Bson base, Document appended);
+    protected abstract S newSelf(Bson base, OldDocument appended);
 
     @Override
     public final <TDocument> BsonDocument toBsonDocument(final Class<TDocument> documentClass, final CodecRegistry codecRegistry) {
@@ -79,7 +79,7 @@ public abstract class AbstractConstructibleBson<S extends AbstractConstructibleB
     }
 
     /**
-     * {@linkplain Document#append(String, Object) Appends} the specified mapping via {@link #newMutated(Consumer)}.
+     * {@linkplain OldDocument#append(String, Object) Appends} the specified mapping via {@link #newMutated(Consumer)}.
      *
      * @return A new instance.
      */
@@ -88,12 +88,12 @@ public abstract class AbstractConstructibleBson<S extends AbstractConstructibleB
     }
 
     /**
-     * Creates a {@link Document#Document(java.util.Map) shallow copy} of {@code this} and mutates it via the specified {@code mutator}.
+     * Creates a {@link OldDocument#OldDocument(java.util.Map) shallow copy} of {@code this} and mutates it via the specified {@code mutator}.
      *
      * @return A new instance.
      */
-    protected final S newMutated(final Consumer<Document> mutator) {
-        Document newAppended = new Document(appended);
+    protected final S newMutated(final Consumer<OldDocument> mutator) {
+        OldDocument newAppended = new OldDocument(appended);
         mutator.accept(newAppended);
         return newSelf(base, newAppended);
     }
@@ -135,8 +135,8 @@ public abstract class AbstractConstructibleBson<S extends AbstractConstructibleB
     @Override
     public String toString() {
         return tryToMap()
-                .map(Document::new)
-                .map(Document::toString)
+                .map(OldDocument::new)
+                .map(OldDocument::toString)
                 .orElseGet(() -> "ConstructibleBson{base=" + base
                         + ", appended=" + appended
                         + '}');
@@ -153,12 +153,12 @@ public abstract class AbstractConstructibleBson<S extends AbstractConstructibleB
             super(base);
         }
 
-        private ConstructibleBson(final Bson base, final Document appended) {
+        private ConstructibleBson(final Bson base, final OldDocument appended) {
             super(base, appended);
         }
 
         @Override
-        protected ConstructibleBson newSelf(final Bson base, final Document appended) {
+        protected ConstructibleBson newSelf(final Bson base, final OldDocument appended) {
             return new ConstructibleBson(base, appended);
         }
     }

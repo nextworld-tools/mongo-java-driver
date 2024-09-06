@@ -42,7 +42,7 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -101,7 +101,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         boolean exceptionFound = false;
 
         try {
-            collection.insertOne(Document.parse("{x: 1}"));
+            collection.insertOne(OldDocument.parse("{x: 1}"));
         } catch (MongoClientException e) {
             assertEquals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string.", e.getMessage());
@@ -118,7 +118,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         boolean exceptionFound = false;
 
         try {
-            collection.findOneAndDelete(Document.parse("{x: 1}"));
+            collection.findOneAndDelete(OldDocument.parse("{x: 1}"));
         } catch (MongoClientException e) {
             assertEquals("This MongoDB deployment does not support retryable writes. "
                     + "Please add retryWrites=false to your connection string.", e.getMessage());
@@ -135,13 +135,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @Test
     public void poolClearedExceptionMustBeRetryable() throws InterruptedException, ExecutionException, TimeoutException {
         poolClearedExceptionMustBeRetryable(MongoClients::create,
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     @SuppressWarnings("try")
     public static <R> void poolClearedExceptionMustBeRetryable(
             final Function<MongoClientSettings, MongoClient> clientCreator,
-            final Function<MongoCollection<Document>, R> operation, final String operationName, final boolean write)
+            final Function<MongoCollection<OldDocument>, R> operation, final String operationName, final boolean write)
             throws InterruptedException, ExecutionException, TimeoutException {
         assumeTrue(serverVersionAtLeast(4, 3) && !(write && isStandalone()));
         assumeFalse(isServerlessTest());
@@ -183,7 +183,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
         int timeoutSeconds = 5;
         try (MongoClient client = clientCreator.apply(clientSettings);
                 FailPoint ignored = FailPoint.enable(configureFailPoint, Fixture.getPrimary())) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("poolClearedExceptionMustBeRetryable");
             collection.drop();
             ExecutorService ex = Executors.newFixedThreadPool(2);
@@ -261,10 +261,10 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                         builder.heartbeatFrequency(50, TimeUnit.MILLISECONDS))
                 .build());
              FailPoint ignored = FailPoint.enable(failPointDocument, primaryServerAddress)) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("originalErrorMustBePropagatedIfNoWritesPerformed");
             collection.drop();
-            MongoWriteConcernException e = assertThrows(MongoWriteConcernException.class, () -> collection.insertOne(new Document()));
+            MongoWriteConcernException e = assertThrows(MongoWriteConcernException.class, () -> collection.insertOne(new OldDocument()));
             assertEquals(91, e.getCode());
         } finally {
             futureFailPointFromListener.thenAccept(FailPoint::close);
@@ -277,13 +277,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @Test
     public void retriesOnDifferentMongosWhenAvailable() {
         retriesOnDifferentMongosWhenAvailable(MongoClients::create,
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     @SuppressWarnings("try")
     public static <R> void retriesOnDifferentMongosWhenAvailable(
             final Function<MongoClientSettings, MongoClient> clientCreator,
-            final Function<MongoCollection<Document>, R> operation, final String operationName, final boolean write) {
+            final Function<MongoCollection<OldDocument>, R> operation, final String operationName, final boolean write) {
         if (write) {
             assumeTrue(serverVersionAtLeast(4, 4));
         } else  {
@@ -315,7 +315,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                      // explicitly specify only s0 and s1, in case `getMultiMongosMongoClientSettingsBuilder` has more
                      .applyToClusterSettings(builder -> builder.hosts(asList(s0Address, s1Address)))
                      .build())) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("retriesOnDifferentMongosWhenAvailable");
             collection.drop();
             commandListener.reset();
@@ -341,13 +341,13 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     @Test
     public void retriesOnSameMongosWhenAnotherNotAvailable() {
         retriesOnSameMongosWhenAnotherNotAvailable(MongoClients::create,
-                mongoCollection -> mongoCollection.insertOne(new Document()), "insert", true);
+                mongoCollection -> mongoCollection.insertOne(new OldDocument()), "insert", true);
     }
 
     @SuppressWarnings("try")
     public static <R> void retriesOnSameMongosWhenAnotherNotAvailable(
             final Function<MongoClientSettings, MongoClient> clientCreator,
-            final Function<MongoCollection<Document>, R> operation, final String operationName, final boolean write) {
+            final Function<MongoCollection<OldDocument>, R> operation, final String operationName, final boolean write) {
         if (write) {
             assumeTrue(serverVersionAtLeast(4, 4));
         } else  {
@@ -379,7 +379,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
                              .hosts(singletonList(s0Address))
                              .mode(ClusterConnectionMode.MULTIPLE))
                      .build())) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("retriesOnSameMongosWhenAnotherNotAvailable");
             collection.drop();
             commandListener.reset();
@@ -399,7 +399,7 @@ public class RetryableWritesProseTest extends DatabaseTestCase {
     }
 
     private boolean canRunMmapv1Tests() {
-        Document storageEngine = (Document) getServerStatus().get("storageEngine");
+        OldDocument storageEngine = (OldDocument) getServerStatus().get("storageEngine");
 
         return ((isSharded() || isDiscoverableReplicaSet())
                 && storageEngine != null && storageEngine.get("name").equals("mmapv1")

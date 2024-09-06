@@ -27,7 +27,7 @@ import com.mongodb.client.MongoCluster;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Mono;
@@ -218,13 +218,13 @@ public class SyncMongoCluster implements MongoCluster {
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases() {
+    public ListDatabasesIterable<OldDocument> listDatabases() {
         return new SyncListDatabasesIterable<>(wrapped.listDatabases());
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
-        return listDatabases(clientSession, Document.class);
+    public ListDatabasesIterable<OldDocument> listDatabases(final ClientSession clientSession) {
+        return listDatabases(clientSession, OldDocument.class);
     }
 
     @Override
@@ -238,7 +238,7 @@ public class SyncMongoCluster implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return new SyncChangeStreamIterable<>(wrapped.watch());
     }
 
@@ -248,7 +248,7 @@ public class SyncMongoCluster implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
         return new SyncChangeStreamIterable<>(wrapped.watch(pipeline));
     }
 
@@ -258,7 +258,7 @@ public class SyncMongoCluster implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
         return new SyncChangeStreamIterable<>(wrapped.watch(unwrap(clientSession)));
     }
 
@@ -268,7 +268,7 @@ public class SyncMongoCluster implements MongoCluster {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return new SyncChangeStreamIterable<>(wrapped.watch(unwrap(clientSession), pipeline));
     }
 

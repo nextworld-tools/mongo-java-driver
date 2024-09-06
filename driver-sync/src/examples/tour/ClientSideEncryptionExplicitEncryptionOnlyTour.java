@@ -33,7 +33,7 @@ import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
 import org.bson.BsonBinary;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -77,7 +77,7 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
         MongoClient mongoClient = MongoClients.create(clientSettings);
 
         // Set up the key vault for this example
-        MongoCollection<Document> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
+        MongoCollection<OldDocument> keyVaultCollection = mongoClient.getDatabase(keyVaultNamespace.getDatabaseName())
                 .getCollection(keyVaultNamespace.getCollectionName());
         keyVaultCollection.drop();
 
@@ -86,7 +86,7 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
                 new IndexOptions().unique(true)
                         .partialFilterExpression(Filters.exists("keyAltNames")));
 
-        MongoCollection<Document> collection = mongoClient.getDatabase("test").getCollection("coll");
+        MongoCollection<OldDocument> collection = mongoClient.getDatabase("test").getCollection("coll");
         collection.drop(); // Clear old data
 
         // Create the ClientEncryption instance
@@ -104,7 +104,7 @@ public class ClientSideEncryptionExplicitEncryptionOnlyTour {
         BsonBinary encryptedFieldValue = clientEncryption.encrypt(new BsonString("123456789"),
                 new EncryptOptions("AEAD_AES_256_CBC_HMAC_SHA_512-Deterministic").keyId(dataKeyId));
 
-        collection.insertOne(new Document("encryptedField", encryptedFieldValue));
+        collection.insertOne(new OldDocument("encryptedField", encryptedFieldValue));
 
         // Automatically decrypts the encrypted field.
         System.out.println(collection.find().first().toJson());

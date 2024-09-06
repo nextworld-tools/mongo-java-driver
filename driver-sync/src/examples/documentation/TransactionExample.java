@@ -31,7 +31,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -107,8 +107,8 @@ public class TransactionExample {
     }
 
     private void updateEmployeeInfo() {
-        MongoCollection<Document> employeesCollection = client.getDatabase("hr").getCollection("employees");
-        MongoCollection<Document> eventsCollection = client.getDatabase("reporting").getCollection("events");
+        MongoCollection<OldDocument> employeesCollection = client.getDatabase("hr").getCollection("employees");
+        MongoCollection<OldDocument> eventsCollection = client.getDatabase("reporting").getCollection("events");
 
         TransactionOptions txnOptions = TransactionOptions.builder()
                 .readPreference(ReadPreference.primary())
@@ -123,7 +123,7 @@ public class TransactionExample {
                     Filters.eq("employee", 3),
                     Updates.set("status", "Inactive"));
             eventsCollection.insertOne(clientSession,
-                    new Document("employee", 3).append("status", new Document("new", "Inactive").append("old", "Active")));
+                    new OldDocument("employee", 3).append("status", new OldDocument("new", "Inactive").append("old", "Active")));
 
             commitWithRetry(clientSession);
         }
@@ -131,8 +131,8 @@ public class TransactionExample {
 
     @Test
     public void updateEmployeeInfoUsingWithTransactionHelper() {
-        MongoCollection<Document> employeesCollection = client.getDatabase("hr").getCollection("employees");
-        MongoCollection<Document> eventsCollection = client.getDatabase("reporting").getCollection("events");
+        MongoCollection<OldDocument> employeesCollection = client.getDatabase("hr").getCollection("employees");
+        MongoCollection<OldDocument> eventsCollection = client.getDatabase("reporting").getCollection("events");
 
         TransactionOptions txnOptions = TransactionOptions.builder()
                 .readPreference(ReadPreference.primary())
@@ -146,7 +146,7 @@ public class TransactionExample {
                         Filters.eq("employee", 3),
                         Updates.set("status", "Inactive"));
                 eventsCollection.insertOne(clientSession,
-                        new Document("employee", 3).append("status", new Document("new", "Inactive").append("old", "Active")));
+                        new OldDocument("employee", 3).append("status", new OldDocument("new", "Inactive").append("old", "Active")));
                 return null;
             }, txnOptions);
         } catch (MongoException e) {

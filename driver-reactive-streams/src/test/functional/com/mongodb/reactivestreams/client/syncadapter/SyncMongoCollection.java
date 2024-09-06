@@ -52,7 +52,7 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertManyResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Flux;
@@ -690,8 +690,8 @@ class SyncMongoCollection<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListSearchIndexesIterable<Document> listSearchIndexes() {
-        return listSearchIndexes(Document.class);
+    public ListSearchIndexesIterable<OldDocument> listSearchIndexes() {
+        return listSearchIndexes(OldDocument.class);
     }
 
     @Override
@@ -742,8 +742,8 @@ class SyncMongoCollection<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListIndexesIterable<Document> listIndexes() {
-        return listIndexes(Document.class);
+    public ListIndexesIterable<OldDocument> listIndexes() {
+        return listIndexes(OldDocument.class);
     }
 
     @Override
@@ -752,8 +752,8 @@ class SyncMongoCollection<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListIndexesIterable<Document> listIndexes(final ClientSession clientSession) {
-        return listIndexes(clientSession, Document.class);
+    public ListIndexesIterable<OldDocument> listIndexes(final ClientSession clientSession) {
+        return listIndexes(clientSession, OldDocument.class);
     }
 
     @Override

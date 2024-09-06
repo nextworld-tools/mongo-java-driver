@@ -24,7 +24,7 @@ import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -48,7 +48,7 @@ class DropIndexOperationSpecification extends OperationFunctionalSpecification {
 
     def 'should error when dropping non-existent index on existing collection'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentThat', 'forces creation of the Collection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentThat', 'forces creation of the Collection'))
 
         when:
         execute(new DropIndexOperation(getNamespace(), 'made_up_index_1', null), async)
@@ -66,7 +66,7 @@ class DropIndexOperationSpecification extends OperationFunctionalSpecification {
 
         when:
         execute(new DropIndexOperation(getNamespace(), 'theField_1', null), async)
-        List<Document> indexes = getIndexes()
+        List<OldDocument> indexes = getIndexes()
 
         then:
         indexes.size() == 1
@@ -83,7 +83,7 @@ class DropIndexOperationSpecification extends OperationFunctionalSpecification {
 
         when:
         execute(new DropIndexOperation(getNamespace(), keys, null), async)
-        List<Document> indexes = getIndexes()
+        List<OldDocument> indexes = getIndexes()
 
         then:
         indexes.size() == 1
@@ -108,7 +108,7 @@ class DropIndexOperationSpecification extends OperationFunctionalSpecification {
         when:
         execute(new DropIndexOperation(getNamespace(), new BsonDocument('theField', new BsonInt64(1)), null),
                 async)
-        List<Document> indexes = getIndexes()
+        List<OldDocument> indexes = getIndexes()
 
         then:
         indexes.size() == 1
@@ -125,7 +125,7 @@ class DropIndexOperationSpecification extends OperationFunctionalSpecification {
 
         when:
         execute(new DropIndexOperation(getNamespace(), '*', null), async)
-        List<Document> indexes = getIndexes()
+        List<OldDocument> indexes = getIndexes()
 
         then:
         indexes.size() == 1

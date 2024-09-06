@@ -26,7 +26,7 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
@@ -158,7 +158,7 @@ public abstract class OperationTest {
         stages.add(setWindowFields(partitionBy, null, output));
         stages.add(sort(sortSpecification));
 
-        List<Document> actual = getCollectionHelper().aggregate(stages, DOCUMENT_DECODER);
+        List<OldDocument> actual = getCollectionHelper().aggregate(stages, DOCUMENT_DECODER);
 
         return actual.stream()
                 .map(doc -> doc.get("result"))

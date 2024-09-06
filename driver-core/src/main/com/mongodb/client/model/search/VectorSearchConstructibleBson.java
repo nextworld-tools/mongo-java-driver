@@ -18,7 +18,7 @@ package com.mongodb.client.model.search;
 import com.mongodb.annotations.Immutable;
 import com.mongodb.internal.client.model.AbstractConstructibleBson;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -34,12 +34,12 @@ final class VectorSearchConstructibleBson extends AbstractConstructibleBson<Vect
         super(base);
     }
 
-    private VectorSearchConstructibleBson(final Bson base, final Document appended) {
+    private VectorSearchConstructibleBson(final Bson base, final OldDocument appended) {
         super(base, appended);
     }
 
     @Override
-    protected VectorSearchConstructibleBson newSelf(final Bson base, final Document appended) {
+    protected VectorSearchConstructibleBson newSelf(final Bson base, final OldDocument appended) {
         return new VectorSearchConstructibleBson(base, appended);
     }
 

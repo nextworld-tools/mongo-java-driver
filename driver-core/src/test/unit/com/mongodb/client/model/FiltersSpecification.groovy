@@ -25,7 +25,7 @@ import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonString
 import org.bson.BsonType
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 import java.util.regex.Pattern
@@ -667,7 +667,7 @@ class FiltersSpecification extends Specification {
 
     def 'should render with iterable value'() {
         expect:
-        toBson(eq('x', new Document())) == parse('''{
+        toBson(eq('x', new OldDocument())) == parse('''{
                                                   x : {}
                                                }''')
 

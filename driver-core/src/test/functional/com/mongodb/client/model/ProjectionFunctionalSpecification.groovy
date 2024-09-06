@@ -19,7 +19,7 @@ package com.mongodb.client.model
 
 import com.mongodb.MongoQueryException
 import com.mongodb.OperationFunctionalSpecification
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Filters.and
@@ -34,20 +34,20 @@ import static com.mongodb.client.model.Projections.metaTextScore
 import static com.mongodb.client.model.Projections.slice
 
 class ProjectionFunctionalSpecification extends OperationFunctionalSpecification {
-    def a = new Document('_id', 1).append('x', 'coffee').append('y', [new Document('a', 1).append('b', 2),
-                                                               new Document('a', 2).append('b', 3),
-                                                               new Document('a', 3).append('b', 4)])
-    def aYSlice1 = new Document('_id', 1).append('x', 'coffee').append('y', [new Document('a', 1).append('b', 2)])
-    def aYSlice12 = new Document('_id', 1).append('x', 'coffee').append('y', [new Document('a', 2).append('b', 3),
-                                                                       new Document('a', 3).append('b', 4)])
-    def aNoY = new Document('_id', 1).append('x', 'coffee')
-    def aId = new Document('_id', 1)
-    def aNoId = new Document().append('x', 'coffee').append('y', [new Document('a', 1).append('b', 2),
-                                                           new Document('a', 2).append('b', 3),
-                                                           new Document('a', 3).append('b', 4)])
-    def aWithScore = new Document('_id', 1).append('x', 'coffee').append('y', [new Document('a', 1).append('b', 2),
-                                                                        new Document('a', 2).append('b', 3),
-                                                                        new Document('a', 3).append('b', 4)])
+    def a = new OldDocument('_id', 1).append('x', 'coffee').append('y', [new OldDocument('a', 1).append('b', 2),
+                                                                         new OldDocument('a', 2).append('b', 3),
+                                                                         new OldDocument('a', 3).append('b', 4)])
+    def aYSlice1 = new OldDocument('_id', 1).append('x', 'coffee').append('y', [new OldDocument('a', 1).append('b', 2)])
+    def aYSlice12 = new OldDocument('_id', 1).append('x', 'coffee').append('y', [new OldDocument('a', 2).append('b', 3),
+                                                                                 new OldDocument('a', 3).append('b', 4)])
+    def aNoY = new OldDocument('_id', 1).append('x', 'coffee')
+    def aId = new OldDocument('_id', 1)
+    def aNoId = new OldDocument().append('x', 'coffee').append('y', [new OldDocument('a', 1).append('b', 2),
+                                                                     new OldDocument('a', 2).append('b', 3),
+                                                                     new OldDocument('a', 3).append('b', 4)])
+    def aWithScore = new OldDocument('_id', 1).append('x', 'coffee').append('y', [new OldDocument('a', 1).append('b', 2),
+                                                                                  new OldDocument('a', 2).append('b', 3),
+                                                                                  new OldDocument('a', 3).append('b', 4)])
                                            .append('score', 1.0)
 
     def setup() {
@@ -83,7 +83,7 @@ class ProjectionFunctionalSpecification extends OperationFunctionalSpecification
 
     def 'firstElem'() {
         expect:
-        find(new Document('y', new Document('$elemMatch', new Document('a', 1).append('b', 2))),
+        find(new OldDocument('y', new OldDocument('$elemMatch', new OldDocument('a', 1).append('b', 2))),
              fields(include('x'), elemMatch('y'))) == [aYSlice1]
     }
 
@@ -100,7 +100,7 @@ class ProjectionFunctionalSpecification extends OperationFunctionalSpecification
 
     def 'metaTextScore'() {
         given:
-        getCollectionHelper().createIndex(new Document('x', 'text'))
+        getCollectionHelper().createIndex(new OldDocument('x', 'text'))
 
         expect:
         find(text('coffee'), metaTextScore('score')) == [aWithScore]

@@ -21,7 +21,7 @@ import org.bson.BSONObject;
 import org.bson.BsonBinarySubType;
 import org.bson.BsonBinaryWriter;
 import org.bson.BsonObjectId;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.io.OutputBuffer;
 import org.bson.types.BSONTimestamp;
 import org.bson.types.Binary;
@@ -542,7 +542,7 @@ public class DBCollectionTest extends DatabaseTestCase {
         doc.append("byte array", new byte[]{1, 2, 3});
         doc.append("int array", new int[]{4, 5, 6});
         doc.append("list", asList(7, 8, 9));
-        doc.append("doc list", asList(new Document("x", 1), new Document("x", 2)));
+        doc.append("doc list", asList(new OldDocument("x", 1), new OldDocument("x", 2)));
 
         collection.insert(doc);
         DBObject found = collection.findOne();

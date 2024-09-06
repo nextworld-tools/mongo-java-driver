@@ -32,7 +32,7 @@ import com.mongodb.reactivestreams.client.gridfs.GridFSFindPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
@@ -56,7 +56,7 @@ public final class GridFSPublisherCreator {
     }
 
     public static GridFSUploadPublisherImpl createGridFSUploadPublisher(
-            final int chunkSizeBytes, final MongoCollection<GridFSFile> filesCollection, final MongoCollection<Document> chunksCollection,
+            final int chunkSizeBytes, final MongoCollection<GridFSFile> filesCollection, final MongoCollection<OldDocument> chunksCollection,
             @Nullable final ClientSession clientSession, final BsonValue id, final String filename, final GridFSUploadOptions options,
             final Publisher<ByteBuffer> source) {
         notNull("filesCollection", filesCollection);
@@ -73,7 +73,7 @@ public final class GridFSPublisherCreator {
     }
 
     public static GridFSDownloadPublisherImpl createGridFSDownloadPublisher(
-            final MongoCollection<Document> chunksCollection,
+            final MongoCollection<OldDocument> chunksCollection,
             @Nullable final ClientSession clientSession,
             final Function<Timeout, GridFSFindPublisher> publisher) {
         notNull("chunksCollection", chunksCollection);
@@ -119,8 +119,8 @@ public final class GridFSPublisherCreator {
             sort = -1;
         }
 
-        return createGridFSFindPublisher(filesCollection, clientSession, new Document("filename", filename), operationTimeout).skip(skip)
-                .sort(new Document("uploadDate", sort));
+        return createGridFSFindPublisher(filesCollection, clientSession, new OldDocument("filename", filename), operationTimeout).skip(skip)
+                .sort(new OldDocument("uploadDate", sort));
     }
 
     public static FindPublisher<GridFSFile> createFindPublisher(
@@ -166,7 +166,7 @@ public final class GridFSPublisherCreator {
     }
 
     public static Publisher<Void> createDeletePublisher(final MongoCollection<GridFSFile> filesCollection,
-                                                        final MongoCollection<Document> chunksCollection,
+                                                        final MongoCollection<OldDocument> chunksCollection,
                                                         @Nullable final ClientSession clientSession,
                                                         final BsonValue id) {
         notNull("filesCollection", filesCollection);
@@ -224,7 +224,7 @@ public final class GridFSPublisherCreator {
     }
 
     public static Publisher<Void> createDropPublisher(final MongoCollection<GridFSFile> filesCollection,
-                                                      final MongoCollection<Document> chunksCollection,
+                                                      final MongoCollection<OldDocument> chunksCollection,
                                                       @Nullable final ClientSession clientSession) {
 
         return Mono.defer(() -> {

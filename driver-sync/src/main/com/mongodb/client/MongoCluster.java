@@ -25,7 +25,7 @@ import com.mongodb.annotations.Alpha;
 import com.mongodb.annotations.Immutable;
 import com.mongodb.annotations.Reason;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -224,7 +224,7 @@ public interface MongoCluster {
      *
      * @return the list databases iterable interface
      */
-    ListDatabasesIterable<Document> listDatabases();
+    ListDatabasesIterable<OldDocument> listDatabases();
 
     /**
      * Gets the list of databases
@@ -234,7 +234,7 @@ public interface MongoCluster {
      * @mongodb.driver.manual reference/command/listDatabases List Databases
      * @mongodb.server.release 3.6
      */
-    ListDatabasesIterable<Document> listDatabases(ClientSession clientSession);
+    ListDatabasesIterable<OldDocument> listDatabases(ClientSession clientSession);
 
     /**
      * Gets the list of databases
@@ -265,7 +265,7 @@ public interface MongoCluster {
      * @since 3.8
      * @mongodb.server.release 4.0
      */
-    ChangeStreamIterable<Document> watch();
+    ChangeStreamIterable<OldDocument> watch();
 
     /**
      * Creates a change stream for this client.
@@ -288,7 +288,7 @@ public interface MongoCluster {
      * @since 3.8
      * @mongodb.server.release 4.0
      */
-    ChangeStreamIterable<Document> watch(List<? extends Bson> pipeline);
+    ChangeStreamIterable<OldDocument> watch(List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this client.
@@ -312,7 +312,7 @@ public interface MongoCluster {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamIterable<Document> watch(ClientSession clientSession);
+    ChangeStreamIterable<OldDocument> watch(ClientSession clientSession);
 
     /**
      * Creates a change stream for this client.
@@ -337,7 +337,7 @@ public interface MongoCluster {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamIterable<Document> watch(ClientSession clientSession, List<? extends Bson> pipeline);
+    ChangeStreamIterable<OldDocument> watch(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this client.

@@ -25,7 +25,7 @@ import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.Projections;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import java.util.concurrent.TimeUnit;
@@ -294,7 +294,7 @@ public interface FindIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.driver.manual reference/command/explain/
      * @mongodb.server.release 3.2
      */
-    Document explain();
+    OldDocument explain();
 
     /**
      * Explain the execution plan for this operation with the given verbosity level
@@ -305,7 +305,7 @@ public interface FindIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.driver.manual reference/command/explain/
      * @mongodb.server.release 3.2
      */
-    Document explain(ExplainVerbosity verbosity);
+    OldDocument explain(ExplainVerbosity verbosity);
 
     /**
      * Explain the execution plan for this operation with the server's default verbosity level

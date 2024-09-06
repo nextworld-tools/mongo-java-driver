@@ -24,7 +24,7 @@ import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -68,10 +68,10 @@ public class ContextProviderTest {
                 .build())) {
 
             // given
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("ContextProviderTest");
             Mono.from(collection.drop()).block();
-            Mono.from(collection.insertMany(asList(new Document(), new Document(), new Document(), new Document()))).block();
+            Mono.from(collection.insertMany(asList(new OldDocument(), new OldDocument(), new OldDocument(), new OldDocument()))).block();
             commandListener.reset();
 
             // when
@@ -94,10 +94,10 @@ public class ContextProviderTest {
                 .build())) {
 
             // given
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("ContextProviderTest");
             Mono.from(collection.drop()).block();
-            Mono.from(collection.insertMany(asList(new Document(), new Document(), new Document(), new Document()))).block();
+            Mono.from(collection.insertMany(asList(new OldDocument(), new OldDocument(), new OldDocument(), new OldDocument()))).block();
             commandListener.reset();
 
             // when
@@ -109,7 +109,7 @@ public class ContextProviderTest {
 
             // given
             commandListener.reset();
-            Document document = new Document();
+            OldDocument document = new OldDocument();
 
             // when
             Mono.from(collection.insertOne(document)).block();
@@ -130,7 +130,7 @@ public class ContextProviderTest {
 
             // given
             commandListener.reset();
-            Document documentTwo = new Document();
+            OldDocument documentTwo = new OldDocument();
 
             // when
             Mono.from(collection.withWriteConcern(WriteConcern.UNACKNOWLEDGED).insertOne(documentTwo)).block();
@@ -164,7 +164,7 @@ public class ContextProviderTest {
             commandListener.reset();
 
             // when
-            Flux<Document> findFlux = Flux.from(collection.find().batchSize(4));
+            Flux<OldDocument> findFlux = Flux.from(collection.find().batchSize(4));
             findFlux.blockLast();
 
             // then
@@ -176,7 +176,7 @@ public class ContextProviderTest {
 
             // when
             try {
-                Mono.from(client.getDatabase("admin").runCommand(new Document("notRealCommand", 1))).block();
+                Mono.from(client.getDatabase("admin").runCommand(new OldDocument("notRealCommand", 1))).block();
                 fail();
             } catch (Exception e) {
                 // then

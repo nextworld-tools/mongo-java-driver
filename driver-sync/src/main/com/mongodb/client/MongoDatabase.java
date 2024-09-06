@@ -25,7 +25,7 @@ import com.mongodb.annotations.ThreadSafe;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.CreateViewOptions;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -177,7 +177,7 @@ public interface MongoDatabase {
      * @throws IllegalArgumentException if collectionName is invalid
      * @see com.mongodb.MongoNamespace#checkCollectionNameValidity(String)
      */
-    MongoCollection<Document> getCollection(String collectionName);
+    MongoCollection<OldDocument> getCollection(String collectionName);
 
     /**
      * Gets a collection, with a specific default document class.
@@ -198,7 +198,7 @@ public interface MongoDatabase {
      * @param command the command to be run
      * @return the command result
      */
-    Document runCommand(Bson command);
+    OldDocument runCommand(Bson command);
 
     /**
      * Executes the given command in the context of the current database with the given read preference.
@@ -210,7 +210,7 @@ public interface MongoDatabase {
      * @param readPreference the {@link ReadPreference} to be used when executing the command
      * @return the command result
      */
-    Document runCommand(Bson command, ReadPreference readPreference);
+    OldDocument runCommand(Bson command, ReadPreference readPreference);
 
     /**
      * Executes the given command in the context of the current database with a read preference of {@link ReadPreference#primary()}.
@@ -251,7 +251,7 @@ public interface MongoDatabase {
      * @since 3.6
      * @mongodb.server.release 3.6
      */
-    Document runCommand(ClientSession clientSession, Bson command);
+    OldDocument runCommand(ClientSession clientSession, Bson command);
 
     /**
      * Executes the given command in the context of the current database with the given read preference.
@@ -266,7 +266,7 @@ public interface MongoDatabase {
      * @since 3.6
      * @mongodb.server.release 3.6
      */
-    Document runCommand(ClientSession clientSession, Bson command, ReadPreference readPreference);
+    OldDocument runCommand(ClientSession clientSession, Bson command, ReadPreference readPreference);
 
     /**
      * Executes the given command in the context of the current database with a read preference of {@link ReadPreference#primary()}.
@@ -332,7 +332,7 @@ public interface MongoDatabase {
      * @return the list collections iterable interface
      * @mongodb.driver.manual reference/command/listCollections listCollections
      */
-    ListCollectionsIterable<Document> listCollections();
+    ListCollectionsIterable<OldDocument> listCollections();
 
     /**
      * Finds all the collections in this database.
@@ -364,7 +364,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 3.6
      * @mongodb.driver.manual reference/command/listCollections listCollections
      */
-    ListCollectionsIterable<Document> listCollections(ClientSession clientSession);
+    ListCollectionsIterable<OldDocument> listCollections(ClientSession clientSession);
 
     /**
      * Finds all the collections in this database.
@@ -481,7 +481,7 @@ public interface MongoDatabase {
      * @since 3.8
      * @mongodb.server.release 4.0
      */
-    ChangeStreamIterable<Document> watch();
+    ChangeStreamIterable<OldDocument> watch();
 
     /**
      * Creates a change stream for this database.
@@ -504,7 +504,7 @@ public interface MongoDatabase {
      * @since 3.8
      * @mongodb.server.release 4.0
      */
-    ChangeStreamIterable<Document> watch(List<? extends Bson> pipeline);
+    ChangeStreamIterable<OldDocument> watch(List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this database.
@@ -528,7 +528,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamIterable<Document> watch(ClientSession clientSession);
+    ChangeStreamIterable<OldDocument> watch(ClientSession clientSession);
 
     /**
      * Creates a change stream for this database.
@@ -553,7 +553,7 @@ public interface MongoDatabase {
      * @mongodb.server.release 4.0
      * @mongodb.driver.dochub core/changestreams Change Streams
      */
-    ChangeStreamIterable<Document> watch(ClientSession clientSession, List<? extends Bson> pipeline);
+    ChangeStreamIterable<OldDocument> watch(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Creates a change stream for this database.
@@ -579,7 +579,7 @@ public interface MongoDatabase {
      * @mongodb.driver.manual reference/command/aggregate/#dbcmd.aggregate Aggregate Command
      * @mongodb.server.release 3.6
      */
-    AggregateIterable<Document> aggregate(List<? extends Bson> pipeline);
+    AggregateIterable<OldDocument> aggregate(List<? extends Bson> pipeline);
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages
@@ -606,7 +606,7 @@ public interface MongoDatabase {
      * @mongodb.driver.manual reference/command/aggregate/#dbcmd.aggregate Aggregate Command
      * @mongodb.server.release 3.6
      */
-    AggregateIterable<Document> aggregate(ClientSession clientSession, List<? extends Bson> pipeline);
+    AggregateIterable<OldDocument> aggregate(ClientSession clientSession, List<? extends Bson> pipeline);
 
     /**
      * Runs an aggregation framework pipeline on the database for pipeline stages

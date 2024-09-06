@@ -30,7 +30,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,7 +76,7 @@ public class CrudProseTest extends DatabaseTestCase {
 
         try {
             setFailPoint();
-            collection.insertOne(Document.parse("{ x: 1 }"));
+            collection.insertOne(OldDocument.parse("{ x: 1 }"));
         } catch (MongoWriteConcernException e) {
             assertEquals(e.getWriteConcernError().getCode(), 100);
             assertEquals("UnsatisfiableWriteConcern", e.getWriteConcernError().getCodeName());
@@ -102,7 +102,7 @@ public class CrudProseTest extends DatabaseTestCase {
                                 .validator(Filters.type("x", "string"))));
 
         try {
-            collection.insertOne(new Document("x", 1));
+            collection.insertOne(new OldDocument("x", 1));
             fail("Should throw, as document doesn't match schema");
         } catch (MongoWriteException e) {
             // These assertions doesn't do exactly what's required by the specification, but it's simpler to implement and nearly as
@@ -115,7 +115,7 @@ public class CrudProseTest extends DatabaseTestCase {
         }
 
         try {
-            collection.insertMany(asList(new Document("x", 1)));
+            collection.insertMany(asList(new OldDocument("x", 1)));
             fail("Should throw, as document doesn't match schema");
         } catch (MongoBulkWriteException e) {
             // These assertions doesn't do exactly what's required by the specification, but it's simpler to implement and nearly as

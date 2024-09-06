@@ -29,7 +29,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.reactivestreams.client.internal.BatchCursor;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -208,12 +208,12 @@ public class SyncMongoClient implements MongoClient {
 
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases() {
+    public ListDatabasesIterable<OldDocument> listDatabases() {
         return delegate.listDatabases();
     }
 
     @Override
-    public ListDatabasesIterable<Document> listDatabases(final ClientSession clientSession) {
+    public ListDatabasesIterable<OldDocument> listDatabases(final ClientSession clientSession) {
         return delegate.listDatabases(clientSession);
     }
 
@@ -228,7 +228,7 @@ public class SyncMongoClient implements MongoClient {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch() {
+    public ChangeStreamIterable<OldDocument> watch() {
         return delegate.watch();
     }
 
@@ -238,7 +238,7 @@ public class SyncMongoClient implements MongoClient {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final List<? extends Bson> pipeline) {
         return delegate.watch(pipeline);
     }
 
@@ -248,7 +248,7 @@ public class SyncMongoClient implements MongoClient {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession) {
         return delegate.watch(clientSession);
     }
 
@@ -258,7 +258,7 @@ public class SyncMongoClient implements MongoClient {
     }
 
     @Override
-    public ChangeStreamIterable<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+    public ChangeStreamIterable<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
         return delegate.watch(clientSession, pipeline);
     }
 

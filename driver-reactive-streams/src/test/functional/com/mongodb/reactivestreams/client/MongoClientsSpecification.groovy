@@ -24,7 +24,7 @@ import com.mongodb.ServerAddress
 import com.mongodb.WriteConcern
 import com.mongodb.connection.TransportSettings
 import com.mongodb.reactivestreams.client.internal.MongoClientImpl
-import org.bson.Document
+import org.bson.OldDocument
 import reactor.core.publisher.Mono
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -53,7 +53,7 @@ class MongoClientsSpecification extends FunctionalSpecification {
 
         when:
         def client = MongoClients.create(connectionString)
-        Mono.from(client.getDatabase('admin').runCommand(new Document('ping', 1))).block(TIMEOUT_DURATION)
+        Mono.from(client.getDatabase('admin').runCommand(new OldDocument('ping', 1))).block(TIMEOUT_DURATION)
 
         then:
         noExceptionThrown()

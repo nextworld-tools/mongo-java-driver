@@ -27,7 +27,7 @@ import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.connection.OperationContext;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.RawBsonDocument;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,18 +66,18 @@ final class ChangeStreamBatchCursorTest {
     private ReadBinding readBinding;
     private BsonDocument resumeToken;
     private CommandBatchCursor<RawBsonDocument> commandBatchCursor;
-    private CommandBatchCursor<RawBsonDocument> newCommandBatchCursor;
-    private ChangeStreamBatchCursor<Document> newChangeStreamCursor;
-    private ChangeStreamOperation<Document> changeStreamOperation;
+    private CommandBatchCursor<RawBsonDocument>  newCommandBatchCursor;
+    private ChangeStreamBatchCursor<OldDocument> newChangeStreamCursor;
+    private ChangeStreamOperation<OldDocument>   changeStreamOperation;
 
     @Test
     @DisplayName("should return result on next")
     void shouldReturnResultOnNext() {
         when(commandBatchCursor.next()).thenReturn(RESULT_FROM_NEW_CURSOR);
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
 
         //when
-        List<Document> next = cursor.next();
+        List<OldDocument> next = cursor.next();
 
         //then
         assertEquals(RESULT_FROM_NEW_CURSOR, next);
@@ -93,7 +93,7 @@ final class ChangeStreamBatchCursorTest {
     @DisplayName("should throw timeout exception without resume attempt on next")
     void shouldThrowTimeoutExceptionWithoutResumeAttemptOnNext() {
         when(commandBatchCursor.next()).thenThrow(new MongoOperationTimeoutException("timeout"));
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
         //when
         assertThrows(MongoOperationTimeoutException.class, cursor::next);
 
@@ -109,9 +109,9 @@ final class ChangeStreamBatchCursorTest {
     @DisplayName("should perform resume attempt on next when resumable error is thrown")
     void shouldPerformResumeAttemptOnNextWhenResumableErrorIsThrown() {
         when(commandBatchCursor.next()).thenThrow(new MongoNotPrimaryException(new BsonDocument(), new ServerAddress()));
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
         //when
-        List<Document> next = cursor.next();
+        List<OldDocument> next = cursor.next();
 
         //then
         assertEquals(RESULT_FROM_NEW_CURSOR, next);
@@ -131,7 +131,7 @@ final class ChangeStreamBatchCursorTest {
     @DisplayName("should resume only once on subsequent calls after timeout error")
     void shouldResumeOnlyOnceOnSubsequentCallsAfterTimeoutError() {
         when(commandBatchCursor.next()).thenThrow(new MongoOperationTimeoutException("timeout"));
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
         //when
         assertThrows(MongoOperationTimeoutException.class, cursor::next);
 
@@ -144,7 +144,7 @@ final class ChangeStreamBatchCursorTest {
         clearInvocations(commandBatchCursor, newCommandBatchCursor, timeoutContext, changeStreamOperation, readBinding);
 
         //when seconds next is called. Resume is attempted.
-        List<Document> next = cursor.next();
+        List<OldDocument> next = cursor.next();
 
         //then
         assertEquals(Collections.emptyList(), next);
@@ -160,7 +160,7 @@ final class ChangeStreamBatchCursorTest {
         clearInvocations(commandBatchCursor, newCommandBatchCursor, timeoutContext, changeStreamOperation, readBinding);
 
         //when third next is called. No resume is attempted.
-        List<Document> next2 = cursor.next();
+        List<OldDocument> next2 = cursor.next();
 
         //then
         assertEquals(Collections.emptyList(), next2);
@@ -182,7 +182,7 @@ final class ChangeStreamBatchCursorTest {
         MongoNotPrimaryException resumableError = new MongoNotPrimaryException(new BsonDocument(), new ServerAddress());
         when(changeStreamOperation.execute(readBinding)).thenThrow(resumableError);
 
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
         //when
         assertThrows(MongoOperationTimeoutException.class, cursor::next);
         clearInvocations(commandBatchCursor, newCommandBatchCursor, timeoutContext, changeStreamOperation, readBinding);
@@ -200,7 +200,7 @@ final class ChangeStreamBatchCursorTest {
     @DisplayName("should perform a resume attempt in subsequent next call when previous resume attempt in next timed out")
     void shouldResumeAfterTimeoutInAggregateOnNextCall() {
         //given
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
 
         //first next operation times out on getMore
         when(commandBatchCursor.next()).thenThrow(new MongoOperationTimeoutException("timeout during next call"));
@@ -215,7 +215,7 @@ final class ChangeStreamBatchCursorTest {
         doReturn(newChangeStreamCursor).when(changeStreamOperation).execute(readBinding);
 
         //when third operation succeeds to resume and call next
-        List<Document> next = cursor.next();
+        List<OldDocument> next = cursor.next();
 
         //then
         assertEquals(RESULT_FROM_NEW_CURSOR, next);
@@ -234,7 +234,7 @@ final class ChangeStreamBatchCursorTest {
     @DisplayName("should close change stream when resume operation fails due to non-timeout error")
     void shouldCloseChangeStreamWhenResumeOperationFailsDueToNonTimeoutError() {
         //given
-        ChangeStreamBatchCursor<Document> cursor = createChangeStreamCursor();
+        ChangeStreamBatchCursor<OldDocument> cursor = createChangeStreamCursor();
 
         //first next operation times out on getMore
         when(commandBatchCursor.next()).thenThrow(new MongoOperationTimeoutException("timeout during next call"));
@@ -263,8 +263,8 @@ final class ChangeStreamBatchCursorTest {
         verifyNoResumeAttemptCalled();
     }
 
-    private ChangeStreamBatchCursor<Document> createChangeStreamCursor() {
-        ChangeStreamBatchCursor<Document> cursor =
+    private ChangeStreamBatchCursor<OldDocument> createChangeStreamCursor() {
+        ChangeStreamBatchCursor<OldDocument> cursor =
                 new ChangeStreamBatchCursor<>(changeStreamOperation, commandBatchCursor, readBinding, null, maxWireVersion);
         clearInvocations(commandBatchCursor, newCommandBatchCursor, timeoutContext, changeStreamOperation, readBinding);
         return cursor;

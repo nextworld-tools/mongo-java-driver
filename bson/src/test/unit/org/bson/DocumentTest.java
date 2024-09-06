@@ -44,14 +44,14 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 // Don't convert to Spock, as Groovy intercepts equals/hashCode methods that we are trying to test
 public class DocumentTest {
-    private final Document emptyDocument = new Document();
-    private final Document document = new Document()
+    private final OldDocument emptyDocument = new OldDocument();
+    private final OldDocument document      = new OldDocument()
             .append("a", 1)
             .append("b", 2)
-            .append("c", new Document("x", true))
-            .append("d", asList(new Document("y", false), 1));
+            .append("c", new OldDocument("x", true))
+            .append("d", asList(new OldDocument("y", false), 1));
 
-    private final Document customDocument = new Document("database", new Name("MongoDB"));
+    private final OldDocument   customDocument = new OldDocument("database", new Name("MongoDB"));
     private final CodecRegistry customRegistry = fromRegistries(fromCodecs(new NameCodec()),
             fromProviders(new DocumentCodecProvider(), new ValueCodecProvider(), new BsonValueCodecProvider()));
     private final DocumentCodec customDocumentCodec = new DocumentCodec(customRegistry, new BsonTypeClassMap());
@@ -82,7 +82,7 @@ public class DocumentTest {
     @Test
     public void toJsonShouldNotReorderIdField() {
         // given
-        Document d = new Document().append("x", 1)
+        OldDocument d = new OldDocument().append("x", 1)
                 .append("y", Collections.singletonList("one"))
                 .append("_id", "1");
         assertEquals("{\"x\": 1, \"y\": [\"one\"], \"_id\": \"1\"}", d.toJson());
@@ -92,7 +92,7 @@ public class DocumentTest {
     @Test
     public void shouldGetWithDefaultValue() {
         // given
-        Document d = new Document("x", 1)
+        OldDocument d = new OldDocument("x", 1)
                 .append("y", Collections.singletonList("one"))
                 .append("z", "foo");
 
@@ -145,7 +145,7 @@ public class DocumentTest {
     @Test
     public void toJsonShouldRenderUuidAsStandard() {
         UUID uuid = UUID.randomUUID();
-        Document doc = new Document("_id", uuid);
+        OldDocument doc = new OldDocument("_id", uuid);
 
         String json = doc.toJson();
         assertEquals(new BsonDocument("_id", new BsonBinary(uuid)), BsonDocument.parse(json));

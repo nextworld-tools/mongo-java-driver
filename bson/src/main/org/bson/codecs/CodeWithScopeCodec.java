@@ -18,7 +18,7 @@ package org.bson.codecs;
 
 import org.bson.BsonReader;
 import org.bson.BsonWriter;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.CodeWithScope;
 
 /**
@@ -27,21 +27,21 @@ import org.bson.types.CodeWithScope;
  * @since 3.0
  */
 public class CodeWithScopeCodec implements Codec<CodeWithScope> {
-    private final Codec<Document> documentCodec;
+    private final Codec<OldDocument> documentCodec;
 
     /**
      * Creates a new CodeWithScopeCodec.
      *
      * @param documentCodec a Codec for encoding and decoding the {@link org.bson.types.CodeWithScope#getScope()}.
      */
-    public CodeWithScopeCodec(final Codec<Document> documentCodec) {
+    public CodeWithScopeCodec(final Codec<OldDocument> documentCodec) {
         this.documentCodec = documentCodec;
     }
 
     @Override
     public CodeWithScope decode(final BsonReader bsonReader, final DecoderContext decoderContext) {
         String code = bsonReader.readJavaScriptWithScope();
-        Document scope = documentCodec.decode(bsonReader, decoderContext);
+        OldDocument scope = documentCodec.decode(bsonReader, decoderContext);
         return new CodeWithScope(code, scope);
     }
 

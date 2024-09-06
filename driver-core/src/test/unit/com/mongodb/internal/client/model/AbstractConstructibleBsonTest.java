@@ -18,7 +18,7 @@ package com.mongodb.internal.client.model;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 
@@ -66,40 +66,40 @@ final class AbstractConstructibleBsonTest {
 
     @Test
     void appendedCannotBeMutatedViaToBsonDocument() {
-        appendedCannotBeMutatedViaToBsonDocument(new Document());
-        appendedCannotBeMutatedViaToBsonDocument(new Document("appendedName", "appendedValue"));
+        appendedCannotBeMutatedViaToBsonDocument(new OldDocument());
+        appendedCannotBeMutatedViaToBsonDocument(new OldDocument("appendedName", "appendedValue"));
     }
 
     @Test
     void tostring() {
         assertEquals(
-                new Document(
+                new OldDocument(
                         "array", new BsonArray(asList(new BsonString("e1"), new BsonString("e2"))))
                         .append("double", 0.5)
-                        .append("doc", new Document("i", 42))
-                        .append("constructible", new Document("s", ""))
+                        .append("doc", new OldDocument("i", 42))
+                        .append("constructible", new OldDocument("s", ""))
                         .toString(),
                 AbstractConstructibleBson.of(
                         new BsonDocument("array", new BsonArray(asList(new BsonString("e1"), new BsonString("e2")))))
                         .newAppended("double", 0.5)
-                        .newAppended("doc", new Document("i", 42))
-                        .newAppended("constructible", AbstractConstructibleBson.of(AbstractConstructibleBson.of(new Document("s", ""))))
+                        .newAppended("doc", new OldDocument("i", 42))
+                        .newAppended("constructible", AbstractConstructibleBson.of(AbstractConstructibleBson.of(new OldDocument("s", ""))))
                         .toString());
     }
 
-    private static void appendedCannotBeMutatedViaToBsonDocument(final Document appended) {
+    private static void appendedCannotBeMutatedViaToBsonDocument(final OldDocument appended) {
         String expected = appended.toBsonDocument().toJson();
         final class Constructible extends AbstractConstructibleBson<Constructible> {
-            private Constructible(final Bson base, final Document appended) {
+            private Constructible(final Bson base, final OldDocument appended) {
                 super(base, appended);
             }
 
             @Override
-            protected Constructible newSelf(final Bson base, final Document appended) {
+            protected Constructible newSelf(final Bson base, final OldDocument appended) {
                 return new Constructible(base, appended);
             }
         }
-        AbstractConstructibleBson<?> constructible = new Constructible(new Document("name", "value"), appended);
+        AbstractConstructibleBson<?> constructible = new Constructible(new OldDocument("name", "value"), appended);
         // here we modify the document produced by `toBsonDocument` and check that it does not affect `appended`
         constructible.toBsonDocument().append("name2", new BsonString("value2"));
         assertEquals(expected, appended.toBsonDocument().toJson());

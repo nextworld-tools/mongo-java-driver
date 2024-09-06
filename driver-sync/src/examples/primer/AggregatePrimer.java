@@ -17,7 +17,7 @@
 package primer;
 
 import com.mongodb.client.AggregateIterable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
@@ -32,8 +32,8 @@ public class AggregatePrimer extends PrimerTestCase {
 
         // @begin: group-documents-by-a-field-and-calculate-count
         // @code: start
-        AggregateIterable<Document> iterable = db.getCollection("restaurants").aggregate(asList(
-                new Document("$group", new Document("_id", "$borough").append("count", new Document("$sum", 1)))));
+        AggregateIterable<OldDocument> iterable = db.getCollection("restaurants").aggregate(asList(
+                new OldDocument("$group", new OldDocument("_id", "$borough").append("count", new OldDocument("$sum", 1)))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
@@ -60,9 +60,9 @@ public class AggregatePrimer extends PrimerTestCase {
 
         // @begin: filter-and-group-documents
         // @code: start
-        AggregateIterable<Document> iterable = db.getCollection("restaurants").aggregate(asList(
-                new Document("$match", new Document("borough", "Queens").append("cuisine", "Brazilian")),
-                new Document("$group", new Document("_id", "$address.zipcode").append("count", new Document("$sum", 1)))));
+        AggregateIterable<OldDocument> iterable = db.getCollection("restaurants").aggregate(asList(
+                new OldDocument("$match", new OldDocument("borough", "Queens").append("cuisine", "Brazilian")),
+                new OldDocument("$group", new OldDocument("_id", "$address.zipcode").append("count", new OldDocument("$sum", 1)))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document

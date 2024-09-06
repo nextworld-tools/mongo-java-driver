@@ -58,7 +58,7 @@ import com.mongodb.kotlin.client.coroutine.MongoCollection
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.toCollection
 import kotlinx.coroutines.runBlocking
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 
@@ -422,7 +422,7 @@ data class SyncMongoCollection<T : Any>(val wrapped: MongoCollection<T>) : JMong
 
     override fun dropSearchIndex(indexName: String) = runBlocking { wrapped.dropSearchIndex(indexName) }
 
-    override fun listSearchIndexes(): ListSearchIndexesIterable<Document> =
+    override fun listSearchIndexes(): ListSearchIndexesIterable<OldDocument> =
         SyncListSearchIndexesIterable(wrapped.listSearchIndexes())
 
     override fun <R : Any> listSearchIndexes(resultClass: Class<R>): ListSearchIndexesIterable<R> =
@@ -467,12 +467,12 @@ data class SyncMongoCollection<T : Any>(val wrapped: MongoCollection<T>) : JMong
         wrapped.createIndexes(clientSession.unwrapped(), indexes, createIndexOptions).toCollection(mutableListOf())
     }
 
-    override fun listIndexes(): ListIndexesIterable<Document> = SyncListIndexesIterable(wrapped.listIndexes())
+    override fun listIndexes(): ListIndexesIterable<OldDocument> = SyncListIndexesIterable(wrapped.listIndexes())
 
     override fun <R : Any> listIndexes(resultClass: Class<R>): ListIndexesIterable<R> =
         SyncListIndexesIterable(wrapped.listIndexes(resultClass = resultClass))
 
-    override fun listIndexes(clientSession: ClientSession): ListIndexesIterable<Document> =
+    override fun listIndexes(clientSession: ClientSession): ListIndexesIterable<OldDocument> =
         SyncListIndexesIterable(wrapped.listIndexes(clientSession.unwrapped()))
 
     override fun <R : Any> listIndexes(clientSession: ClientSession, resultClass: Class<R>): ListIndexesIterable<R> =

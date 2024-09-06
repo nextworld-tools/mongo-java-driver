@@ -27,7 +27,7 @@ import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.junit.jupiter.api.DisplayName;
@@ -50,13 +50,13 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
     @Test
     void shouldBuildTheExpectedOperation() {
         List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
-        Codec<ChangeStreamDocument<Document>> codec = ChangeStreamDocument.createCodec(Document.class, getDefaultCodecRegistry());
+        Codec<ChangeStreamDocument<OldDocument>> codec = ChangeStreamDocument.createCodec(OldDocument.class, getDefaultCodecRegistry());
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        ChangeStreamPublisher<Document> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
-                                                                                    Document.class, pipeline, ChangeStreamLevel.COLLECTION);
+        ChangeStreamPublisher<OldDocument> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
+                                                                                    OldDocument.class, pipeline, ChangeStreamLevel.COLLECTION);
 
-        ChangeStreamOperation<ChangeStreamDocument<Document>> expectedOperation =
+        ChangeStreamOperation<ChangeStreamDocument<OldDocument>> expectedOperation =
                 new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, FullDocumentBeforeChange.DEFAULT, pipeline,
                         codec)
                         .batchSize(Integer.MAX_VALUE)
@@ -98,7 +98,7 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
 
         int batchSize = 100;
         Publisher<BsonDocument> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
-                                                                            Document.class, pipeline, ChangeStreamLevel.COLLECTION)
+                                                                            OldDocument.class, pipeline, ChangeStreamLevel.COLLECTION)
                 .batchSize(batchSize)
                 .comment(new BsonInt32(1))
                 .withDocumentClass(BsonDocument.class);
@@ -124,18 +124,18 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
         TestOperationExecutor executor = createOperationExecutor(asList(new MongoException("Failure"), null, null));
 
         // Operation fails
-        ChangeStreamPublisher<Document> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
-                                                                                    Document.class, pipeline, ChangeStreamLevel.COLLECTION);
+        ChangeStreamPublisher<OldDocument> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
+                                                                                    OldDocument.class, pipeline, ChangeStreamLevel.COLLECTION);
         assertThrows(MongoException.class, () -> Flux.from(publisher).blockFirst());
 
         // Missing Codec
         assertThrows(CodecConfigurationException.class, () ->
                 new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor)
-                        .withCodecRegistry(BSON_CODEC_REGISTRY), Document.class, pipeline, ChangeStreamLevel.COLLECTION));
+                        .withCodecRegistry(BSON_CODEC_REGISTRY), OldDocument.class, pipeline, ChangeStreamLevel.COLLECTION));
 
         // Pipeline contains null
-        ChangeStreamPublisher<Document> publisherPipelineNull =
-                new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor), Document.class,
+        ChangeStreamPublisher<OldDocument> publisherPipelineNull =
+                new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor), OldDocument.class,
                                                 singletonList(null), ChangeStreamLevel.COLLECTION);
         assertThrows(IllegalArgumentException.class, () -> Flux.from(publisherPipelineNull).blockFirst());
     }

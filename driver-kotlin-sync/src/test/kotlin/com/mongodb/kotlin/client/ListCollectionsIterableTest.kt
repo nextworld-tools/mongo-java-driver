@@ -22,7 +22,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import org.bson.BsonDocument
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -40,7 +40,7 @@ class ListCollectionsIterableTest {
 
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val wrapped: JListCollectionsIterable<Document> = mock()
+        val wrapped: JListCollectionsIterable<OldDocument> = mock()
         val iterable = ListCollectionsIterable(wrapped)
 
         val batchSize = 10

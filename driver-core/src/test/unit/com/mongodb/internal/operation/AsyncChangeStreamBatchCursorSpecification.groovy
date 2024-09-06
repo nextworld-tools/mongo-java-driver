@@ -22,7 +22,7 @@ import com.mongodb.internal.TimeoutContext
 import com.mongodb.internal.async.SingleResultCallback
 import com.mongodb.internal.binding.AsyncReadBinding
 import com.mongodb.internal.connection.OperationContext
-import org.bson.Document
+import org.bson.OldDocument
 import spock.lang.Specification
 
 import static java.util.concurrent.TimeUnit.SECONDS
@@ -133,7 +133,7 @@ class AsyncChangeStreamBatchCursorSpecification extends Specification {
         hasTimeoutMS << [true, false]
     }
 
-    List<Document> nextBatch(AsyncChangeStreamBatchCursor cursor) {
+    List<OldDocument> nextBatch(AsyncChangeStreamBatchCursor cursor) {
         def futureResultCallback = new FutureResultCallback()
         cursor.next(futureResultCallback)
         futureResultCallback.get(1, SECONDS)

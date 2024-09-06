@@ -43,7 +43,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonObjectId;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 
@@ -512,14 +512,14 @@ final class GridFSBucketImpl implements GridFSBucket {
     private void checkCreateIndex(@Nullable final ClientSession clientSession, @Nullable final Timeout operationTimeout) {
         if (!checkedIndexes) {
             if (collectionIsEmpty(clientSession,
-                    filesCollection.withDocumentClass(Document.class).withReadPreference(primary()),
+                    filesCollection.withDocumentClass(OldDocument.class).withReadPreference(primary()),
                     operationTimeout)) {
 
-                Document filesIndex = new Document("filename", 1).append("uploadDate", 1);
+                OldDocument filesIndex = new OldDocument("filename", 1).append("uploadDate", 1);
                 if (!hasIndex(clientSession, filesCollection.withReadPreference(primary()), filesIndex, operationTimeout)) {
                     createIndex(clientSession, filesCollection, filesIndex, new IndexOptions(), operationTimeout);
                 }
-                Document chunksIndex = new Document("files_id", 1).append("n", 1);
+                OldDocument chunksIndex = new OldDocument("files_id", 1).append("n", 1);
                 if (!hasIndex(clientSession, chunksCollection.withReadPreference(primary()), chunksIndex, operationTimeout)) {
                     createIndex(clientSession, chunksCollection, chunksIndex, new IndexOptions().unique(true), operationTimeout);
                 }
@@ -533,26 +533,26 @@ final class GridFSBucketImpl implements GridFSBucket {
                                           @Nullable final Timeout operationTimeout) {
         if (clientSession != null) {
             return withNullableTimeout(collection, operationTimeout)
-                    .find(clientSession).projection(new Document("_id", 1)).first() == null;
+                    .find(clientSession).projection(new OldDocument("_id", 1)).first() == null;
         } else {
             return withNullableTimeout(collection, operationTimeout)
-                    .find().projection(new Document("_id", 1)).first() == null;
+                    .find().projection(new OldDocument("_id", 1)).first() == null;
         }
     }
 
     private <T> boolean hasIndex(@Nullable final ClientSession clientSession, final MongoCollection<T> collection,
-                                 final Document index, @Nullable final Timeout operationTimeout) {
+                                 final OldDocument index, @Nullable final Timeout operationTimeout) {
         boolean hasIndex = false;
-        ListIndexesIterable<Document> listIndexesIterable;
+        ListIndexesIterable<OldDocument> listIndexesIterable;
         if (clientSession != null) {
             listIndexesIterable = withNullableTimeout(collection, operationTimeout).listIndexes(clientSession);
         } else {
             listIndexesIterable = withNullableTimeout(collection, operationTimeout).listIndexes();
         }
 
-        ArrayList<Document> indexes = listIndexesIterable.into(new ArrayList<>());
-        for (Document result : indexes) {
-            Document indexDoc = result.get("key", new Document());
+        ArrayList<OldDocument> indexes = listIndexesIterable.into(new ArrayList<>());
+        for (OldDocument result : indexes) {
+            OldDocument indexDoc = result.get("key", new OldDocument());
             for (final Map.Entry<String, Object> entry : indexDoc.entrySet()) {
                 if (entry.getValue() instanceof Number) {
                     entry.setValue(((Number) entry.getValue()).intValue());
@@ -566,7 +566,7 @@ final class GridFSBucketImpl implements GridFSBucket {
         return hasIndex;
     }
 
-    private <T> void createIndex(@Nullable final ClientSession clientSession, final MongoCollection<T> collection, final Document index,
+    private <T> void createIndex(@Nullable final ClientSession clientSession, final MongoCollection<T> collection, final OldDocument index,
                                  final IndexOptions indexOptions, final @Nullable Timeout operationTimeout) {
         if (clientSession != null) {
             withNullableTimeout(collection, operationTimeout).createIndex(clientSession, index, indexOptions);
@@ -588,8 +588,8 @@ final class GridFSBucketImpl implements GridFSBucket {
             sort = -1;
         }
 
-        GridFSFile fileInfo = createGridFSFindIterable(clientSession, new Document("filename", filename), operationTimeout).skip(skip)
-                .sort(new Document("uploadDate", sort)).first();
+        GridFSFile fileInfo = createGridFSFindIterable(clientSession, new OldDocument("filename", filename), operationTimeout).skip(skip)
+                .sort(new OldDocument("uploadDate", sort)).first();
         if (fileInfo == null) {
             throw new MongoGridFSException(format("No file found with the filename: %s and revision: %s", filename, revision));
         }
@@ -599,7 +599,7 @@ final class GridFSBucketImpl implements GridFSBucket {
     private GridFSFile getFileInfoById(@Nullable final ClientSession clientSession, final BsonValue id,
                                        @Nullable final Timeout operationTImeout) {
         notNull("id", id);
-        GridFSFile fileInfo = createFindIterable(clientSession, new Document("_id", id), operationTImeout).first();
+        GridFSFile fileInfo = createFindIterable(clientSession, new OldDocument("_id", id), operationTImeout).first();
         if (fileInfo == null) {
             throw new MongoGridFSException(format("No file found with the id: %s", id));
         }

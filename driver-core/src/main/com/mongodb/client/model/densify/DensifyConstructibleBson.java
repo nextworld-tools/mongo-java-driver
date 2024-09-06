@@ -16,7 +16,7 @@
 package com.mongodb.client.model.densify;
 
 import com.mongodb.internal.client.model.AbstractConstructibleBson;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -31,12 +31,12 @@ final class DensifyConstructibleBson extends AbstractConstructibleBson<DensifyCo
         super(base);
     }
 
-    private DensifyConstructibleBson(final Bson base, final Document appended) {
+    private DensifyConstructibleBson(final Bson base, final OldDocument appended) {
         super(base, appended);
     }
 
     @Override
-    protected DensifyConstructibleBson newSelf(final Bson base, final Document appended) {
+    protected DensifyConstructibleBson newSelf(final Bson base, final OldDocument appended) {
         return new DensifyConstructibleBson(base, appended);
     }
 

@@ -19,7 +19,7 @@ package reactivestreams.primer;
 
 // @imports: start
 import com.mongodb.client.result.InsertOneResult;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.OperationSubscriber;
@@ -43,8 +43,8 @@ public class InsertPrimer extends PrimerTestCase {
 
         ObservableSubscriber<InsertOneResult> insertOneSubscriber = new OperationSubscriber<>();
         db.getCollection("restaurants").insertOne(
-                new Document("address",
-                        new Document()
+                new OldDocument("address",
+                        new OldDocument()
                                 .append("street", "2 Avenue")
                                 .append("zipcode", "10075")
                                 .append("building", "1480")
@@ -52,11 +52,11 @@ public class InsertPrimer extends PrimerTestCase {
                         .append("borough", "Manhattan")
                         .append("cuisine", "Italian")
                         .append("grades", asList(
-                                new Document()
+                                new OldDocument()
                                         .append("date", format.parse("2014-10-01T00:00:00Z"))
                                         .append("grade", "A")
                                         .append("score", 11),
-                                new Document()
+                                new OldDocument()
                                         .append("date", format.parse("2014-01-16T00:00:00Z"))
                                         .append("grade", "B")
                                         .append("score", 17)))

@@ -28,7 +28,7 @@ import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,15 +128,15 @@ public class ClientEncryptionDataKeyAndDoubleEncryptionTest {
                 new DataKeyOptions().keyAltNames(singletonList(keyAltName)).masterKey(getMasterKey()));
         assertEquals(4, dataKeyId.getType());
 
-        ArrayList<Document> dataKeys = client
+        ArrayList<OldDocument> dataKeys = client
                 .getDatabase("keyvault")
                 .getCollection("datakeys")
                 .find(eq("_id", dataKeyId))
                 .into(new ArrayList<>());
         assertEquals(1, dataKeys.size());
 
-        Document dataKey = dataKeys.get(0);
-        assertEquals(providerName, dataKey.get("masterKey", new Document()).get("provider", ""));
+        OldDocument dataKey = dataKeys.get(0);
+        assertEquals(providerName, dataKey.get("masterKey", new OldDocument()).get("provider", ""));
 
         String insertWriteConcern = commandListener.getCommandStartedEvent("insert")
                 .getCommand()
@@ -151,10 +151,10 @@ public class ClientEncryptionDataKeyAndDoubleEncryptionTest {
                         .keyId(dataKeyId));
         assertEquals(6, encrypted.getType());
 
-        Document insertDocument = new Document("_id", providerName);
+        OldDocument insertDocument = new OldDocument("_id", providerName);
         insertDocument.put("value", encrypted);
         clientEncrypted.getDatabase("db").getCollection("coll").insertOne(insertDocument);
-        Document decryptedDocument = clientEncrypted.getDatabase("db")
+        OldDocument decryptedDocument = clientEncrypted.getDatabase("db")
                 .getCollection("coll")
                 .find(eq("_id", providerName))
                 .first();
@@ -170,7 +170,7 @@ public class ClientEncryptionDataKeyAndDoubleEncryptionTest {
                 clientEncrypted
                         .getDatabase("db")
                         .getCollection("coll")
-                        .insertOne(new Document("encrypted_placeholder", encrypted))
+                        .insertOne(new OldDocument("encrypted_placeholder", encrypted))
         );
     }
 

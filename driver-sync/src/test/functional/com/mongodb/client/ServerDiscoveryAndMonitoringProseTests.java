@@ -36,7 +36,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonNull;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -127,7 +127,7 @@ public class ServerDiscoveryAndMonitoringProseTests {
                                            });
                                        }).build();
         try (MongoClient client = MongoClients.create(settings)) {
-            client.getDatabase("admin").runCommand(new Document("ping", 1));
+            client.getDatabase("admin").runCommand(new OldDocument("ping", 1));
             Thread.sleep(250);
             assertTrue(events.size() >= 1);
             events.forEach(event ->

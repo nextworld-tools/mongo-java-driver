@@ -18,7 +18,7 @@ package com.mongodb.client.model
 
 import com.mongodb.OperationFunctionalSpecification
 import org.bson.BsonTimestamp
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Updates.combine
@@ -34,7 +34,7 @@ import static com.mongodb.client.model.Updates.setOnInsert
 import static com.mongodb.client.model.Updates.unset
 
 class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
-    def a = new Document('_id', 1).append('x', 1)
+    def a = new OldDocument('_id', 1).append('x', 1)
 
 
     def setup() {
@@ -42,7 +42,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
     }
 
     def find() {
-        find(new Document('_id', 1))
+        find(new OldDocument('_id', 1))
     }
 
     def find(Bson filter) {
@@ -50,7 +50,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
     }
 
     def updateOne(Bson update) {
-        getCollectionHelper().updateOne(new Document('_id', 1), update)
+        getCollectionHelper().updateOne(new OldDocument('_id', 1), update)
     }
 
     def updateOne(Bson filter, Bson update, boolean isUpsert) {
@@ -62,7 +62,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(set('x', 5))
 
         then:
-        find() == [new Document('_id', 1).append('x', 5)]
+        find() == [new OldDocument('_id', 1).append('x', 5)]
     }
 
     def 'setOnInsert'() {
@@ -73,19 +73,19 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         find() == [a]
 
         when:
-        updateOne(new Document('_id', 2), setOnInsert('y', 5), true)
+        updateOne(new OldDocument('_id', 2), setOnInsert('y', 5), true)
 
         then:
-        find(new Document('_id', 2)) == [new Document('_id', 2).append('y', 5)]
+        find(new OldDocument('_id', 2)) == [new OldDocument('_id', 2).append('y', 5)]
 
         when:
-        updateOne(new Document('_id', 3), setOnInsert(Document.parse('{a: 1, b: "two"}')), true)
+        updateOne(new OldDocument('_id', 3), setOnInsert(OldDocument.parse('{a: 1, b: "two"}')), true)
 
         then:
-        find(new Document('_id', 3)) == [Document.parse('{_id: 3, a: 1, b: "two"}')]
+        find(new OldDocument('_id', 3)) == [OldDocument.parse('{_id: 3, a: 1, b: "two"}')]
 
         when:
-        updateOne(new Document('_id', 3), setOnInsert(null), true)
+        updateOne(new OldDocument('_id', 3), setOnInsert(null), true)
 
         then:
         thrown IllegalArgumentException
@@ -96,7 +96,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(unset('x'))
 
         then:
-        find() == [new Document('_id', 1)]
+        find() == [new OldDocument('_id', 1)]
     }
 
     def 'rename'() {
@@ -104,7 +104,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(rename('x', 'y'))
 
         then:
-        find() == [new Document('_id', 1).append('y', 1)]
+        find() == [new OldDocument('_id', 1).append('y', 1)]
     }
 
     def 'inc'() {
@@ -112,19 +112,19 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(inc('x', 5))
 
         then:
-        find() == [new Document('_id', 1).append('x', 6)]
+        find() == [new OldDocument('_id', 1).append('x', 6)]
 
         when:
         updateOne(inc('x', 5L))
 
         then:
-        find() == [new Document('_id', 1).append('x', 11)]
+        find() == [new OldDocument('_id', 1).append('x', 11)]
 
         when:
         updateOne(inc('x', 3.4d))
 
         then:
-        find() == [new Document('_id', 1).append('x', 14.4)]
+        find() == [new OldDocument('_id', 1).append('x', 14.4)]
     }
 
     def 'mul'() {
@@ -132,19 +132,19 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(mul('x', 5))
 
         then:
-        find() == [new Document('_id', 1).append('x', 5)]
+        find() == [new OldDocument('_id', 1).append('x', 5)]
 
         when:
         updateOne(mul('x', 5L))
 
         then:
-        find() == [new Document('_id', 1).append('x', 25)]
+        find() == [new OldDocument('_id', 1).append('x', 25)]
 
         when:
         updateOne(mul('x', 3.5d))
 
         then:
-        find() == [new Document('_id', 1).append('x', 87.5)]
+        find() == [new OldDocument('_id', 1).append('x', 87.5)]
     }
 
     def 'min'() {
@@ -152,7 +152,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(min('x', -1))
 
         then:
-        find() == [new Document('_id', 1).append('x', -1)]
+        find() == [new OldDocument('_id', 1).append('x', -1)]
     }
 
     def 'max'() {
@@ -160,7 +160,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(max('x', 5))
 
         then:
-        find() == [new Document('_id', 1).append('x', 5)]
+        find() == [new OldDocument('_id', 1).append('x', 5)]
     }
 
     def 'currentDate'() {
@@ -182,7 +182,7 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(combine(set('x', 5), set('y', 6)))
 
         then:
-        find() == [new Document('_id', 1).append('x', 5).append('y', 6)]
+        find() == [new OldDocument('_id', 1).append('x', 5).append('y', 6)]
     }
 
     def 'combine multiple operators'() {
@@ -190,6 +190,6 @@ class UpdatesFunctionalSpecification extends OperationFunctionalSpecification {
         updateOne(combine(set('a', 5), set('b', 6), inc('x', 3), inc('y', 5)))
 
         then:
-        find() == [new Document('_id', 1).append('a', 5).append('b', 6).append('x', 4).append('y', 5)]
+        find() == [new OldDocument('_id', 1).append('a', 5).append('b', 6).append('x', 4).append('y', 5)]
     }
 }

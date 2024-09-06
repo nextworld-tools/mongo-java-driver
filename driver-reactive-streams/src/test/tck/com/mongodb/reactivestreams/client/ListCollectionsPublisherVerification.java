@@ -16,7 +16,7 @@
 
 package com.mongodb.reactivestreams.client;
 
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -25,7 +25,7 @@ import static com.mongodb.reactivestreams.client.MongoFixture.DEFAULT_TIMEOUT_MI
 import static com.mongodb.reactivestreams.client.MongoFixture.PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS;
 import static com.mongodb.reactivestreams.client.MongoFixture.run;
 
-public class ListCollectionsPublisherVerification extends PublisherVerification<Document> {
+public class ListCollectionsPublisherVerification extends PublisherVerification<OldDocument> {
 
     public ListCollectionsPublisherVerification() {
         super(new TestEnvironment(DEFAULT_TIMEOUT_MILLIS), PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS);
@@ -33,7 +33,7 @@ public class ListCollectionsPublisherVerification extends PublisherVerification<
 
 
     @Override
-    public Publisher<Document> createPublisher(final long elements) {
+    public Publisher<OldDocument> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
 
         MongoDatabase database = MongoFixture.getDefaultDatabase();
@@ -47,7 +47,7 @@ public class ListCollectionsPublisherVerification extends PublisherVerification<
     }
 
     @Override
-    public Publisher<Document> createFailedPublisher() {
+    public Publisher<OldDocument> createFailedPublisher() {
         return null;
     }
 

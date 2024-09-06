@@ -22,7 +22,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.internal.capi.MongoCryptHelper;
 import com.mongodb.internal.thread.DaemonThreadFactory;
 import com.mongodb.lang.Nullable;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,9 +69,9 @@ public abstract class AbstractClientSideEncryptionNotCreateMongocryptdClientTest
     private static final Duration TIMEOUT = Duration.ofMillis(1_000);
     private static final MongoNamespace KEY_VAULT_NAMESPACE = new MongoNamespace("keyvault", "datakeys");
 
-    private MongoClient client;
-    private MongoCollection<Document> collection;
-    private ConnectionTracker mongocryptdConnectionTracker;
+    private MongoClient                  client;
+    private MongoCollection<OldDocument> collection;
+    private ConnectionTracker            mongocryptdConnectionTracker;
 
     @BeforeEach
     public void setUp() throws Exception {
@@ -114,7 +114,7 @@ public abstract class AbstractClientSideEncryptionNotCreateMongocryptdClientTest
     void whenCryptSharedLoaded() throws Exception {
         //noinspection unused
         try (AutoCloseable assertNoConnectionsOnAutoCloseToPreserveAssertionFailure = mongocryptdConnectionTracker) {
-            collection.insertOne(Document.parse("{unencrypted: 'test'}"));
+            collection.insertOne(OldDocument.parse("{unencrypted: 'test'}"));
             // ConnectionTracker.assertNoConnections is called on auto-close
         }
     }

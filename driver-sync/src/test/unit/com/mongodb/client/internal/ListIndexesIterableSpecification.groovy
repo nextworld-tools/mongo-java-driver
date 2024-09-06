@@ -22,7 +22,7 @@ import com.mongodb.MongoNamespace
 import com.mongodb.client.ClientSession
 import com.mongodb.internal.operation.BatchCursor
 import com.mongodb.internal.operation.ListIndexesOperation
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.DocumentCodecProvider
@@ -48,17 +48,17 @@ class ListIndexesIterableSpecification extends Specification {
     def 'should build the expected listIndexesOperation'() {
         given:
         def executor = new TestOperationExecutor([null, null])
-        def listIndexesIterable = new ListIndexesIterableImpl<Document>(null, namespace, Document, codecRegistry, readPreference,
+        def listIndexesIterable = new ListIndexesIterableImpl<OldDocument>(null, namespace, OldDocument, codecRegistry, readPreference,
                 executor, true, TIMEOUT_SETTINGS).batchSize(100)
 
         when: 'default input should be as expected'
         listIndexesIterable.iterator()
 
-        def operation = executor.getReadOperation() as ListIndexesOperation<Document>
+        def operation = executor.getReadOperation() as ListIndexesOperation<OldDocument>
         def readPreference = executor.getReadPreference()
 
         then:
-        expect operation, isTheSameAs(new ListIndexesOperation<Document>(namespace, new DocumentCodec())
+        expect operation, isTheSameAs(new ListIndexesOperation<OldDocument>(namespace, new DocumentCodec())
                 .batchSize(100).retryReads(true))
         readPreference == secondary()
 
@@ -67,10 +67,10 @@ class ListIndexesIterableSpecification extends Specification {
                 .maxTime(100, MILLISECONDS)
                 .iterator()
 
-        operation = executor.getReadOperation() as ListIndexesOperation<Document>
+        operation = executor.getReadOperation() as ListIndexesOperation<OldDocument>
 
         then: 'should use the overrides'
-        expect operation, isTheSameAs(new ListIndexesOperation<Document>(namespace, new DocumentCodec())
+        expect operation, isTheSameAs(new ListIndexesOperation<OldDocument>(namespace, new DocumentCodec())
                 .batchSize(99).retryReads(true))
     }
 
@@ -80,7 +80,7 @@ class ListIndexesIterableSpecification extends Specification {
             _ * hasNext() >> { false }
         }
         def executor = new TestOperationExecutor([batchCursor, batchCursor])
-        def listIndexesIterable = new ListIndexesIterableImpl<Document>(clientSession, namespace, Document, codecRegistry, readPreference,
+        def listIndexesIterable = new ListIndexesIterableImpl<OldDocument>(clientSession, namespace, OldDocument, codecRegistry, readPreference,
                 executor, true, TIMEOUT_SETTINGS)
 
         when:
@@ -102,7 +102,7 @@ class ListIndexesIterableSpecification extends Specification {
 
     def 'should follow the MongoIterable interface as expected'() {
         given:
-        def cannedResults = [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3)]
+        def cannedResults = [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3)]
         def cursor = {
             Stub(BatchCursor) {
                 def count = 0
@@ -121,7 +121,7 @@ class ListIndexesIterableSpecification extends Specification {
             }
         }
         def executor = new TestOperationExecutor([cursor(), cursor(), cursor(), cursor()])
-        def mongoIterable = new ListIndexesIterableImpl<Document>(null, namespace, Document, codecRegistry, readPreference,
+        def mongoIterable = new ListIndexesIterableImpl<OldDocument>(null, namespace, OldDocument, codecRegistry, readPreference,
                 executor, true, TIMEOUT_SETTINGS)
 
         when:
@@ -132,9 +132,9 @@ class ListIndexesIterableSpecification extends Specification {
 
         when:
         def count = 0
-        mongoIterable.forEach(new Consumer<Document>() {
+        mongoIterable.forEach(new Consumer<OldDocument>() {
             @Override
-            void accept(Document document) {
+            void accept(OldDocument document) {
                 count++
             }
         })
@@ -151,9 +151,9 @@ class ListIndexesIterableSpecification extends Specification {
 
         when:
         target = []
-        mongoIterable.map(new Function<Document, Integer>() {
+        mongoIterable.map(new Function<OldDocument, Integer>() {
             @Override
-            Integer apply(Document document) {
+            Integer apply(OldDocument document) {
                 document.getInteger('_id')
             }
         }).into(target)
@@ -165,7 +165,7 @@ class ListIndexesIterableSpecification extends Specification {
     def 'should get and set batchSize as expected'() {
         when:
         def batchSize = 5
-        def mongoIterable = new ListIndexesIterableImpl<Document>(null, namespace, Document, codecRegistry, readPreference,
+        def mongoIterable = new ListIndexesIterableImpl<OldDocument>(null, namespace, OldDocument, codecRegistry, readPreference,
                 Stub(OperationExecutor), true, TIMEOUT_SETTINGS)
 
         then:

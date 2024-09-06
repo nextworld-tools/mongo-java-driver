@@ -32,7 +32,7 @@ import com.mongodb.internal.operation.FindOperation
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonObjectId
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.types.ObjectId
 import spock.lang.Specification
 
@@ -57,7 +57,7 @@ class GridFSFindIterableSpecification extends Specification {
         given:
         def executor = new TestOperationExecutor([null, null])
         def underlying = new FindIterableImpl(null, namespace, GridFSFile, GridFSFile, codecRegistry, readPreference, readConcern, executor,
-                new Document(), true, TIMEOUT_SETTINGS)
+                new OldDocument(), true, TIMEOUT_SETTINGS)
         def findIterable = new GridFSFindIterableImpl(underlying)
 
         when: 'default input should be as expected'
@@ -72,8 +72,8 @@ class GridFSFindIterableSpecification extends Specification {
         readPreference == secondary()
 
         when: 'overriding initial options'
-        findIterable.filter(new Document('filter', 2))
-                .sort(new Document('sort', 2))
+        findIterable.filter(new OldDocument('filter', 2))
+                .sort(new OldDocument('sort', 2))
                 .maxTime(100, MILLISECONDS)
                 .batchSize(99)
                 .limit(99)
@@ -101,10 +101,10 @@ class GridFSFindIterableSpecification extends Specification {
         given:
         def executor = new TestOperationExecutor([null, null])
         def findIterable = new FindIterableImpl(null, namespace, GridFSFile, GridFSFile, codecRegistry, readPreference, readConcern,
-                executor, new Document('filter', 1), true, TIMEOUT_SETTINGS)
+                executor, new OldDocument('filter', 1), true, TIMEOUT_SETTINGS)
 
         when:
-        findIterable.filter(new Document('filter', 1))
+        findIterable.filter(new OldDocument('filter', 1))
                 .sort(new BsonDocument('sort', new BsonInt32(1)))
                 .iterator()
 
@@ -148,7 +148,7 @@ class GridFSFindIterableSpecification extends Specification {
         }
         def executor = new TestOperationExecutor([cursor(), cursor(), cursor(), cursor()])
         def underlying = new FindIterableImpl(null, namespace, GridFSFile, GridFSFile, codecRegistry, readPreference, readConcern, executor,
-                new Document(), true, TIMEOUT_SETTINGS)
+                new OldDocument(), true, TIMEOUT_SETTINGS)
         def mongoIterable = new GridFSFindIterableImpl(underlying)
 
         when:

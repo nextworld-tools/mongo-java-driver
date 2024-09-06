@@ -22,7 +22,7 @@ import com.mongodb.client.model.search.SearchCollector
 import com.mongodb.client.model.search.SearchOperator
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -145,9 +145,9 @@ class AggregatesSpecification extends Specification {
         toBson(addFields(new Field('newField', null))) == parse('{$addFields: {newField: null}}')
         toBson(addFields(new Field('newField', 'hello'))) == parse('{$addFields: {newField: "hello"}}')
         toBson(addFields(new Field('this', '$$CURRENT'))) == parse('{$addFields: {this: "$$CURRENT"}}')
-        toBson(addFields(new Field('myNewField', new Document('c', 3)
+        toBson(addFields(new Field('myNewField', new OldDocument('c', 3)
                 .append('d', 4)))) == parse('{$addFields: {myNewField: {c: 3, d: 4}}}')
-        toBson(addFields(new Field('alt3', new Document('$lt', asList('$a', 3))))) == parse(
+        toBson(addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3))))) == parse(
                 '{$addFields: {alt3: {$lt: ["$a", 3]}}}')
         toBson(addFields(new Field('b', 3), new Field('c', 5))) == parse('{$addFields: {b: 3, c: 5}}')
         toBson(addFields(asList(new Field('b', 3), new Field('c', 5)))) == parse('{$addFields: {b: 3, c: 5}}')
@@ -158,9 +158,9 @@ class AggregatesSpecification extends Specification {
         toBson(set(new Field('newField', null))) == parse('{$set: {newField: null}}')
         toBson(set(new Field('newField', 'hello'))) == parse('{$set: {newField: "hello"}}')
         toBson(set(new Field('this', '$$CURRENT'))) == parse('{$set: {this: "$$CURRENT"}}')
-        toBson(set(new Field('myNewField', new Document('c', 3)
+        toBson(set(new Field('myNewField', new OldDocument('c', 3)
                 .append('d', 4)))) == parse('{$set: {myNewField: {c: 3, d: 4}}}')
-        toBson(set(new Field('alt3', new Document('$lt', asList('$a', 3))))) == parse(
+        toBson(set(new Field('alt3', new OldDocument('$lt', asList('$a', 3))))) == parse(
                 '{$set: {alt3: {$lt: ["$a", 3]}}}')
         toBson(set(new Field('b', 3), new Field('c', 5))) == parse('{$set: {b: 3, c: 5}}')
         toBson(set(asList(new Field('b', 3), new Field('c', 5)))) == parse('{$set: {b: 3, c: 5}}')
@@ -275,7 +275,7 @@ class AggregatesSpecification extends Specification {
     def 'should render $sortByCount'() {
         expect:
         toBson(sortByCount('someField')) == parse('{$sortByCount: "someField"}')
-        toBson(sortByCount(new Document('$floor', '$x'))) == parse('{$sortByCount: {$floor: "$x"}}')
+        toBson(sortByCount(new OldDocument('$floor', '$x'))) == parse('{$sortByCount: {$floor: "$x"}}')
     }
 
     def 'should render $limit'() {
@@ -288,7 +288,7 @@ class AggregatesSpecification extends Specification {
         toBson(lookup('from', 'localField', 'foreignField', 'as')) == parse('''{ $lookup : { from: "from", localField: "localField",
             foreignField: "foreignField", as: "as" } }''')
 
-        List<Bson> pipeline = asList(match(expr(new Document('$eq', asList('x', '1')))))
+        List<Bson> pipeline = asList(match(expr(new OldDocument('$eq', asList('x', '1')))))
         toBson(lookup('from', asList(new Variable('var1', 'expression1')), pipeline, 'as')) ==
                 parse('''{ $lookup : { from: "from",
                                             let: { var1: "expression1" },
@@ -376,7 +376,7 @@ class AggregatesSpecification extends Specification {
 
     def 'should render $unionWith'() {
         expect:
-        List<Bson> pipeline = asList(match(expr(new Document('$eq', asList('x', '1')))))
+        List<Bson> pipeline = asList(match(expr(new OldDocument('$eq', asList('x', '1')))))
         toBson(unionWith('with', pipeline)) ==
                 parse('''{ $unionWith : { coll: "with", pipeline : [{ $match : { $expr: { $eq : [ "x" , "1" ]}}}] }}''')
     }
@@ -399,7 +399,7 @@ class AggregatesSpecification extends Specification {
     def 'should render $out'() {
         expect:
         toBson(out('authors')) == parse('{ $out : "authors" }')
-        toBson(out(Document.parse('{ s3: "s3://bucket/path/to/file…?format=json&maxFileSize=100MiB"}'))) ==
+        toBson(out(OldDocument.parse('{ s3: "s3://bucket/path/to/file…?format=json&maxFileSize=100MiB"}'))) ==
                 parse('{ $out : { s3: "s3://bucket/path/to/file…?format=json&maxFileSize=100MiB"} }')
         toBson(out('authorsDB', 'books')) == parse('{ $out : { db: "authorsDB", coll: "books" } }')
     }
@@ -483,12 +483,12 @@ class AggregatesSpecification extends Specification {
                                       stdDevSamp: { $stdDevSamp: "$quantity" }
                                      }
                                   }''')
-        toBson(group(new Document('gid', '$groupByField'),
+        toBson(group(new OldDocument('gid', '$groupByField'),
                      sum('sum', parse('{ $multiply: [ "$price", "$quantity" ] }')),
                      avg('avg', '$quantity'),
                      min('min', '$quantity'),
                      minN('minN', '$quantity',
-                             new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                             new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                      .append('then', 2).append('else', 1))),
                      max('max', '$quantity'),
                      maxN('maxN', '$quantity', 2),
@@ -500,7 +500,7 @@ class AggregatesSpecification extends Specification {
                      lastN('lastN', '$quantity', 2),
                      bottom('bottom', ascending('quantity'), ['$quantity', '$quality']),
                      bottomN('bottomN', ascending('quantity'), ['$quantity', '$quality'],
-                             new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                             new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                      .append('then', 2).append('else', 1))),
                      push('all', '$quantity'),
                      mergeObjects('merged', '$quantity'),
@@ -514,16 +514,16 @@ class AggregatesSpecification extends Specification {
         given:
         Window window = documents(1, 2)
         BsonDocument setWindowFieldsBson = toBson(setWindowFields(
-                new Document('gid', '$partitionByField'), ascending('sortByField'), asList(
-                WindowOutputFields.of(new BsonField('newField00', new Document('$sum', '$field00')
-                        .append('window', Windows.of(new Document('range', asList(1, 'current')))))),
+                new OldDocument('gid', '$partitionByField'), ascending('sortByField'), asList(
+                WindowOutputFields.of(new BsonField('newField00', new OldDocument('$sum', '$field00')
+                        .append('window', Windows.of(new OldDocument('range', asList(1, 'current')))))),
                 WindowOutputFields.sum('newField01', '$field01', Windows.range(1, CURRENT)),
                 WindowOutputFields.avg('newField02', '$field02', Windows.range(UNBOUNDED, 1)),
                 WindowOutputFields.stdDevSamp('newField03', '$field03', window),
                 WindowOutputFields.stdDevPop('newField04', '$field04', window),
                 WindowOutputFields.min('newField05', '$field05', window),
                 WindowOutputFields.minN('newField05N', '$field05N',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1)),
                         window),
                 WindowOutputFields.max('newField06', '$field06', window),
@@ -550,7 +550,7 @@ class AggregatesSpecification extends Specification {
                 WindowOutputFields.denseRank('newField23'),
                 WindowOutputFields.bottom('newField24', descending('sortByField'), '$field24', window),
                 WindowOutputFields.bottomN('newField24N', descending('sortByField'), '$field24N',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1)),
                         window),
                 WindowOutputFields.top('newField25', ascending('sortByField'), '$field25', window),
@@ -998,7 +998,7 @@ class AggregatesSpecification extends Specification {
         lookup('from', 'localField', 'foreignField', 'as')
                 .equals(lookup('from', 'localField', 'foreignField', 'as'))
 
-        List<Bson> pipeline = asList(match(expr(new Document('$eq', asList('x', '1')))))
+        List<Bson> pipeline = asList(match(expr(new OldDocument('$eq', asList('x', '1')))))
         lookup('from', asList(new Variable('var1', 'expression1')), pipeline, 'as')
                 .equals(lookup('from', asList(new Variable('var1', 'expression1')), pipeline, 'as'))
 
@@ -1010,7 +1010,7 @@ class AggregatesSpecification extends Specification {
         lookup('from', 'localField', 'foreignField', 'as').hashCode() ==
                 lookup('from', 'localField', 'foreignField', 'as').hashCode()
 
-        List<Bson> pipeline = asList(match(expr(new Document('$eq', asList('x', '1')))))
+        List<Bson> pipeline = asList(match(expr(new OldDocument('$eq', asList('x', '1')))))
         lookup('from', asList(new Variable('var1', 'expression1')), pipeline, 'as').hashCode() ==
                 lookup('from', asList(new Variable('var1', 'expression1')), pipeline, 'as').hashCode()
 
@@ -1090,7 +1090,7 @@ class AggregatesSpecification extends Specification {
                 avg('avg', '$quantity'),
                 min('min', '$quantity'),
                 minN('minN', '$quantity',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 max('max', '$quantity'),
                 maxN('maxN', '$quantity', 2),
@@ -1102,7 +1102,7 @@ class AggregatesSpecification extends Specification {
                 lastN('lastN', '$quantity', 2),
                 bottom('bottom', ascending('quantity'), ['$quantity', '$quality']),
                 bottomN('bottomN', ascending('quantity'), ['$quantity', '$quality'],
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 push('all', '$quantity'),
                 mergeObjects('merged', '$quantity'),
@@ -1114,7 +1114,7 @@ class AggregatesSpecification extends Specification {
                 avg('avg', '$quantity'),
                 min('min', '$quantity'),
                 minN('minN', '$quantity',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 max('max', '$quantity'),
                 maxN('maxN', '$quantity', 2),
@@ -1126,7 +1126,7 @@ class AggregatesSpecification extends Specification {
                 lastN('lastN', '$quantity', 2),
                 bottom('bottom', ascending('quantity'), ['$quantity', '$quality']),
                 bottomN('bottomN', ascending('quantity'), ['$quantity', '$quality'],
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 push('all', '$quantity'),
                 mergeObjects('merged', '$quantity'),
@@ -1149,7 +1149,7 @@ class AggregatesSpecification extends Specification {
                 avg('avg', '$quantity'),
                 min('min', '$quantity'),
                 minN('minN', '$quantity',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 max('max', '$quantity'),
                 maxN('maxN', '$quantity', 2),
@@ -1161,7 +1161,7 @@ class AggregatesSpecification extends Specification {
                 lastN('lastN', '$quantity', 2),
                 bottom('bottom', ascending('quantity'), ['$quantity', '$quality']),
                 bottomN('bottomN', ascending('quantity'), ['$quantity', '$quality'],
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 push('all', '$quantity'),
                 mergeObjects('merged', '$quantity'),
@@ -1174,7 +1174,7 @@ class AggregatesSpecification extends Specification {
                 avg('avg', '$quantity'),
                 min('min', '$quantity'),
                 minN('minN', '$quantity',
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 max('max', '$quantity'),
                 maxN('maxN', '$quantity', 2),
@@ -1186,7 +1186,7 @@ class AggregatesSpecification extends Specification {
                 lastN('lastN', '$quantity', 2),
                 bottom('bottom', ascending('quantity'), ['$quantity', '$quality']),
                 bottomN('bottomN', ascending('quantity'), ['$quantity', '$quality'],
-                        new Document('$cond', new Document('if', new Document('$eq', asList('$gid', true)))
+                        new OldDocument('$cond', new OldDocument('if', new OldDocument('$eq', asList('$gid', true)))
                                 .append('then', 2).append('else', 1))),
                 push('all', '$quantity'),
                 mergeObjects('merged', '$quantity'),
@@ -1198,13 +1198,13 @@ class AggregatesSpecification extends Specification {
     def 'should test equals for SortByCountStage'() {
         expect:
         sortByCount('someField').equals(sortByCount('someField'))
-        sortByCount(new Document('$floor', '$x')).equals(sortByCount(new Document('$floor', '$x')))
+        sortByCount(new OldDocument('$floor', '$x')).equals(sortByCount(new OldDocument('$floor', '$x')))
     }
 
     def 'should test hashCode for SortByCountStage'() {
         expect:
         sortByCount('someField').hashCode() == sortByCount('someField').hashCode()
-        sortByCount(new Document('$floor', '$x')).hashCode() == sortByCount(new Document('$floor', '$x')).hashCode()
+        sortByCount(new OldDocument('$floor', '$x')).hashCode() == sortByCount(new OldDocument('$floor', '$x')).hashCode()
     }
 
     def 'should test equals for FacetStage'() {
@@ -1260,10 +1260,10 @@ class AggregatesSpecification extends Specification {
         addFields(new Field('newField', null)).equals(addFields(new Field('newField', null)))
         addFields(new Field('newField', 'hello')).equals(addFields(new Field('newField', 'hello')))
         addFields(new Field('this', '$$CURRENT')).equals(addFields(new Field('this', '$$CURRENT')))
-        addFields(new Field('myNewField', new Document('c', 3).append('d', 4)))
-                .equals(addFields(new Field('myNewField', new Document('c', 3).append('d', 4))))
-        addFields(new Field('alt3', new Document('$lt', asList('$a', 3))))
-                .equals(addFields(new Field('alt3', new Document('$lt', asList('$a', 3)))))
+        addFields(new Field('myNewField', new OldDocument('c', 3).append('d', 4)))
+                .equals(addFields(new Field('myNewField', new OldDocument('c', 3).append('d', 4))))
+        addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3))))
+                .equals(addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3)))))
         addFields(new Field('b', 3), new Field('c', 5))
                 .equals(addFields(new Field('b', 3), new Field('c', 5)))
         addFields(asList(new Field('b', 3), new Field('c', 5)))
@@ -1275,10 +1275,10 @@ class AggregatesSpecification extends Specification {
         addFields(new Field('newField', null)).hashCode() == addFields(new Field('newField', null)).hashCode()
         addFields(new Field('newField', 'hello')).hashCode() == addFields(new Field('newField', 'hello')).hashCode()
         addFields(new Field('this', '$$CURRENT')).hashCode() == addFields(new Field('this', '$$CURRENT')).hashCode()
-        addFields(new Field('myNewField', new Document('c', 3).append('d', 4))).hashCode() ==
-                addFields(new Field('myNewField', new Document('c', 3).append('d', 4))).hashCode()
-        addFields(new Field('alt3', new Document('$lt', asList('$a', 3)))).hashCode() ==
-                addFields(new Field('alt3', new Document('$lt', asList('$a', 3)))).hashCode()
+        addFields(new Field('myNewField', new OldDocument('c', 3).append('d', 4))).hashCode() ==
+                addFields(new Field('myNewField', new OldDocument('c', 3).append('d', 4))).hashCode()
+        addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3)))).hashCode() ==
+                addFields(new Field('alt3', new OldDocument('$lt', asList('$a', 3)))).hashCode()
         addFields(new Field('b', 3), new Field('c', 5)).hashCode() ==
                 addFields(new Field('b', 3), new Field('c', 5)).hashCode()
         addFields(asList(new Field('b', 3), new Field('c', 5))).hashCode() ==

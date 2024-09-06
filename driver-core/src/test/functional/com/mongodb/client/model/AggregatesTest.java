@@ -21,7 +21,7 @@ import com.mongodb.client.model.geojson.Position;
 import com.mongodb.client.model.mql.MqlValues;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -75,7 +75,7 @@ public class AggregatesTest extends OperationTest {
                 + "]");
 
         //when
-        List<Document> results = getCollectionHelper().aggregate(Collections.singletonList(
+        List<OldDocument> results = getCollectionHelper().aggregate(Collections.singletonList(
                 group("$z", quantileAccumulator)), DOCUMENT_DECODER);
 
         //then
@@ -120,10 +120,10 @@ public class AggregatesTest extends OperationTest {
                                                  final List<Object> expectedFieldValues) {
         //given
         assumeTrue(serverVersionAtLeast(7, 0));
-        Document[] original = new Document[]{
-                new Document("partitionId", 1).append("num1", 1),
-                new Document("partitionId", 1).append("num1", 2),
-                new Document("partitionId", 2).append("num1", 3)
+        OldDocument[] original = new OldDocument[]{
+                new OldDocument("partitionId", 1).append("num1", 1),
+                new OldDocument("partitionId", 1).append("num1", 2),
+                new OldDocument("partitionId", 2).append("num1", 3)
         };
         getCollectionHelper().insertDocuments(original);
 
@@ -218,7 +218,7 @@ public class AggregatesTest extends OperationTest {
                         geoNearOptions()
                                 .minDistance(0)
                                 .maxDistance(2)
-                                .query(new Document("category", "Parks"))
+                                .query(new OldDocument("category", "Parks"))
                                 .includeLocs("dist.location")
                                 .spherical()
                                 .key("location")
@@ -248,7 +248,7 @@ public class AggregatesTest extends OperationTest {
     public void testDocuments() {
         assumeTrue(serverVersionAtLeast(5, 1));
         Bson stage = Aggregates.documents(asList(
-                Document.parse("{a: 1, b: {$add: [1, 1]} }"),
+                OldDocument.parse("{a: 1, b: {$add: [1, 1]} }"),
                 BsonDocument.parse("{a: 3, b: 4}")));
         assertPipeline(
                 "{$documents: [{a: 1, b: {$add: [1, 1]}}, {a: 3, b: 4}]}",
@@ -273,7 +273,7 @@ public class AggregatesTest extends OperationTest {
         assumeTrue(serverVersionAtLeast(5, 1));
 
         getCollectionHelper().insertDocuments("[{_id: 1, a: 8}, {_id: 2, a: 9}]");
-        Bson documentsStage = Aggregates.documents(asList(Document.parse("{a: 5}")));
+        Bson documentsStage = Aggregates.documents(asList(OldDocument.parse("{a: 5}")));
 
         Bson lookupStage = Aggregates.lookup(null, Arrays.asList(documentsStage), "added");
         assertPipeline(

@@ -16,10 +16,10 @@
 
 package primer;
 
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 // @import: start
-import org.bson.Document;
 
 import static java.util.Arrays.asList;
 // @import: end
@@ -31,9 +31,9 @@ public class UpdatePrimer extends PrimerTestCase {
     public void updateTopLevelFields() {
         // @begin: update-top-level-fields
         // @code: start
-        db.getCollection("restaurants").updateOne(new Document("name", "Juni"),
-                new Document("$set", new Document("cuisine", "American (New)"))
-                    .append("$currentDate", new Document("lastModified", true)));
+        db.getCollection("restaurants").updateOne(new OldDocument("name", "Juni"),
+                new OldDocument("$set", new OldDocument("cuisine", "American (New)"))
+                    .append("$currentDate", new OldDocument("lastModified", true)));
         // @code: end
 
         /*
@@ -49,8 +49,8 @@ public class UpdatePrimer extends PrimerTestCase {
     public void updateEmbeddedField() {
         // @begin: update-embedded-field
         // @code: start
-        db.getCollection("restaurants").updateOne(new Document("restaurant_id", "41156888"),
-                new Document("$set", new Document("address.street", "East 31st Street")));
+        db.getCollection("restaurants").updateOne(new OldDocument("restaurant_id", "41156888"),
+                new OldDocument("$set", new OldDocument("address.street", "East 31st Street")));
 
         // @code: end
         /*
@@ -67,9 +67,9 @@ public class UpdatePrimer extends PrimerTestCase {
     public void updateMultipleDocuments() {
         // @begin: update-multiple-documents
         // @code: start
-        db.getCollection("restaurants").updateMany(new Document("address.zipcode", "10016").append("cuisine", "Other"),
-                new Document("$set", new Document("cuisine", "Category To Be Determined"))
-                        .append("$currentDate", new Document("lastModified", true)));
+        db.getCollection("restaurants").updateMany(new OldDocument("address.zipcode", "10016").append("cuisine", "Other"),
+                new OldDocument("$set", new OldDocument("cuisine", "Category To Be Determined"))
+                        .append("$currentDate", new OldDocument("lastModified", true)));
         // @code: end
 
         /*
@@ -85,9 +85,9 @@ public class UpdatePrimer extends PrimerTestCase {
     public void replaceDocument() {
         // @begin: replace-document
         // @code: start
-        db.getCollection("restaurants").replaceOne(new Document("restaurant_id", "41704620"),
-                new Document("address",
-                        new Document()
+        db.getCollection("restaurants").replaceOne(new OldDocument("restaurant_id", "41704620"),
+                new OldDocument("address",
+                        new OldDocument()
                                 .append("street", "2 Avenue")
                                 .append("zipcode", "10075")
                                 .append("building", "1480")

@@ -21,7 +21,7 @@ import com.mongodb.client.AggregateIterable;
 import com.mongodb.client.DatabaseTestCase;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.Aggregates;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 
@@ -48,12 +48,12 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
 
     private static String bsonToString(final Bson project) {
-        return project.toBsonDocument(Document.class, MongoClientSettings.getDefaultCodecRegistry()).toString().replaceAll("\"", "'");
+        return project.toBsonDocument(OldDocument.class, MongoClientSettings.getDefaultCodecRegistry()).toString().replaceAll("\"", "'");
     }
 
-    private List<Document> aggregate(final Bson... stages) {
-        AggregateIterable<Document> result = collection.aggregate(Arrays.asList(stages));
-        List<Document> results = new ArrayList<>();
+    private List<OldDocument> aggregate(final Bson... stages) {
+        AggregateIterable<OldDocument> result = collection.aggregate(Arrays.asList(stages));
+        List<OldDocument> results = new ArrayList<>();
         result.forEach(r -> results.add(r));
         return results;
     }
@@ -62,17 +62,17 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     public void findTest() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         collection.insertMany(Arrays.asList(
-                Document.parse("{_id: 1, x: 0, y: 2}"),
-                Document.parse("{_id: 2, x: 0, y: 3}"),
-                Document.parse("{_id: 3, x: 1, y: 3}")));
+                OldDocument.parse("{_id: 1, x: 0, y: 2}"),
+                OldDocument.parse("{_id: 2, x: 0, y: 3}"),
+                OldDocument.parse("{_id: 3, x: 1, y: 3}")));
 
-        FindIterable<Document> iterable = collection.find(expr(
+        FindIterable<OldDocument> iterable = collection.find(expr(
                 current().getInteger("x").eq(of(1))));
-        List<Document> results = new ArrayList<>();
+        List<OldDocument> results = new ArrayList<>();
         iterable.forEach(r -> results.add(r));
 
         assertEquals(
-                Arrays.asList(Document.parse("{_id: 3, x: 1, y: 3}")),
+                Arrays.asList(OldDocument.parse("{_id: 3, x: 1, y: 3}")),
                 results);
     }
 
@@ -80,15 +80,15 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     public void matchTest() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         collection.insertMany(Arrays.asList(
-                Document.parse("{_id: 1, x: 0, y: 2}"),
-                Document.parse("{_id: 2, x: 0, y: 3}"),
-                Document.parse("{_id: 3, x: 1, y: 3}")));
+                OldDocument.parse("{_id: 1, x: 0, y: 2}"),
+                OldDocument.parse("{_id: 2, x: 0, y: 3}"),
+                OldDocument.parse("{_id: 3, x: 1, y: 3}")));
 
-        List<Document> results = aggregate(
+        List<OldDocument> results = aggregate(
                 match(expr(current().getInteger("x").eq(of(1)))));
 
         assertEquals(
-                Arrays.asList(Document.parse("{_id: 3, x: 1, y: 3}")),
+                Arrays.asList(OldDocument.parse("{_id: 3, x: 1, y: 3}")),
                 results);
     }
 
@@ -96,18 +96,18 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     public void currentAsMapMatchTest() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         collection.insertMany(Arrays.asList(
-                Document.parse("{_id: 1, x: 0, y: 2}"),
-                Document.parse("{_id: 2, x: 0, y: 3}"),
-                Document.parse("{_id: 3, x: 1, y: 3}")));
+                OldDocument.parse("{_id: 1, x: 0, y: 2}"),
+                OldDocument.parse("{_id: 2, x: 0, y: 3}"),
+                OldDocument.parse("{_id: 3, x: 1, y: 3}")));
 
-        List<Document> results = aggregate(
+        List<OldDocument> results = aggregate(
                 match(expr(MqlValues.<MqlNumber>currentAsMap()
                         .entries()
                         .map(e -> e.getValue())
                         .sum(v -> v).eq(of(7)))));
 
         assertEquals(
-                Arrays.asList(Document.parse("{_id: 3, x: 1, y: 3}")),
+                Arrays.asList(OldDocument.parse("{_id: 3, x: 1, y: 3}")),
                 results);
     }
 
@@ -115,9 +115,9 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     public void projectTest() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         collection.insertMany(Arrays.asList(
-                Document.parse("{_id: 1, x: 0, y: 2}")));
+                OldDocument.parse("{_id: 1, x: 0, y: 2}")));
 
-        List<Document> expected = Arrays.asList(Document.parse("{_id: 1, x: 0, c: 2}"));
+        List<OldDocument> expected = Arrays.asList(OldDocument.parse("{_id: 1, x: 0, c: 2}"));
 
         // old, using "$y"
         Bson projectOld = project(fields(include("x"), computed("c",
@@ -141,7 +141,7 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     @Test
     public void projectTest2() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
-        collection.insertMany(Arrays.asList(Document.parse("{_id: 0, x: 1}")));
+        collection.insertMany(Arrays.asList(OldDocument.parse("{_id: 0, x: 1}")));
 
         // new, nestedArray
         Bson projectNestedArray = project(fields(excludeId(), computed("nestedArray", ofArray(
@@ -150,16 +150,16 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
                 of(0), of(1), of(true), of(false)
         ))));
         assertEquals(
-                Arrays.asList(Document.parse("{ nestedArray: [ 4, 1, 0, 1, true, false ] }")),
+                Arrays.asList(OldDocument.parse("{ nestedArray: [ 4, 1, 0, 1, true, false ] }")),
                 aggregate(projectNestedArray));
 
         // new, document
         Bson projectDocument = project(fields(computed("nested",
                 // the below is roughly: "{ x: {$max : ['$x', 4] }}"
-                of(Document.parse("{x: 9}")).setField("x", current().getInteger("x").max(of(4)))
+                of(OldDocument.parse("{x: 9}")).setField("x", current().getInteger("x").max(of(4)))
         )));
         assertEquals(
-                Arrays.asList(Document.parse("{_id: 0, nested: { x: 4 } }")),
+                Arrays.asList(OldDocument.parse("{_id: 0, nested: { x: 4 } }")),
                 aggregate(projectDocument));
     }
 
@@ -167,19 +167,19 @@ public class InContextMqlValuesFunctionalTest extends DatabaseTestCase {
     public void groupTest() {
         assumeTrue(serverVersionAtLeast(5, 0)); // get/setField
         collection.insertMany(Arrays.asList(
-                Document.parse("{t: 0, a: 1}"),
-                Document.parse("{t: 0, a: 2}"),
-                Document.parse("{t: 1, a: 9}")));
+                OldDocument.parse("{t: 0, a: 1}"),
+                OldDocument.parse("{t: 0, a: 2}"),
+                OldDocument.parse("{t: 1, a: 9}")));
 
-        List<Document> results = aggregate(
+        List<OldDocument> results = aggregate(
                 Aggregates.group(
                         current().getInteger("t").add(of(100)),
                         sum("sum", current().getInteger("a").add(1))),
                 Aggregates.sort(ascending("_id")));
         assertEquals(
                 Arrays.asList(
-                        Document.parse("{_id: 100, sum: 5}"),
-                        Document.parse("{_id: 101, sum: 10}")),
+                        OldDocument.parse("{_id: 100, sum: 5}"),
+                        OldDocument.parse("{_id: 101, sum: 10}")),
                 results);
     }
 }

@@ -22,7 +22,7 @@ import org.bson.BsonBinaryWriter;
 import org.bson.BsonInt32;
 import org.bson.BsonObjectId;
 import org.bson.ByteBufNIO;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.BsonInput;
 import org.bson.io.ByteBufferBsonInput;
@@ -67,7 +67,7 @@ public class DocumentCodecTest {
     @Test
     public void testPrimitiveBSONTypeCodecs() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document();
+        OldDocument doc = new OldDocument();
         doc.put("oid", new ObjectId());
         doc.put("integer", 1);
         doc.put("long", 2L);
@@ -86,22 +86,22 @@ public class DocumentCodecTest {
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
         BsonInput bsonInput = createInputBuffer();
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
         assertEquals(doc, decodedDocument);
     }
 
     @Test
     public void testIterableEncoding() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document()
+        OldDocument doc = new OldDocument()
                        .append("list", asList(1, 2, 3, 4, 5))
                        .append("set", new HashSet<>(asList(1, 2, 3, 4)));
 
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
         BsonInput bsonInput = createInputBuffer();
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
-        assertEquals(new Document()
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
+        assertEquals(new OldDocument()
                      .append("list", asList(1, 2, 3, 4, 5))
                      .append("set", asList(1, 2, 3, 4)), decodedDocument);
     }
@@ -109,60 +109,60 @@ public class DocumentCodecTest {
     @Test
     public void testCodeWithScopeEncoding() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document();
-        doc.put("theCode", new CodeWithScope("javaScript code", new Document("fieldNameOfScope", "valueOfScope")));
+        OldDocument doc = new OldDocument();
+        doc.put("theCode", new CodeWithScope("javaScript code", new OldDocument("fieldNameOfScope", "valueOfScope")));
 
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(createInputBuffer()), DecoderContext.builder().build());
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(createInputBuffer()), DecoderContext.builder().build());
         assertEquals(doc, decodedDocument);
     }
 
     @Test
     public void testIterableContainingOtherIterableEncoding() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document();
+        OldDocument doc = new OldDocument();
         List<List<Integer>> listOfLists = asList(asList(1), asList(2));
         doc.put("array", listOfLists);
 
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
         BsonInput bsonInput = createInputBuffer();
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
         assertEquals(doc, decodedDocument);
     }
 
     @Test
     public void testIterableContainingDocumentsEncoding() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document();
-        List<Document> listOfDocuments = asList(new Document("intVal", 1), new Document("anotherInt", 2));
+        OldDocument doc = new OldDocument();
+        List<OldDocument> listOfDocuments = asList(new OldDocument("intVal", 1), new OldDocument("anotherInt", 2));
         doc.put("array", listOfDocuments);
 
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
         BsonInput bsonInput = createInputBuffer();
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
         assertEquals(doc, decodedDocument);
     }
 
     @Test
     public void testNestedDocumentEncoding() throws IOException {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document doc = new Document();
-        doc.put("nested", new Document("x", 1));
+        OldDocument doc = new OldDocument();
+        doc.put("nested", new OldDocument("x", 1));
 
         documentCodec.encode(writer, doc, EncoderContext.builder().build());
 
         BsonInput bsonInput = createInputBuffer();
-        Document decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
+        OldDocument decodedDocument = documentCodec.decode(new BsonBinaryReader(bsonInput), DecoderContext.builder().build());
         assertEquals(doc, decodedDocument);
     }
 
     @Test
     public void shouldNotGenerateIdIfPresent() {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document document = new Document("_id", 1);
+        OldDocument document = new OldDocument("_id", 1);
         assertTrue(documentCodec.documentHasId(document));
         document = documentCodec.generateIdIfAbsentFromDocument(document);
         assertTrue(documentCodec.documentHasId(document));
@@ -172,7 +172,7 @@ public class DocumentCodecTest {
     @Test
     public void shouldGenerateIdIfAbsent() {
         DocumentCodec documentCodec = new DocumentCodec();
-        Document document = new Document();
+        OldDocument document = new OldDocument();
         assertFalse(documentCodec.documentHasId(document));
         document = documentCodec.generateIdIfAbsentFromDocument(document);
         assertTrue(documentCodec.documentHasId(document));

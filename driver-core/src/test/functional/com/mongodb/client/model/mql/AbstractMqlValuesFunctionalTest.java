@@ -24,7 +24,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonReader;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.DecoderContext;
@@ -93,7 +93,7 @@ public abstract class AbstractMqlValuesFunctionalTest extends OperationTest {
         if (value instanceof BsonValue) {
             return (BsonValue) value;
         }
-        return new Document("val", value).toBsonDocument().get("val");
+        return new OldDocument("val", value).toBsonDocument().get("val");
     }
 
     @Nullable

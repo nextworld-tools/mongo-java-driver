@@ -54,7 +54,7 @@ import com.mongodb.internal.operation.ReadOperation
 import com.mongodb.internal.operation.WriteOperation
 import com.mongodb.internal.session.SessionContext
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.Shared
 import spock.lang.Specification
@@ -118,12 +118,12 @@ class OperationFunctionalSpecification extends Specification {
         binding.release()
     }
 
-    CollectionHelper<Document> getCollectionHelper() {
+    CollectionHelper<OldDocument> getCollectionHelper() {
         getCollectionHelper(getNamespace())
     }
 
-    CollectionHelper<Document> getCollectionHelper(MongoNamespace namespace) {
-        new CollectionHelper<Document>(new DocumentCodec(), namespace)
+    CollectionHelper<OldDocument> getCollectionHelper(MongoNamespace namespace) {
+        new CollectionHelper<OldDocument>(new DocumentCodec(), namespace)
     }
 
     CollectionHelper<Worker> getWorkerCollectionHelper() {

@@ -18,7 +18,7 @@ package com.mongodb.client.model.search;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static com.mongodb.client.model.search.SearchPath.fieldPath;
@@ -112,8 +112,8 @@ final class SearchHighlightTest {
                 wildcardPath("wildc*rd"));
     }
 
-    private static Document docExampleCustom() {
-        return new Document("path", asList(
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("path", asList(
                 fieldPath("fieldName").toBsonValue(),
                 wildcardPath("wildc*rd").toBsonValue()));
     }

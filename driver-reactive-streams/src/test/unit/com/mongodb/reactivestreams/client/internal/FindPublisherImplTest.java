@@ -26,7 +26,7 @@ import com.mongodb.reactivestreams.client.FindPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -47,10 +47,10 @@ public class FindPublisherImplTest extends TestHelper {
         configureBatchCursor();
 
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
-        FindPublisher<Document> publisher = new FindPublisherImpl<>(null, createMongoOperationPublisher(executor), new Document());
+        FindPublisher<OldDocument> publisher = new FindPublisherImpl<>(null, createMongoOperationPublisher(executor), new OldDocument());
 
-        FindOperation<Document> expectedOperation = new FindOperation<>(NAMESPACE,
-                                                                        getDefaultCodecRegistry().get(Document.class))
+        FindOperation<OldDocument> expectedOperation = new FindOperation<>(NAMESPACE,
+                                                                        getDefaultCodecRegistry().get(OldDocument.class))
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true)
                 .filter(new BsonDocument());
@@ -63,9 +63,9 @@ public class FindPublisherImplTest extends TestHelper {
 
         // Should apply settings
         publisher
-                .filter(new Document("filter", 1))
+                .filter(new OldDocument("filter", 1))
                 .sort(Sorts.ascending("sort"))
-                .projection(new Document("projection", 1))
+                .projection(new OldDocument("projection", 1))
                 .maxTime(101, MILLISECONDS)
                 .maxAwaitTime(1001, MILLISECONDS)
                 .batchSize(100)
@@ -77,14 +77,14 @@ public class FindPublisherImplTest extends TestHelper {
                 .collation(COLLATION)
                 .comment("my comment")
                 .hintString("a_1")
-                .min(new Document("min", 1))
-                .max(new Document("max", 1))
+                .min(new OldDocument("min", 1))
+                .max(new OldDocument("max", 1))
                 .returnKey(false)
                 .showRecordId(false)
                 .allowDiskUse(false);
 
         expectedOperation = new FindOperation<>(NAMESPACE,
-                                                getDefaultCodecRegistry().get(Document.class))
+                                                getDefaultCodecRegistry().get(OldDocument.class))
                 .retryReads(true)
                 .filter(new BsonDocument())
                 .allowDiskUse(false)

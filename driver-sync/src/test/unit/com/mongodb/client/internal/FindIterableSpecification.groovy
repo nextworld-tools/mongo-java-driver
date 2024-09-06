@@ -28,7 +28,7 @@ import com.mongodb.internal.operation.FindOperation
 import org.bson.BsonDocument
 import org.bson.BsonInt32
 import org.bson.BsonString
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
 import org.bson.codecs.DocumentCodecProvider
@@ -57,10 +57,10 @@ class FindIterableSpecification extends Specification {
     def 'should build the expected findOperation'() {
         given:
         def executor = new TestOperationExecutor([null, null, null])
-        def findIterable = new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document('filter', 1), true, TIMEOUT_SETTINGS)
-                .sort(new Document('sort', 1))
-                .projection(new Document('projection', 1))
+        def findIterable = new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument('filter', 1), true, TIMEOUT_SETTINGS)
+                .sort(new OldDocument('sort', 1))
+                .projection(new OldDocument('projection', 1))
                 .batchSize(100)
                 .limit(100)
                 .skip(10)
@@ -70,8 +70,8 @@ class FindIterableSpecification extends Specification {
                 .collation(null)
                 .comment(new BsonString('my comment'))
                 .hintString('a_1')
-                .min(new Document('min', 1))
-                .max(new Document('max', 1))
+                .min(new OldDocument('min', 1))
+                .max(new OldDocument('max', 1))
                 .returnKey(false)
                 .showRecordId(false)
                 .allowDiskUse(false)
@@ -79,11 +79,11 @@ class FindIterableSpecification extends Specification {
         when: 'default input should be as expected'
         findIterable.iterator()
 
-        def operation = executor.getReadOperation() as FindOperation<Document>
+        def operation = executor.getReadOperation() as FindOperation<OldDocument>
         def readPreference = executor.getReadPreference()
 
         then:
-        expect operation, isTheSameAs(new FindOperation<Document>(namespace, new DocumentCodec())
+        expect operation, isTheSameAs(new FindOperation<OldDocument>(namespace, new DocumentCodec())
                 .filter(new BsonDocument('filter', new BsonInt32(1)))
                 .sort(new BsonDocument('sort', new BsonInt32(1)))
                 .projection(new BsonDocument('projection', new BsonInt32(1)))
@@ -103,9 +103,9 @@ class FindIterableSpecification extends Specification {
         readPreference == secondary()
 
         when: 'overriding initial options'
-        findIterable.filter(new Document('filter', 2))
-                .sort(new Document('sort', 2))
-                .projection(new Document('projection', 2))
+        findIterable.filter(new OldDocument('filter', 2))
+                .sort(new OldDocument('sort', 2))
+                .projection(new OldDocument('projection', 2))
                 .maxTime(101, MILLISECONDS)
                 .maxAwaitTime(1001, MILLISECONDS)
                 .batchSize(99)
@@ -116,19 +116,19 @@ class FindIterableSpecification extends Specification {
                 .partial(true)
                 .collation(collation)
                 .comment('alt comment')
-                .hint(new Document('hint', 2))
-                .min(new Document('min', 2))
-                .max(new Document('max', 2))
+                .hint(new OldDocument('hint', 2))
+                .min(new OldDocument('min', 2))
+                .max(new OldDocument('max', 2))
                 .returnKey(true)
                 .showRecordId(true)
                 .allowDiskUse(true)
                 .iterator()
 
-        operation = executor.getReadOperation() as FindOperation<Document>
+        operation = executor.getReadOperation() as FindOperation<OldDocument>
 
         then: 'should use the overrides'
         expect operation, isTheSameAs(
-                new FindOperation<Document>(namespace, new DocumentCodec())
+                new FindOperation<OldDocument>(namespace, new DocumentCodec())
                         .filter(new BsonDocument('filter', new BsonInt32(2)))
                         .sort(new BsonDocument('sort', new BsonInt32(2)))
                         .projection(new BsonDocument('projection', new BsonInt32(2)))
@@ -150,8 +150,8 @@ class FindIterableSpecification extends Specification {
         )
 
         when: 'passing nulls to nullable methods'
-        new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document('filter', 1), true, TIMEOUT_SETTINGS)
+        new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument('filter', 1), true, TIMEOUT_SETTINGS)
                 .filter(null as Bson)
                 .collation(null)
                 .projection(null)
@@ -162,10 +162,10 @@ class FindIterableSpecification extends Specification {
                 .min(null as Bson)
                 .iterator()
 
-        operation = executor.getReadOperation() as FindOperation<Document>
+        operation = executor.getReadOperation() as FindOperation<OldDocument>
 
         then: 'should set an empty doc for the filter'
-        expect operation, isTheSameAs(new FindOperation<Document>(namespace, new DocumentCodec())
+        expect operation, isTheSameAs(new FindOperation<OldDocument>(namespace, new DocumentCodec())
                 .filter(new BsonDocument()).retryReads(true))
     }
 
@@ -175,8 +175,8 @@ class FindIterableSpecification extends Specification {
             _ * hasNext() >> { false }
         }
         def executor = new TestOperationExecutor([batchCursor, batchCursor])
-        def findIterable = new FindIterableImpl(clientSession, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document('filter', 1), true, TIMEOUT_SETTINGS)
+        def findIterable = new FindIterableImpl(clientSession, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument('filter', 1), true, TIMEOUT_SETTINGS)
 
         when:
         findIterable.first()
@@ -197,18 +197,18 @@ class FindIterableSpecification extends Specification {
     def 'should handle mixed types'() {
         given:
         def executor = new TestOperationExecutor([null, null])
-        def findIterable = new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document('filter', 1), true, TIMEOUT_SETTINGS)
+        def findIterable = new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument('filter', 1), true, TIMEOUT_SETTINGS)
 
         when:
-        findIterable.filter(new Document('filter', 1))
+        findIterable.filter(new OldDocument('filter', 1))
                   .sort(new BsonDocument('sort', new BsonInt32(1)))
                   .iterator()
 
-        def operation = executor.getReadOperation() as FindOperation<Document>
+        def operation = executor.getReadOperation() as FindOperation<OldDocument>
 
         then:
-        expect operation, isTheSameAs(new FindOperation<Document>(namespace, new DocumentCodec())
+        expect operation, isTheSameAs(new FindOperation<OldDocument>(namespace, new DocumentCodec())
                 .filter(new BsonDocument('filter', new BsonInt32(1)))
                 .sort(new BsonDocument('sort', new BsonInt32(1)))
                 .cursorType(CursorType.NonTailable)
@@ -218,7 +218,7 @@ class FindIterableSpecification extends Specification {
 
     def 'should follow the MongoIterable interface as expected'() {
         given:
-        def cannedResults = [new Document('_id', 1), new Document('_id', 2), new Document('_id', 3)]
+        def cannedResults = [new OldDocument('_id', 1), new OldDocument('_id', 2), new OldDocument('_id', 3)]
         def cursor = {
             Stub(BatchCursor) {
                 def count = 0
@@ -237,8 +237,8 @@ class FindIterableSpecification extends Specification {
             }
         }
         def executor = new TestOperationExecutor([cursor(), cursor(), cursor(), cursor()])
-        def mongoIterable = new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document(), true, TIMEOUT_SETTINGS)
+        def mongoIterable = new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument(), true, TIMEOUT_SETTINGS)
 
         when:
         def results = mongoIterable.first()
@@ -248,9 +248,9 @@ class FindIterableSpecification extends Specification {
 
         when:
         def count = 0
-        mongoIterable.forEach(new Consumer<Document>() {
+        mongoIterable.forEach(new Consumer<OldDocument>() {
             @Override
-            void accept(Document document) {
+            void accept(OldDocument document) {
                 count++
             }
         })
@@ -267,9 +267,9 @@ class FindIterableSpecification extends Specification {
 
         when:
         target = []
-        mongoIterable.map(new Function<Document, Integer>() {
+        mongoIterable.map(new Function<OldDocument, Integer>() {
             @Override
-            Integer apply(Document document) {
+            Integer apply(OldDocument document) {
                 document.getInteger('_id')
             }
         }).into(target)
@@ -281,8 +281,8 @@ class FindIterableSpecification extends Specification {
     def 'should get and set batchSize as expected'() {
         when:
         def batchSize = 5
-        def mongoIterable = new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference,
-                readConcern, Stub(OperationExecutor), new Document(), true, TIMEOUT_SETTINGS)
+        def mongoIterable = new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference,
+                readConcern, Stub(OperationExecutor), new OldDocument(), true, TIMEOUT_SETTINGS)
 
         then:
         mongoIterable.getBatchSize() == null
@@ -303,13 +303,13 @@ class FindIterableSpecification extends Specification {
             }
         }
         def executor = new TestOperationExecutor([cursor])
-        def mongoIterable = new FindIterableImpl(null, namespace, Document, Document, codecRegistry, readPreference, readConcern,
-                executor, new Document(), true, TIMEOUT_SETTINGS)
+        def mongoIterable = new FindIterableImpl(null, namespace, OldDocument, OldDocument, codecRegistry, readPreference, readConcern,
+                executor, new OldDocument(), true, TIMEOUT_SETTINGS)
 
         when:
-        mongoIterable.forEach(new Consumer<Document>() {
+        mongoIterable.forEach(new Consumer<OldDocument>() {
             @Override
-            void accept(Document document) {
+            void accept(OldDocument document) {
             }
         })
 

@@ -21,7 +21,7 @@ import com.mongodb.annotations.Sealed;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.geojson.Point;
 import org.bson.BsonType;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import java.time.Duration;
@@ -70,7 +70,7 @@ public interface SearchOperator extends Bson {
      * @mongodb.atlas.manual atlas-search/exists/ exists operator
      */
     static ExistsSearchOperator exists(final FieldSearchPath path) {
-        return new SearchConstructibleBsonElement("exists", new Document("path", notNull("path", path).toValue()));
+        return new SearchConstructibleBsonElement("exists", new OldDocument("path", notNull("path", path).toValue()));
     }
 
     /**
@@ -99,7 +99,7 @@ public interface SearchOperator extends Bson {
         String firstQuery = queryIterator.next();
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
-        return new SearchConstructibleBsonElement("text", new Document("query", queryIterator.hasNext() ? queries : firstQuery)
+        return new SearchConstructibleBsonElement("text", new OldDocument("query", queryIterator.hasNext() ? queries : firstQuery)
                 .append("path", combineToBsonValue(pathIterator, false)));
     }
 
@@ -128,7 +128,7 @@ public interface SearchOperator extends Bson {
         Iterator<String> queryIterator = notNull("queries", queries).iterator();
         isTrueArgument("queries must not be empty", queryIterator.hasNext());
         String firstQuery = queryIterator.next();
-        return new SearchConstructibleBsonElement("autocomplete", new Document("query", queryIterator.hasNext() ? queries : firstQuery)
+        return new SearchConstructibleBsonElement("autocomplete", new OldDocument("query", queryIterator.hasNext() ? queries : firstQuery)
                 .append("path", notNull("path", path).toValue()));
     }
 
@@ -158,7 +158,7 @@ public interface SearchOperator extends Bson {
     static NumberRangeSearchOperatorBase numberRange(final Iterable<? extends FieldSearchPath> paths) {
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
-        return new NumberRangeConstructibleBsonElement("range", new Document("path", combineToBsonValue(pathIterator, true)));
+        return new NumberRangeConstructibleBsonElement("range", new OldDocument("path", combineToBsonValue(pathIterator, true)));
     }
 
     /**
@@ -185,7 +185,7 @@ public interface SearchOperator extends Bson {
     static DateRangeSearchOperatorBase dateRange(final Iterable<? extends FieldSearchPath> paths) {
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
-        return new DateRangeConstructibleBsonElement("range", new Document("path", combineToBsonValue(pathIterator, true)));
+        return new DateRangeConstructibleBsonElement("range", new OldDocument("path", combineToBsonValue(pathIterator, true)));
     }
 
     /**
@@ -216,7 +216,7 @@ public interface SearchOperator extends Bson {
     static NumberNearSearchOperator near(final Number origin, final Number pivot, final Iterable<? extends FieldSearchPath> paths) {
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
-        return new SearchConstructibleBsonElement("near", new Document("origin", notNull("origin", origin))
+        return new SearchConstructibleBsonElement("near", new OldDocument("origin", notNull("origin", origin))
                 .append("path", combineToBsonValue(pathIterator, true))
                 .append("pivot", notNull("pivot", pivot)));
     }
@@ -254,7 +254,7 @@ public interface SearchOperator extends Bson {
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
         notNull("pivot", pivot);
-        return new SearchConstructibleBsonElement("near", new Document("origin", notNull("origin", origin))
+        return new SearchConstructibleBsonElement("near", new OldDocument("origin", notNull("origin", origin))
                 .append("path", combineToBsonValue(pathIterator, true))
                 .append("pivot", pivot.toMillis()));
     }
@@ -287,7 +287,7 @@ public interface SearchOperator extends Bson {
     static GeoNearSearchOperator near(final Point origin, final Number pivot, final Iterable<? extends FieldSearchPath> paths) {
         Iterator<? extends SearchPath> pathIterator = notNull("paths", paths).iterator();
         isTrueArgument("paths must not be empty", pathIterator.hasNext());
-        return new SearchConstructibleBsonElement("near", new Document("origin", notNull("origin", origin))
+        return new SearchConstructibleBsonElement("near", new OldDocument("origin", notNull("origin", origin))
                 .append("path", combineToBsonValue(pathIterator, true))
                 .append("pivot", notNull("pivot", pivot)));
     }

@@ -40,7 +40,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -116,11 +116,11 @@ public class LambdaTestApp implements RequestHandler<APIGatewayProxyRequestEvent
 
     public APIGatewayProxyResponseEvent handleRequest(final APIGatewayProxyRequestEvent input, final Context context) {
         try {
-            MongoCollection<Document> collection = mongoClient
+            MongoCollection<OldDocument> collection = mongoClient
                     .getDatabase("lambdaTest")
                     .getCollection("test");
-            BsonValue id = collection.insertOne(new Document("n", 1)).getInsertedId();
-            collection.deleteOne(new Document("_id", id));
+            BsonValue id = collection.insertOne(new OldDocument("n", 1)).getInsertedId();
+            collection.deleteOne(new OldDocument("_id", id));
 
             assertTrue(failedAssertions.isEmpty(), failedAssertions.toString());
             BsonDocument responseBody = getBsonDocument();

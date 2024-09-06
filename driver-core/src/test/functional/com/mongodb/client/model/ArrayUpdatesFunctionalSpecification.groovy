@@ -17,7 +17,7 @@
 package com.mongodb.client.model
 
 import com.mongodb.OperationFunctionalSpecification
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 import static com.mongodb.client.model.Updates.addEachToSet
@@ -33,7 +33,7 @@ import static com.mongodb.client.model.Updates.pushEach
 import static com.mongodb.client.model.Updates.unset
 
 class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecification {
-    def a = new Document('_id', 1).append('x', [1, 2, 3])
+    def a = new OldDocument('_id', 1).append('x', [1, 2, 3])
 
 
     def setup() {
@@ -41,7 +41,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
     }
 
     def find() {
-        find(new Document('_id', 1))
+        find(new OldDocument('_id', 1))
     }
 
     def find(Bson filter) {
@@ -49,7 +49,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
     }
 
     def updateOne(Bson update) {
-        getCollectionHelper().updateOne(new Document('_id', 1), update)
+        getCollectionHelper().updateOne(new OldDocument('_id', 1), update)
     }
 
     def updateOne(Bson filter, Bson update, boolean isUpsert) {
@@ -61,19 +61,19 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(addToSet('x', 4))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4])]
 
         when:
         updateOne(addToSet('x', 4))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4])]
 
         when:
         updateOne(addEachToSet('x', [4, 5, 6]))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4, 5, 6])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4, 5, 6])]
     }
 
     def 'push'() {
@@ -81,13 +81,13 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(push('x', 4))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4])]
 
         when:
         updateOne(push('x', 4))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4, 4])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4, 4])]
     }
 
     def 'push with each'() {
@@ -95,26 +95,26 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(pushEach('x', [4, 4, 4, 5, 6], new PushOptions()))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2, 3, 4, 4, 4, 5, 6])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2, 3, 4, 4, 4, 5, 6])]
 
         when:
         updateOne(pushEach('x', [4, 5, 6], new PushOptions().position(0).slice(5)))
 
         then:
-        find() == [new Document('_id', 1).append('x', [4, 5, 6, 1, 2])]
+        find() == [new OldDocument('_id', 1).append('x', [4, 5, 6, 1, 2])]
 
         when:
         updateOne(pushEach('x', [], new PushOptions().sort(-1)))
 
         then:
-        find() == [new Document('_id', 1).append('x', [6, 5, 4, 2, 1])]
+        find() == [new OldDocument('_id', 1).append('x', [6, 5, 4, 2, 1])]
 
         when:
-        updateOne(combine(unset('x'), pushEach('scores', [new Document('score', 89), new Document('score', 65)],
-                                               new PushOptions().sortDocument(new Document('score', 1)))))
+        updateOne(combine(unset('x'), pushEach('scores', [new OldDocument('score', 89), new OldDocument('score', 65)],
+                                               new PushOptions().sortDocument(new OldDocument('score', 1)))))
 
         then:
-        find() == [new Document('_id', 1).append('scores', [new Document('score', 65), new Document('score', 89)])]
+        find() == [new OldDocument('_id', 1).append('scores', [new OldDocument('score', 65), new OldDocument('score', 89)])]
     }
 
     def 'pull'() {
@@ -122,7 +122,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(pull('x', 1))
 
         then:
-        find() == [new Document('_id', 1).append('x', [2, 3])]
+        find() == [new OldDocument('_id', 1).append('x', [2, 3])]
     }
 
     def 'pullByFilter'() {
@@ -130,7 +130,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(pullByFilter(Filters.gt('x', 1)))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1])]
+        find() == [new OldDocument('_id', 1).append('x', [1])]
     }
 
     def 'pullAll'() {
@@ -138,7 +138,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(pullAll('x', [2, 3]))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1])]
+        find() == [new OldDocument('_id', 1).append('x', [1])]
     }
 
     def 'pop first'() {
@@ -146,7 +146,7 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(popFirst('x'))
 
         then:
-        find() == [new Document('_id', 1).append('x', [2, 3])]
+        find() == [new OldDocument('_id', 1).append('x', [2, 3])]
     }
 
     def 'pop last'() {
@@ -154,6 +154,6 @@ class ArrayUpdatesFunctionalSpecification extends OperationFunctionalSpecificati
         updateOne(popLast('x'))
 
         then:
-        find() == [new Document('_id', 1).append('x', [1, 2])]
+        find() == [new OldDocument('_id', 1).append('x', [1, 2])]
     }
 }

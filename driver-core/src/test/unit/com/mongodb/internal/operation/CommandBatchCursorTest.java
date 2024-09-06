@@ -35,7 +35,7 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DocumentCodec;
 import org.junit.jupiter.api.Assertions;
@@ -62,7 +62,7 @@ class CommandBatchCursorTest {
                             .append("id", CURSOR_ID)
                             .append("firstBatch", new BsonArrayWrapper<>(new BsonArray())));
 
-    private static final Decoder<Document> DOCUMENT_CODEC = new DocumentCodec();
+    private static final Decoder<OldDocument> DOCUMENT_CODEC = new DocumentCodec();
 
 
     private Connection mockConnection;
@@ -101,7 +101,7 @@ class CommandBatchCursorTest {
                 new MongoSocketException("test", new ServerAddress()));
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
 
-        CommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        CommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
         //when
         Assertions.assertThrows(MongoSocketException.class, commandBatchCursor::next);
 
@@ -110,7 +110,7 @@ class CommandBatchCursorTest {
         verify(mockConnection, times(1)).command(eq(NAMESPACE.getDatabaseName()), any(), any(), any(), any(), any());
     }
 
-    private CommandBatchCursor<Document> createBatchCursor() {
+    private CommandBatchCursor<OldDocument> createBatchCursor() {
         return new CommandBatchCursor<>(
                 TimeoutMode.CURSOR_LIFETIME,
                 COMMAND_CURSOR_DOCUMENT,
@@ -130,7 +130,7 @@ class CommandBatchCursorTest {
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
         when(timeoutContext.hasTimeoutMS()).thenReturn(true);
 
-        CommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        CommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
 
         //when
         Assertions.assertThrows(MongoOperationTimeoutException.class, commandBatchCursor::next);
@@ -155,7 +155,7 @@ class CommandBatchCursorTest {
         when(serverDescription.getType()).thenReturn(ServerType.LOAD_BALANCER);
         when(timeoutContext.hasTimeoutMS()).thenReturn(true);
 
-        CommandBatchCursor<Document> commandBatchCursor = createBatchCursor();
+        CommandBatchCursor<OldDocument> commandBatchCursor = createBatchCursor();
 
         //when
         Assertions.assertThrows(MongoOperationTimeoutException.class, commandBatchCursor::next);

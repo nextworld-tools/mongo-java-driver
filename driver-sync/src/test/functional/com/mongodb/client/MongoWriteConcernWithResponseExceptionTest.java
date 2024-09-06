@@ -30,7 +30,7 @@ import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
@@ -125,14 +125,14 @@ public final class MongoWriteConcernWithResponseExceptionTest {
                 .applyToServerSettings(builder -> builder.heartbeatFrequency(50, TimeUnit.MILLISECONDS))
                 .build());
              FailPoint ignored = FailPoint.enable(firstAttemptFpDoc, primaryServerAddress)) {
-            MongoCollection<Document> collection = client.getDatabase(getDefaultDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(getDefaultDatabaseName())
                     .getCollection("originalErrorMustBePropagatedIfNoWritesPerformed");
             collection.drop();
             assertThrows(MongoWriteConcernException.class, () -> {
                 // We want to see an exception indicating `writeConcernError`,
                 // but not in the form of `MongoWriteConcernWithResponseException`.
                 try {
-                    collection.insertOne(new Document());
+                    collection.insertOne(new OldDocument());
                 } catch (MongoWriteConcernWithResponseException e) {
                     throw new AssertionError("The internal exception leaked.", e);
                 }

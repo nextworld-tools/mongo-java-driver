@@ -23,7 +23,7 @@ import com.mongodb.client.model.geojson.MultiPolygon
 import com.mongodb.connection.ClusterSettings
 import com.mongodb.internal.connection.Cluster
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.UuidCodec
 import org.bson.codecs.ValueCodecProvider
 import org.bson.codecs.configuration.CodecRegistry
@@ -54,7 +54,7 @@ class MongoClientSpecification extends Specification {
         expect:
         codecRegistry.get(BsonDocument)
         codecRegistry.get(BasicDBObject)
-        codecRegistry.get(Document)
+        codecRegistry.get(OldDocument)
         codecRegistry.get(Integer)
         codecRegistry.get(MultiPolygon)
         codecRegistry.get(Collection)

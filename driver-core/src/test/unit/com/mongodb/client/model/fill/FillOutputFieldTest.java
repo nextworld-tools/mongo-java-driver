@@ -17,7 +17,7 @@ package com.mongodb.client.model.fill;
 
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +65,7 @@ final class FillOutputFieldTest {
         return FillOutputField.locf("fieldName");
     }
 
-    private static Document docExampleCustom() {
-        return new Document("fieldName", new Document("method", "locf"));
+    private static OldDocument docExampleCustom() {
+        return new OldDocument("fieldName", new OldDocument("method", "locf"));
     }
 }

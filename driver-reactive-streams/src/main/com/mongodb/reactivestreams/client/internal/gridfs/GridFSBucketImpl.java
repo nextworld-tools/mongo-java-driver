@@ -34,7 +34,7 @@ import com.mongodb.reactivestreams.client.gridfs.GridFSUploadPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonObjectId;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.reactivestreams.Publisher;
@@ -63,8 +63,8 @@ public final class GridFSBucketImpl implements GridFSBucket {
     private static final int DEFAULT_CHUNKSIZE_BYTES = 255 * 1024;
     private final String bucketName;
     private final int chunkSizeBytes;
-    private final MongoCollection<GridFSFile> filesCollection;
-    private final MongoCollection<Document> chunksCollection;
+    private final MongoCollection<GridFSFile>  filesCollection;
+    private final MongoCollection<OldDocument> chunksCollection;
 
     public GridFSBucketImpl(final MongoDatabase database) {
         this(database, "fs");
@@ -77,7 +77,7 @@ public final class GridFSBucketImpl implements GridFSBucket {
     }
 
     private GridFSBucketImpl(final String bucketName, final int chunkSizeBytes, final MongoCollection<GridFSFile> filesCollection,
-                     final MongoCollection<Document> chunksCollection) {
+                     final MongoCollection<OldDocument> chunksCollection) {
         this.bucketName = notNull("bucketName", bucketName);
         this.chunkSizeBytes = chunkSizeBytes;
         this.filesCollection = notNull("filesCollection", filesCollection);
@@ -90,7 +90,7 @@ public final class GridFSBucketImpl implements GridFSBucket {
         );
     }
 
-    private static MongoCollection<Document> getChunksCollection(final MongoDatabase database, final String bucketName) {
+    private static MongoCollection<OldDocument> getChunksCollection(final MongoDatabase database, final String bucketName) {
         return database.getCollection(bucketName + ".chunks").withCodecRegistry(MongoClients.getDefaultCodecRegistry());
     }
 

@@ -26,7 +26,7 @@ import com.mongodb.client.{
   MongoCollection => JMongoCollection
 }
 import com.mongodb.{ MongoNamespace, ReadConcern, ReadPreference, WriteConcern }
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.conversions.Bson
 import org.mongodb.scala.MongoCollection

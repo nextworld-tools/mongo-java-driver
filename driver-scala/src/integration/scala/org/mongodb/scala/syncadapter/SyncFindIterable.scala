@@ -19,7 +19,7 @@ package org.mongodb.scala.syncadapter
 import com.mongodb.client.FindIterable
 import com.mongodb.client.model.Collation
 import com.mongodb.{ CursorType, ExplainVerbosity }
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 import org.mongodb.scala.bson.BsonValue
 import org.mongodb.scala.bson.DefaultHelper.DefaultsTo

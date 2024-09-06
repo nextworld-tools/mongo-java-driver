@@ -22,7 +22,7 @@ import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.MongoTimeoutException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -75,7 +75,7 @@ public final class MongoFixture {
             return;
         }
         try {
-            run(getMongoClient().getDatabase(name).runCommand(new Document("dropDatabase", 1)));
+            run(getMongoClient().getDatabase(name).runCommand(new OldDocument("dropDatabase", 1)));
         } catch (MongoCommandException e) {
             if (!e.getErrorMessage().contains("ns not found")) {
                 throw e;
@@ -85,7 +85,7 @@ public final class MongoFixture {
 
     public static void drop(final MongoNamespace namespace) {
         try {
-            run(getMongoClient().getDatabase(namespace.getDatabaseName()).runCommand(new Document("drop", namespace.getCollectionName())));
+            run(getMongoClient().getDatabase(namespace.getDatabaseName()).runCommand(new OldDocument("drop", namespace.getCollectionName())));
         } catch (MongoCommandException e) {
             if (!e.getErrorMessage().contains("ns not found")) {
                 throw e;

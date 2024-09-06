@@ -21,7 +21,7 @@ import com.mongodb.internal.operation.ListCollectionsOperation;
 import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
@@ -42,11 +42,11 @@ final class ListCollectionNamesPublisherImplTest extends TestHelper {
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
         ListCollectionNamesPublisher publisher = new ListCollectionNamesPublisherImpl(
                 new ListCollectionsPublisherImpl<>(null, createMongoOperationPublisher(executor)
-                        .withDocumentClass(Document.class), true))
+                        .withDocumentClass(OldDocument.class), true))
                 .authorizedCollections(true);
 
-        ListCollectionsOperation<Document> expectedOperation = new ListCollectionsOperation<>(DATABASE_NAME,
-                                                                                              getDefaultCodecRegistry().get(Document.class))
+        ListCollectionsOperation<OldDocument> expectedOperation = new ListCollectionsOperation<>(DATABASE_NAME,
+                                                                                              getDefaultCodecRegistry().get(OldDocument.class))
                 .batchSize(Integer.MAX_VALUE)
                 .nameOnly(true)
                 .authorizedCollections(true)
@@ -60,12 +60,12 @@ final class ListCollectionNamesPublisherImplTest extends TestHelper {
 
         // Should apply settings
         publisher
-                .filter(new Document("filter", 1))
+                .filter(new OldDocument("filter", 1))
                 .maxTime(10, SECONDS)
                 .batchSize(100);
 
         expectedOperation = new ListCollectionsOperation<>(DATABASE_NAME,
-                                                           getDefaultCodecRegistry().get(Document.class))
+                                                           getDefaultCodecRegistry().get(OldDocument.class))
                 .nameOnly(true)
                 .authorizedCollections(true)
                 .retryReads(true)

@@ -18,7 +18,7 @@ package com.mongodb.client.model.mql;
 
 import com.mongodb.MongoCommandException;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -194,7 +194,7 @@ class TypeMqlValuesFunctionalTest extends AbstractMqlValuesFunctionalTest {
         assertThrows(MongoCommandException.class, () ->
                 assertExpression("[1, 2]", ofIntegerArray(1, 2).asString()));
         assertThrows(MongoCommandException.class, () ->
-                assertExpression("{a: 1}", of(Document.parse("{a: 1}")).asString()));
+                assertExpression("{a: 1}", of(OldDocument.parse("{a: 1}")).asString()));
     }
 
     @Test

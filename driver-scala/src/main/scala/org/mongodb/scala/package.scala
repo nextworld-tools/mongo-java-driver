@@ -447,11 +447,11 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
 
   implicit def bsonDocumentToDocument(doc: BsonDocument): Document = new Document(doc)
 
-  implicit def documentToUntypedDocument(doc: Document): org.bson.Document =
+  implicit def documentToUntypedDocument(doc: Document): org.bson.OldDocument =
     bsonDocumentToUntypedDocument(doc.underlying)
 
   private lazy val DOCUMENT_CODEC = new DocumentCodec()
-  implicit def bsonDocumentToUntypedDocument(doc: BsonDocument): org.bson.Document = {
+  implicit def bsonDocumentToUntypedDocument(doc: BsonDocument): org.bson.OldDocument = {
     DOCUMENT_CODEC.decode(new BsonDocumentReader(doc), DecoderContext.builder().build())
   }
 

@@ -29,7 +29,7 @@ import org.bson.BsonTimestamp
 import org.bson.BsonUndefined
 import org.bson.BsonWriter
 import org.bson.ByteBufNIO
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.configuration.CodecRegistry
 import org.bson.io.BasicOutputBuffer
 import org.bson.io.ByteBufferBsonInput
@@ -72,7 +72,7 @@ class DocumentCodecSpecification extends Specification {
 
     def 'should encode and decode all default types with all readers and writers'(BsonWriter writer) {
         given:
-        def originalDocument = new Document()
+        def originalDocument = new OldDocument()
         originalDocument.with {
             put('null', null)
             put('int32', 42)
@@ -85,7 +85,7 @@ class DocumentCodecSpecification extends Specification {
             put('minKey', new MinKey())
             put('maxKey', new MaxKey())
             put('code', new Code('int i = 0;'))
-            put('codeWithScope', new CodeWithScope('int x = y', new Document('y', 1)))
+            put('codeWithScope', new CodeWithScope('int x = y', new OldDocument('y', 1)))
             put('objectId', new ObjectId())
             put('regex', new BsonRegularExpression('^test.*regex.*xyz$', 'i'))
             put('string', 'the fox ...')
@@ -93,9 +93,9 @@ class DocumentCodecSpecification extends Specification {
             put('timestamp', new BsonTimestamp(0x12345678, 5))
             put('undefined', new BsonUndefined())
             put('binary', new Binary((byte) 0x80, [5, 4, 3, 2, 1] as byte[]))
-            put('array', asList(1, 1L, true, [1, 2, 3], new Document('a', 1), null))
+            put('array', asList(1, 1L, true, [1, 2, 3], new OldDocument('a', 1), null))
             put('uuid', new UUID(1L, 2L))
-            put('document', new Document('a', 2))
+            put('document', new OldDocument('a', 2))
             put('map', [a:1, b:2])
             put('atomicLong', new AtomicLong(1))
             put('atomicInteger', new AtomicInteger(1))
@@ -217,10 +217,10 @@ class DocumentCodecSpecification extends Specification {
 
     def 'should respect encodeIdFirst property in encoder context'() {
         given:
-        def originalDocument = new Document('x', 2)
+        def originalDocument = new OldDocument('x', 2)
                 .append('_id', 2)
-                .append('nested', new Document('x', 2).append('_id', 2))
-                .append('array', asList(new Document('x', 2).append('_id', 2)))
+                .append('nested', new OldDocument('x', 2).append('_id', 2))
+                .append('array', asList(new OldDocument('x', 2).append('_id', 2)))
 
         when:
         def encodedDocument = new BsonDocument()
@@ -258,7 +258,7 @@ class DocumentCodecSpecification extends Specification {
 
     def 'should generate id if absent'() {
         given:
-        def document = new Document()
+        def document = new OldDocument()
 
         when:
         document = new DocumentCodec().generateIdIfAbsentFromDocument(document)
@@ -269,7 +269,7 @@ class DocumentCodecSpecification extends Specification {
 
     def 'should not generate id if present'() {
         given:
-        def document = new Document('_id', 1)
+        def document = new OldDocument('_id', 1)
 
         when:
         document = new DocumentCodec().generateIdIfAbsentFromDocument(document)
@@ -280,19 +280,19 @@ class DocumentCodecSpecification extends Specification {
 
     def 'should determine if id is present'() {
         expect:
-        new DocumentCodec().documentHasId(new Document('_id', 1))
-        !new DocumentCodec().documentHasId(new Document())
+        new DocumentCodec().documentHasId(new OldDocument('_id', 1))
+        !new DocumentCodec().documentHasId(new OldDocument())
     }
 
     def 'should get id if present'() {
         expect:
-        new DocumentCodec().getDocumentId(new Document('_id', 1)) == new BsonInt32(1)
-        new DocumentCodec().getDocumentId(new Document('_id', new BsonInt32(1))) == new BsonInt32(1)
+        new DocumentCodec().getDocumentId(new OldDocument('_id', 1)) == new BsonInt32(1)
+        new DocumentCodec().getDocumentId(new OldDocument('_id', new BsonInt32(1))) == new BsonInt32(1)
     }
 
     def 'should throw if getting id when absent'() {
         when:
-        new DocumentCodec().getDocumentId(new Document())
+        new DocumentCodec().getDocumentId(new OldDocument())
 
         then:
         thrown(IllegalStateException)

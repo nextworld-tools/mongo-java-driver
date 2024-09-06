@@ -32,7 +32,7 @@ import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWrapper;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.DocumentCodec;
 
 import java.io.File;
@@ -143,7 +143,7 @@ public final class MongoCryptHelper {
         if (optionsMap == null) {
             return new BsonDocument();
         }
-        return new BsonDocumentWrapper<>(new Document(optionsMap), new DocumentCodec());
+        return new BsonDocumentWrapper<>(new OldDocument(optionsMap), new DocumentCodec());
     }
 
     public static boolean isMongocryptdSpawningDisabled(@Nullable final String cryptSharedLibVersion,

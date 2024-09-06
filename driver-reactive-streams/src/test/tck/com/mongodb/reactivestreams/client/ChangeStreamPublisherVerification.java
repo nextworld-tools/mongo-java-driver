@@ -17,7 +17,7 @@
 package com.mongodb.reactivestreams.client;
 
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -32,7 +32,7 @@ import static com.mongodb.reactivestreams.client.MongoFixture.DEFAULT_TIMEOUT_MI
 import static com.mongodb.reactivestreams.client.MongoFixture.PUBLISHER_REFERENCE_CLEANUP_TIMEOUT_MILLIS;
 import static com.mongodb.reactivestreams.client.MongoFixture.run;
 
-public class ChangeStreamPublisherVerification extends PublisherVerification<ChangeStreamDocument<Document>> {
+public class ChangeStreamPublisherVerification extends PublisherVerification<ChangeStreamDocument<OldDocument>> {
 
     public static final AtomicInteger COUNTER = new AtomicInteger();
 
@@ -41,26 +41,26 @@ public class ChangeStreamPublisherVerification extends PublisherVerification<Cha
     }
 
     @Override
-    public Publisher<ChangeStreamDocument<Document>> createPublisher(final long elements) {
+    public Publisher<ChangeStreamDocument<OldDocument>> createPublisher(final long elements) {
         assert (elements <= maxElementsFromPublisher());
         if (!isDiscoverableReplicaSet()) {
             notVerified();
         }
 
-        MongoCollection<Document> collection = MongoFixture.getDefaultDatabase()
+        MongoCollection<OldDocument> collection = MongoFixture.getDefaultDatabase()
                 .getCollection("ChangeStreamTest" + COUNTER.getAndIncrement());
 
         if (elements > 0) {
-            MongoFixture.ObservableSubscriber<ChangeStreamDocument<Document>> observer =
-                    new MongoFixture.ObservableSubscriber<>(() -> run(collection.insertOne(Document.parse("{a: 1}"))));
+            MongoFixture.ObservableSubscriber<ChangeStreamDocument<OldDocument>> observer =
+                    new MongoFixture.ObservableSubscriber<>(() -> run(collection.insertOne(OldDocument.parse("{a: 1}"))));
             collection.watch().first().subscribe(observer);
 
-            ChangeStreamDocument<Document> changeDocument =  observer.get().get(0);
+            ChangeStreamDocument<OldDocument> changeDocument =  observer.get().get(0);
 
             // Limit the number of elements returned - this is essentially an infinite stream but to high will cause a OOM.
             long maxElements = elements > 10000 ? 10000 : elements;
-            List<Document> documentList = LongStream.rangeClosed(1, maxElements).boxed()
-                    .map(i -> new Document("a", i)).collect(Collectors.toList());
+            List<OldDocument> documentList = LongStream.rangeClosed(1, maxElements).boxed()
+                    .map(i -> new OldDocument("a", i)).collect(Collectors.toList());
 
             run(collection.insertMany(documentList));
 
@@ -71,7 +71,7 @@ public class ChangeStreamPublisherVerification extends PublisherVerification<Cha
     }
 
     @Override
-    public Publisher<ChangeStreamDocument<Document>> createFailedPublisher() {
+    public Publisher<ChangeStreamDocument<OldDocument>> createFailedPublisher() {
         return null;
     }
 

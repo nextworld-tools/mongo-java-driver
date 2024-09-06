@@ -17,7 +17,7 @@
 package org.bson.codecs;
 
 import org.bson.BsonInvalidOperationException;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -27,32 +27,32 @@ public final class LongCodecTest extends CodecTestCase {
 
     @Test
     public void shouldRoundTripLongValues() {
-        roundTrip(new Document("a", Long.MAX_VALUE));
-        roundTrip(new Document("a", Long.MIN_VALUE));
+        roundTrip(new OldDocument("a", Long.MAX_VALUE));
+        roundTrip(new OldDocument("a", Long.MIN_VALUE));
     }
 
     @Test
     public void shouldHandleAlternativeNumberValues() {
-        Document expected = new Document("a", 10L);
-        roundTrip(new Document("a", 10), expected);
-        roundTrip(new Document("a", 10.00), expected);
-        roundTrip(new Document("a", 9.9999999999999992), expected);
-        roundTrip(new Document("a", Decimal128.parse("10")), expected);
+        OldDocument expected = new OldDocument("a", 10L);
+        roundTrip(new OldDocument("a", 10), expected);
+        roundTrip(new OldDocument("a", 10.00), expected);
+        roundTrip(new OldDocument("a", 9.9999999999999992), expected);
+        roundTrip(new OldDocument("a", Decimal128.parse("10")), expected);
     }
 
     @Test
     public void shouldThrowWhenHandlingLossyValues() {
-        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new Document("a", Double.MAX_VALUE)));
+        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new OldDocument("a", Double.MAX_VALUE)));
     }
 
     @Test
     public void shouldThrowWhenHandlingLossyDoubleValues() {
-        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new Document("a", 9.9999999999999991)));
+        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new OldDocument("a", 9.9999999999999991)));
     }
 
     @Test
     public void shouldThrowWhenHandlingLossyDecimal128Values() {
-        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new Document("a", Decimal128.parse("10.0"))));
+        assertThrows(BsonInvalidOperationException.class, () ->roundTrip(new OldDocument("a", Decimal128.parse("10.0"))));
     }
 
     @Override

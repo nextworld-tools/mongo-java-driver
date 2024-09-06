@@ -26,7 +26,7 @@ import com.mongodb.WriteConcern;
 import com.mongodb.assertions.Assertions;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,7 +108,7 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
                                 mongocryptdSocketAddress.getPort(),
                                 TIMEOUT.toMillis()))
                 ))
-        ).insertOne(Document.parse("{unencrypted: 'test'}"));
+        ).insertOne(OldDocument.parse("{unencrypted: 'test'}"));
         assertMongocryptdNotSpawned();
     }
 
@@ -120,7 +120,7 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
     @Test
     void viaMongocryptdBypassSpawn() {
         assumeFalse(CRYPT_SHARED_LIB_PATH_SYS_PROP_VALUE != null);
-        MongoCollection<Document> collection = setUpCollection((mongocryptdSocketAddress, autoEncryptionSettingsBuilder) ->
+        MongoCollection<OldDocument> collection = setUpCollection((mongocryptdSocketAddress, autoEncryptionSettingsBuilder) ->
                 autoEncryptionSettingsBuilder.extraOptions(merge(commonExtraAutoEncryptionOptions(mongocryptdSocketAddress),
                         new SimpleImmutableEntry<>("mongocryptdBypassSpawn", true),
                         new SimpleImmutableEntry<>("mongocryptdURI", format("mongodb://%s:%d/?serverSelectionTimeoutMS=%d",
@@ -130,7 +130,7 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
                 ))
         );
         assertTrue(assertThrows(MongoClientException.class,
-                () -> collection.insertOne(Document.parse("{encrypted: 'test'}"))).getMessage().contains("Timed out"));
+                () -> collection.insertOne(OldDocument.parse("{encrypted: 'test'}"))).getMessage().contains("Timed out"));
     }
 
     /**
@@ -144,7 +144,7 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
         setUpCollection((mongocryptdSocketAddress, autoEncryptionSettingsBuilder) -> autoEncryptionSettingsBuilder
                 .extraOptions(commonExtraAutoEncryptionOptions(mongocryptdSocketAddress))
                 .bypassAutoEncryption(true)
-        ).insertOne(Document.parse("{unencrypted: 'test'}"));
+        ).insertOne(OldDocument.parse("{unencrypted: 'test'}"));
         assertMongocryptdNotSpawned();
     }
 
@@ -159,11 +159,11 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
         setUpCollection((mongocryptdSocketAddress, autoEncryptionSettingsBuilder) -> autoEncryptionSettingsBuilder
                 .extraOptions(commonExtraAutoEncryptionOptions(mongocryptdSocketAddress))
                 .bypassQueryAnalysis(true)
-        ).insertOne(Document.parse("{unencrypted: 'test'}"));
+        ).insertOne(OldDocument.parse("{unencrypted: 'test'}"));
         assertMongocryptdNotSpawned();
     }
 
-    private MongoCollection<Document> setUpCollection(
+    private MongoCollection<OldDocument> setUpCollection(
             final BiConsumer<InetSocketAddress, AutoEncryptionSettings.Builder> autoEncryptionSettingsBuilderMutator) {
         setUpKeyVaultNamespace();
         InetSocketAddress localMongocryptdSocketAddress = new InetSocketAddress(
@@ -210,7 +210,7 @@ public abstract class AbstractClientSideEncryptionNotSpawnMongocryptdTest {
                         .serverSelectionTimeout(TIMEOUT.toMillis(), TimeUnit.MILLISECONDS))
                 .build())) {
             assertThrows(MongoTimeoutException.class, () -> mongocryptdClient.getDatabase(NAMESPACE.getDatabaseName())
-                    .runCommand(Document.parse("{hello: 1}")),
+                    .runCommand(OldDocument.parse("{hello: 1}")),
                     "If nothing is thrown, then we connected to mongocryptd, i.e., it was spawned");
         }
     }

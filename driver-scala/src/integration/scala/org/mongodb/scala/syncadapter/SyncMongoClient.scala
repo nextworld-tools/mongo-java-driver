@@ -2,7 +2,7 @@ package org.mongodb.scala.syncadapter
 
 import com.mongodb.ClientSessionOptions
 import com.mongodb.client.{ ClientSession, MongoClient => JMongoClient, MongoDatabase => JMongoDatabase }
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 import org.mongodb.scala.MongoClient
 import org.mongodb.scala.bson.DefaultHelper.DefaultsTo

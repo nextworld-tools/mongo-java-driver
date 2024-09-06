@@ -42,7 +42,7 @@ import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -250,13 +250,13 @@ public abstract class AbstractClientSideOperationsEncryptionTimeoutProseTest {
                                 + "  \"bsonType\": \"object\""
                                 + "}"))));
 
-                MongoCollection<Document> collection = mongoClient.getDatabase(dbName).getCollection(collName);
+                MongoCollection<OldDocument> collection = mongoClient.getDatabase(dbName).getCollection(collName);
                 collection.drop();
 
                 mongoClient.getDatabase(dbName).createCollection(collName, createCollectionOptions);
 
                 commandListener.reset();
-                collection.insertOne(new Document("encryptedField", "123456789"));
+                collection.insertOne(new OldDocument("encryptedField", "123456789"));
 
                 List<CommandStartedEvent> commandStartedEvents = commandListener.getCommandStartedEvents();
                 assertTimeoutIsDecreasingForCommands(Arrays.asList("listCollections", "find", "insert"), commandStartedEvents,
@@ -283,7 +283,7 @@ public abstract class AbstractClientSideOperationsEncryptionTimeoutProseTest {
 
             try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder()
                     .timeout(initialTimeoutMS, MILLISECONDS))) {
-                CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(Document.parse(
+                CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions().encryptedFields(OldDocument.parse(
                         "{"
                                 + "  fields: [{"
                                 + "    path: 'ssn',"

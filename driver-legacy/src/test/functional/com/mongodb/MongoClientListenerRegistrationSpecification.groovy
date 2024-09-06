@@ -21,7 +21,7 @@ import com.mongodb.event.CommandListener
 import com.mongodb.event.ConnectionPoolListener
 import com.mongodb.event.ServerListener
 import com.mongodb.event.ServerMonitorListener
-import org.bson.Document
+import org.bson.OldDocument
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -53,7 +53,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         def client = new MongoClient(getMongoClientURI(optionBuilder))
 
         then:
-        client.getDatabase('admin').runCommand(new Document('ping', 1))
+        client.getDatabase('admin').runCommand(new OldDocument('ping', 1))
 
         cleanup:
         client?.close()
@@ -67,7 +67,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         def client = new MongoClient(getMongoClientURI(optionsBuilder))
 
         when:
-        client.getDatabase('admin').runCommand(new Document('ping', 1))
+        client.getDatabase('admin').runCommand(new OldDocument('ping', 1))
 
         then:
         1 * first.commandStarted(_)
@@ -87,7 +87,7 @@ class MongoClientListenerRegistrationSpecification extends FunctionalSpecificati
         def client = new MongoClient(getMongoClientURI(optionsBuilder))
 
         when:
-        client.getDatabase('admin').runCommand(new Document('ping', 1))
+        client.getDatabase('admin').runCommand(new OldDocument('ping', 1))
 
         then:
         1 * first.commandStarted(_)

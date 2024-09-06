@@ -19,7 +19,7 @@ import com.mongodb.Function
 import com.mongodb.client.MongoCursor as JMongoCursor
 import com.mongodb.client.MongoIterable as JMongoIterable
 import kotlin.test.assertContentEquals
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.kotlin.doReturn
@@ -34,15 +34,19 @@ class MongoIterableTest {
     @Suppress("UNCHECKED_CAST")
     @Test
     fun shouldCallTheUnderlyingMethods() {
-        val delegate: JMongoIterable<Document> = mock()
-        val cursor: JMongoCursor<Document> = mock()
+        val delegate: JMongoIterable<OldDocument> = mock()
+        val cursor: JMongoCursor<OldDocument> = mock()
         val iterable = MongoIterable(delegate)
 
         val batchSize = 10
-        val documents = listOf(Document("a", 1), Document("b", 2), Document("c", 3))
-        val transform: (Document) -> String = { it.toJson() }
-        val transformClass: Class<Function<Document, String>> =
-            Function::class.java as Class<Function<Document, String>>
+        val documents = listOf(
+            OldDocument("a", 1),
+            OldDocument("b", 2),
+            OldDocument("c", 3)
+        )
+        val transform: (OldDocument) -> String = { it.toJson() }
+        val transformClass: Class<Function<OldDocument, String>> =
+            Function::class.java as Class<Function<OldDocument, String>>
 
         whenever(cursor.hasNext()).thenReturn(true, true, true, false, true, true, true, false, true, true, true, false)
         whenever(cursor.next())
@@ -80,11 +84,15 @@ class MongoIterableTest {
 
     @Test
     fun shouldCloseTheUnderlyingCursorWhenUsingUse() {
-        val delegate: JMongoIterable<Document> = mock()
-        val cursor: JMongoCursor<Document> = mock()
+        val delegate: JMongoIterable<OldDocument> = mock()
+        val cursor: JMongoCursor<OldDocument> = mock()
         val iterable = MongoIterable(delegate)
 
-        val documents = listOf(Document("a", 1), Document("b", 2), Document("c", 3))
+        val documents = listOf(
+            OldDocument("a", 1),
+            OldDocument("b", 2),
+            OldDocument("c", 3)
+        )
 
         whenever(cursor.hasNext()).thenReturn(true, true, true, false)
         whenever(cursor.next()).thenReturn(documents[0], documents[1], documents[2])
@@ -103,11 +111,15 @@ class MongoIterableTest {
 
     @Test
     fun shouldCloseTheUnderlyingCursorWhenUsingToList() {
-        val delegate: JMongoIterable<Document> = mock()
-        val cursor: JMongoCursor<Document> = mock()
+        val delegate: JMongoIterable<OldDocument> = mock()
+        val cursor: JMongoCursor<OldDocument> = mock()
         val iterable = MongoIterable(delegate)
 
-        val documents = listOf(Document("a", 1), Document("b", 2), Document("c", 3))
+        val documents = listOf(
+            OldDocument("a", 1),
+            OldDocument("b", 2),
+            OldDocument("c", 3)
+        )
 
         whenever(cursor.hasNext()).thenReturn(true, true, true, false)
         whenever(cursor.next()).thenReturn(documents[0], documents[1], documents[2])

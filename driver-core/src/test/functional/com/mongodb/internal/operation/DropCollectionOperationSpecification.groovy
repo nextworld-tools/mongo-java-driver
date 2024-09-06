@@ -20,7 +20,7 @@ import com.mongodb.MongoNamespace
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.WriteConcern
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
@@ -33,7 +33,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
 
     def 'should drop a collection that exists'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentTo', 'createTheCollection'))
         assert collectionNameExists(getCollectionName())
 
         when:
@@ -46,7 +46,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
 
     def 'should drop a collection that exists asynchronously'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentTo', 'createTheCollection'))
         assert collectionNameExists(getCollectionName())
 
         when:
@@ -82,7 +82,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
     @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
+        getCollectionHelper().insertDocuments(new DocumentCodec(), new OldDocument('documentTo', 'createTheCollection'))
         assert collectionNameExists(getCollectionName())
         def operation = new DropCollectionOperation(getNamespace(), new WriteConcern(5))
 

@@ -28,7 +28,7 @@ import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ListSearchIndexesPublisher;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.reactivestreams.Publisher;
 
 import java.util.concurrent.TimeUnit;
@@ -102,15 +102,15 @@ final class ListSearchIndexesPublisherImpl<T> extends BatchCursorPublisher<T> im
     }
 
     @Override
-    public Publisher<Document> explain() {
-        return publishExplain(Document.class, null);
+    public Publisher<OldDocument> explain() {
+        return publishExplain(OldDocument.class, null);
     }
 
     @Override
-    public Publisher<Document> explain(final ExplainVerbosity verbosity) {
+    public Publisher<OldDocument> explain(final ExplainVerbosity verbosity) {
         notNull("verbosity", verbosity);
 
-        return publishExplain(Document.class, verbosity);
+        return publishExplain(OldDocument.class, verbosity);
     }
 
     @Override

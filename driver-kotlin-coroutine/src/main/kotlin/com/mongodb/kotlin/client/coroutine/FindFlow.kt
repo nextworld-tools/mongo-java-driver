@@ -28,7 +28,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitSingle
 import org.bson.BsonValue
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.conversions.Bson
 
 /**
@@ -276,7 +276,7 @@ public class FindFlow<T : Any>(private val wrapped: FindPublisher<T>) : Flow<T> 
      * @see [Explain command](https://www.mongodb.com/docs/manual/reference/command/explain/)
      */
     @JvmName("explainDocument")
-    public suspend fun explain(verbosity: ExplainVerbosity? = null): Document = explain<Document>(verbosity)
+    public suspend fun explain(verbosity: ExplainVerbosity? = null): OldDocument = explain<OldDocument>(verbosity)
 
     /**
      * Explain the execution plan for this operation with the given verbosity level

@@ -19,7 +19,7 @@ package org.bson.codecs;
 import org.bson.BsonBinaryReader;
 import org.bson.BsonBinaryWriter;
 import org.bson.ByteBufNIO;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.io.BasicOutputBuffer;
 import org.bson.io.ByteBufferBsonInput;
 
@@ -28,7 +28,7 @@ import static java.nio.ByteBuffer.wrap;
 public final class CodecTestUtil {
     static BsonBinaryReader prepareReaderWithObjectToBeDecoded(final Object objectToDecode) {
         //Need to encode it wrapped in a document to conform to the validation
-        Document document = new Document("wrapperDocument", objectToDecode);
+        OldDocument document = new OldDocument("wrapperDocument", objectToDecode);
 
         BasicOutputBuffer outputBuffer = new BasicOutputBuffer();
 

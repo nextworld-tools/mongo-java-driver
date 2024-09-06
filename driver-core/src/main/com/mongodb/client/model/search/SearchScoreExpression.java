@@ -21,7 +21,7 @@ import com.mongodb.annotations.Sealed;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -56,7 +56,7 @@ public interface SearchScoreExpression extends Bson {
      * @see SearchScore#boost(FieldSearchPath)
      */
     static PathSearchScoreExpression pathExpression(final FieldSearchPath path) {
-        return new SearchConstructibleBsonElement("path", new Document(SEARCH_PATH_VALUE_KEY, notNull("path", path).toValue()));
+        return new SearchConstructibleBsonElement("path", new OldDocument(SEARCH_PATH_VALUE_KEY, notNull("path", path).toValue()));
     }
 
     /**
@@ -102,7 +102,7 @@ public interface SearchScoreExpression extends Bson {
 
             @Override
             public String toString() {
-                return new Document("origin", origin)
+                return new OldDocument("origin", origin)
                         .append("path", path)
                         .append("scale", scale)
                         .toString();
@@ -119,7 +119,7 @@ public interface SearchScoreExpression extends Bson {
      * @return The requested {@link SearchScoreExpression}.
      */
     static LogSearchScoreExpression logExpression(final SearchScoreExpression expression) {
-        return new SearchConstructibleBson(new Document("log", notNull("expression", expression)));
+        return new SearchConstructibleBson(new OldDocument("log", notNull("expression", expression)));
     }
 
     /**
@@ -130,7 +130,7 @@ public interface SearchScoreExpression extends Bson {
      * @return The requested {@link SearchScoreExpression}.
      */
     static Log1pSearchScoreExpression log1pExpression(final SearchScoreExpression expression) {
-        return new SearchConstructibleBson(new Document("log1p", notNull("expression", expression)));
+        return new SearchConstructibleBson(new OldDocument("log1p", notNull("expression", expression)));
     }
 
     /**
@@ -142,7 +142,7 @@ public interface SearchScoreExpression extends Bson {
     static AddSearchScoreExpression addExpression(final Iterable<? extends SearchScoreExpression> expressions) {
         notNull("expressions", expressions);
         isTrueArgument("expressions must contain at least 2 elements", sizeAtLeast(expressions, 2));
-        return new SearchConstructibleBson(new Document("add", expressions));
+        return new SearchConstructibleBson(new OldDocument("add", expressions));
     }
 
     /**
@@ -154,7 +154,7 @@ public interface SearchScoreExpression extends Bson {
     static MultiplySearchScoreExpression multiplyExpression(final Iterable<? extends SearchScoreExpression> expressions) {
         notNull("expressions", expressions);
         isTrueArgument("expressions must contain at least 2 elements", sizeAtLeast(expressions, 2));
-        return new SearchConstructibleBson(new Document("multiply", expressions));
+        return new SearchConstructibleBson(new OldDocument("multiply", expressions));
     }
 
     /**

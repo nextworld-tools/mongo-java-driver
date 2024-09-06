@@ -55,7 +55,7 @@ import com.mongodb.reactivestreams.client.ListIndexesPublisher;
 import com.mongodb.reactivestreams.client.ListSearchIndexesPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -274,8 +274,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch() {
-        return watch(Document.class);
+    public ChangeStreamPublisher<OldDocument> watch() {
+        return watch(OldDocument.class);
     }
 
     @Override
@@ -284,8 +284,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final List<? extends Bson> pipeline) {
+        return watch(pipeline, OldDocument.class);
     }
 
     @Override
@@ -295,8 +295,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession) {
-        return watch(clientSession, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession) {
+        return watch(clientSession, OldDocument.class);
     }
 
     @Override
@@ -305,8 +305,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ChangeStreamPublisher<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+    public ChangeStreamPublisher<OldDocument> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
+        return watch(clientSession, pipeline, OldDocument.class);
     }
 
     @Override
@@ -699,8 +699,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListSearchIndexesPublisher<Document> listSearchIndexes() {
-      return listSearchIndexes(Document.class);
+    public ListSearchIndexesPublisher<OldDocument> listSearchIndexes() {
+      return listSearchIndexes(OldDocument.class);
     }
 
     @Override
@@ -754,8 +754,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListIndexesPublisher<Document> listIndexes() {
-        return listIndexes(Document.class);
+    public ListIndexesPublisher<OldDocument> listIndexes() {
+        return listIndexes(OldDocument.class);
     }
 
     @Override
@@ -764,8 +764,8 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     }
 
     @Override
-    public ListIndexesPublisher<Document> listIndexes(final ClientSession clientSession) {
-        return listIndexes(clientSession, Document.class);
+    public ListIndexesPublisher<OldDocument> listIndexes(final ClientSession clientSession) {
+        return listIndexes(clientSession, OldDocument.class);
     }
 
     @Override

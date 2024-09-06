@@ -16,7 +16,7 @@
 package com.mongodb.internal.client.model;
 
 import org.bson.BsonDocument;
-import org.bson.Document;
+import org.bson.OldDocument;
 
 import java.util.Map;
 import java.util.Optional;
@@ -27,7 +27,7 @@ interface ToMap {
     static Optional<Map<String, ?>> tryToMap(final Object o) {
         if (o instanceof ToMap) {
             return ((ToMap) o).tryToMap();
-        } else if (o instanceof Document || o instanceof BsonDocument) {
+        } else if (o instanceof OldDocument || o instanceof BsonDocument) {
             @SuppressWarnings("unchecked")
             Map<String, ?> map = (Map<String, ?>) o;
             return Optional.of(map);

@@ -19,7 +19,7 @@ package reactivestreams.primer;
 
 // @import: start
 import com.mongodb.reactivestreams.client.AggregatePublisher;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.Test;
 import reactivestreams.helpers.SubscriberHelpers.ObservableSubscriber;
 import reactivestreams.helpers.SubscriberHelpers.PrintDocumentSubscriber;
@@ -35,13 +35,13 @@ public class AggregatePrimer extends PrimerTestCase {
 
         // @begin: group-documents-by-a-field-and-calculate-count
         // @code: start
-        AggregatePublisher<Document> publisher = db.getCollection("restaurants").aggregate(singletonList(
-                new Document("$group", new Document("_id", "$borough").append("count", new Document("$sum", 1)))));
+        AggregatePublisher<OldDocument> publisher = db.getCollection("restaurants").aggregate(singletonList(
+                new OldDocument("$group", new OldDocument("_id", "$borough").append("count", new OldDocument("$sum", 1)))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> aggregateSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> aggregateSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(aggregateSubscriber);
         aggregateSubscriber.await();
         // @code: end
@@ -65,14 +65,14 @@ public class AggregatePrimer extends PrimerTestCase {
 
         // @begin: filter-and-group-documents
         // @code: start
-        AggregatePublisher<Document> publisher = db.getCollection("restaurants").aggregate(asList(
-                new Document("$match", new Document("borough", "Queens").append("cuisine", "Brazilian")),
-                new Document("$group", new Document("_id", "$address.zipcode").append("count", new Document("$sum", 1)))));
+        AggregatePublisher<OldDocument> publisher = db.getCollection("restaurants").aggregate(asList(
+                new OldDocument("$match", new OldDocument("borough", "Queens").append("cuisine", "Brazilian")),
+                new OldDocument("$group", new OldDocument("_id", "$address.zipcode").append("count", new OldDocument("$sum", 1)))));
         // @code: end
 
         // @pre: Iterate the results and apply a block to each resulting document
         // @code: start
-        ObservableSubscriber<Document> aggregateSubscriber = new PrintDocumentSubscriber();
+        ObservableSubscriber<OldDocument> aggregateSubscriber = new PrintDocumentSubscriber();
         publisher.subscribe(aggregateSubscriber);
         aggregateSubscriber.await();
         // @code: end

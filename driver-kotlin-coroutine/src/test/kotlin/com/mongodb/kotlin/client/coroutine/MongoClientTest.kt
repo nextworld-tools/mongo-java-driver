@@ -21,7 +21,7 @@ import kotlin.reflect.full.declaredFunctions
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.bson.BsonDocument
-import org.bson.Document
+import org.bson.OldDocument
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
@@ -113,19 +113,19 @@ class MongoClientTest {
     @Test
     fun shouldCallTheUnderlyingListDatabases() {
         val mongoClient = MongoClient(wrapped)
-        whenever(wrapped.listDatabases(Document::class.java)).doReturn(mock())
-        whenever(wrapped.listDatabases(clientSession.wrapped, Document::class.java)).doReturn(mock())
+        whenever(wrapped.listDatabases(OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.listDatabases(clientSession.wrapped, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.listDatabases(clientSession.wrapped, BsonDocument::class.java)).doReturn(mock())
 
         mongoClient.listDatabases()
         mongoClient.listDatabases(clientSession)
-        mongoClient.listDatabases(Document::class.java)
+        mongoClient.listDatabases(OldDocument::class.java)
         mongoClient.listDatabases(clientSession, BsonDocument::class.java)
-        mongoClient.listDatabases<Document>()
+        mongoClient.listDatabases<OldDocument>()
         mongoClient.listDatabases<BsonDocument>(clientSession)
 
-        verify(wrapped, times(3)).listDatabases(Document::class.java)
-        verify(wrapped, times(1)).listDatabases(clientSession.wrapped, Document::class.java)
+        verify(wrapped, times(3)).listDatabases(OldDocument::class.java)
+        verify(wrapped, times(1)).listDatabases(clientSession.wrapped, OldDocument::class.java)
         verify(wrapped, times(2)).listDatabases(clientSession.wrapped, BsonDocument::class.java)
         verifyNoMoreInteractions(wrapped)
     }
@@ -133,14 +133,14 @@ class MongoClientTest {
     @Test
     fun shouldCallTheUnderlyingWatch() {
         val mongoClient = MongoClient(wrapped)
-        val pipeline = listOf(Document(mapOf("a" to 1)))
+        val pipeline = listOf(OldDocument(mapOf("a" to 1)))
 
-        whenever(wrapped.watch(emptyList(), Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(pipeline, Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(clientSession.wrapped, emptyList(), Document::class.java)).doReturn(mock())
-        whenever(wrapped.watch(clientSession.wrapped, pipeline, Document::class.java)).doReturn(mock())
+        whenever(wrapped.watch(emptyList(), OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(pipeline, OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(clientSession.wrapped, emptyList(), OldDocument::class.java)).doReturn(mock())
+        whenever(wrapped.watch(clientSession.wrapped, pipeline, OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.watch(pipeline, BsonDocument::class.java)).doReturn(mock())
-        whenever(wrapped.watch(clientSession.wrapped, emptyList(), Document::class.java)).doReturn(mock())
+        whenever(wrapped.watch(clientSession.wrapped, emptyList(), OldDocument::class.java)).doReturn(mock())
         whenever(wrapped.watch(clientSession.wrapped, pipeline, BsonDocument::class.java)).doReturn(mock())
 
         mongoClient.watch()
@@ -148,20 +148,20 @@ class MongoClientTest {
         mongoClient.watch(clientSession)
         mongoClient.watch(clientSession, pipeline)
 
-        mongoClient.watch(resultClass = Document::class.java)
+        mongoClient.watch(resultClass = OldDocument::class.java)
         mongoClient.watch(pipeline, BsonDocument::class.java)
-        mongoClient.watch(clientSession = clientSession, resultClass = Document::class.java)
+        mongoClient.watch(clientSession = clientSession, resultClass = OldDocument::class.java)
         mongoClient.watch(clientSession, pipeline, BsonDocument::class.java)
 
-        mongoClient.watch<Document>()
+        mongoClient.watch<OldDocument>()
         mongoClient.watch<BsonDocument>(pipeline)
-        mongoClient.watch<Document>(clientSession)
+        mongoClient.watch<OldDocument>(clientSession)
         mongoClient.watch<BsonDocument>(clientSession, pipeline)
 
-        verify(wrapped, times(3)).watch(emptyList(), Document::class.java)
-        verify(wrapped, times(1)).watch(pipeline, Document::class.java)
-        verify(wrapped, times(3)).watch(clientSession.wrapped, emptyList(), Document::class.java)
-        verify(wrapped, times(1)).watch(clientSession.wrapped, pipeline, Document::class.java)
+        verify(wrapped, times(3)).watch(emptyList(), OldDocument::class.java)
+        verify(wrapped, times(1)).watch(pipeline, OldDocument::class.java)
+        verify(wrapped, times(3)).watch(clientSession.wrapped, emptyList(), OldDocument::class.java)
+        verify(wrapped, times(1)).watch(clientSession.wrapped, pipeline, OldDocument::class.java)
         verify(wrapped, times(2)).watch(pipeline, BsonDocument::class.java)
         verify(wrapped, times(2)).watch(clientSession.wrapped, pipeline, BsonDocument::class.java)
         verifyNoMoreInteractions(wrapped)

@@ -18,7 +18,7 @@ package com.mongodb.client.model.fill;
 import com.mongodb.annotations.Evolving;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.WindowOutputFields;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.conversions.Bson;
 
 import static com.mongodb.assertions.Assertions.notNull;
@@ -45,7 +45,7 @@ public interface FillOutputField extends Bson {
      */
     static <TExpression> ValueFillOutputField value(final String field, TExpression expression) {
         return new FillConstructibleBsonElement(notNull("field", field),
-                new Document("value", (notNull("expression", expression))));
+                new OldDocument("value", (notNull("expression", expression))));
     }
 
     /**
@@ -57,7 +57,7 @@ public interface FillOutputField extends Bson {
      */
     static LocfFillOutputField locf(final String field) {
         return new FillConstructibleBsonElement(notNull("field", field),
-                new Document("method", "locf"));
+                new OldDocument("method", "locf"));
     }
 
     /**
@@ -71,7 +71,7 @@ public interface FillOutputField extends Bson {
      */
     static LinearFillOutputField linear(final String field) {
         return new FillConstructibleBsonElement(notNull("field", field),
-                new Document("method", "linear"));
+                new OldDocument("method", "linear"));
     }
 
     /**

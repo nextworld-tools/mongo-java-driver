@@ -19,7 +19,7 @@ package com.mongodb.reactivestreams.client;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.RetryableWritesProseTest;
 import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -54,7 +54,7 @@ final class RetryableReadsProseTest {
         RetryableWritesProseTest.retriesOnDifferentMongosWhenAvailable(
                 mongoClientSettings -> new SyncMongoClient(MongoClients.create(mongoClientSettings)),
                 mongoCollection -> {
-                    try (MongoCursor<Document> cursor = mongoCollection.find().iterator()) {
+                    try (MongoCursor<OldDocument> cursor = mongoCollection.find().iterator()) {
                         return cursor.hasNext();
                     }
                 }, "find", false);
@@ -70,7 +70,7 @@ final class RetryableReadsProseTest {
         RetryableWritesProseTest.retriesOnSameMongosWhenAnotherNotAvailable(
                 mongoClientSettings -> new SyncMongoClient(MongoClients.create(mongoClientSettings)),
                 mongoCollection -> {
-                    try (MongoCursor<Document> cursor = mongoCollection.find().iterator()) {
+                    try (MongoCursor<OldDocument> cursor = mongoCollection.find().iterator()) {
                         return cursor.hasNext();
                     }
                 }, "find", false);

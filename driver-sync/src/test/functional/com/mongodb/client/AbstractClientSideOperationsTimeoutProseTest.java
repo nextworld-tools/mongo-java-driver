@@ -51,7 +51,7 @@ import com.mongodb.test.FlakyTest;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonTimestamp;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.codecs.BsonDocumentCodec;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterAll;
@@ -218,11 +218,11 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
 
         try (MongoClient client = createMongoClient(getMongoClientSettingsBuilder()
                 .timeout(applyTimeoutMultiplierForServerless(250), TimeUnit.MILLISECONDS))) {
-            MongoCollection<Document> collection = client.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = client.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
-            try (MongoCursor<Document> cursor = collection.find().cursorType(CursorType.Tailable).cursor()) {
-                Document document = assertDoesNotThrow(cursor::next);
+            try (MongoCursor<OldDocument> cursor = collection.find().cursorType(CursorType.Tailable).cursor()) {
+                OldDocument document = assertDoesNotThrow(cursor::next);
                 assertEquals(1, document.get("x"));
                 assertThrows(MongoOperationTimeoutException.class, cursor::next);
             }
@@ -260,16 +260,16 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder()
                 .timeout(applyTimeoutMultiplierForServerless(250), TimeUnit.MILLISECONDS))) {
 
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
-            try (MongoChangeStreamCursor<ChangeStreamDocument<Document>> cursor = collection.watch(
-                    singletonList(Document.parse("{ '$match': {'operationType': 'insert'}}")))
+            try (MongoChangeStreamCursor<ChangeStreamDocument<OldDocument>> cursor = collection.watch(
+                    singletonList(OldDocument.parse("{ '$match': {'operationType': 'insert'}}")))
                     .startAtOperationTime(startTime)
                     .fullDocument(FullDocument.UPDATE_LOOKUP)
                     .cursor()) {
-                ChangeStreamDocument<Document> document = assertDoesNotThrow(cursor::next);
+                ChangeStreamDocument<OldDocument> document = assertDoesNotThrow(cursor::next);
 
-                Document fullDocument = document.getFullDocument();
+                OldDocument fullDocument = document.getFullDocument();
                 assertNotNull(fullDocument);
                 assertEquals(1, fullDocument.get("x"));
                 assertThrows(MongoOperationTimeoutException.class, cursor::next);
@@ -452,7 +452,7 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
             assertThrows(MongoOperationTimeoutException.class, () -> {
                 mongoClient.getDatabase(namespace.getDatabaseName())
                         .getCollection(namespace.getCollectionName())
-                        .insertOne(new Document("x", 1));
+                        .insertOne(new OldDocument("x", 1));
             });
             long elapsed = msElapsedSince(start);
             assertTrue(elapsed <= 310, "Took too long to time out, elapsedMS: " + elapsed);
@@ -479,12 +479,12 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder().retryWrites(false)
                 .timeout(applyTimeoutMultiplierForServerless(100), TimeUnit.MILLISECONDS))) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession()) {
                 session.startTransaction();
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
 
                 long start = System.nanoTime();
                 session.close();
@@ -516,13 +516,13 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 + "}");
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless((100)), TimeUnit.MILLISECONDS).build())) {
                 session.startTransaction();
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
 
                 long start = System.nanoTime();
                 session.close();
@@ -551,13 +551,13 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 + "}");
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless(200), TimeUnit.MILLISECONDS).build())) {
                 session.startTransaction();
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
                 sleep(applyTimeoutMultiplierForServerless(200));
 
                 assertDoesNotThrow(session::commitTransaction);
@@ -582,13 +582,13 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 + "}");
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless(200), TimeUnit.MILLISECONDS).build())) {
                 session.startTransaction();
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
                 sleep(applyTimeoutMultiplierForServerless(200));
 
                 assertDoesNotThrow(session::close);
@@ -615,12 +615,12 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder()
                 .timeout(applyTimeoutMultiplierForServerless(100), TimeUnit.MILLISECONDS))) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession()) {
                 assertThrows(MongoOperationTimeoutException.class,
-                        () -> session.withTransaction(() -> collection.insertOne(session, new Document("x", 1))));
+                        () -> session.withTransaction(() -> collection.insertOne(session, new OldDocument("x", 1))));
             }
 
             List<CommandEvent> failedEvents = commandListener.getEvents().stream()
@@ -649,14 +649,14 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 + "}");
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless(200), TimeUnit.MILLISECONDS).build())) {
                 assertThrows(MongoOperationTimeoutException.class,
                         () -> session.withTransaction(() -> {
-                            collection.insertOne(session, new Document("x", 1));
+                            collection.insertOne(session, new OldDocument("x", 1));
                             sleep(applyTimeoutMultiplierForServerless(200));
                             return true;
                         })
@@ -684,14 +684,14 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 + "}");
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless(200), TimeUnit.MILLISECONDS).build())) {
                 assertThrows(MongoOperationTimeoutException.class,
                         () -> session.withTransaction(() -> {
-                            collection.insertOne(session, new Document("x", 1));
+                            collection.insertOne(session, new OldDocument("x", 1));
                             sleep(applyTimeoutMultiplierForServerless(200));
                             return true;
                         })
@@ -710,7 +710,7 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
         assumeFalse(isStandalone());
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
@@ -719,7 +719,7 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 session.startTransaction(TransactionOptions.builder()
                         .writeConcern(WriteConcern.ACKNOWLEDGED.withWTimeout(applyTimeoutMultiplierForServerless(100), TimeUnit.MILLISECONDS))
                         .build());
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
                 sleep(applyTimeoutMultiplierForServerless(200));
 
                 assertDoesNotThrow(session::commitTransaction);
@@ -751,7 +751,7 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
 
         long rtt = ClusterFixture.getPrimaryRTT();
         collectionHelper.create(namespace.getCollectionName(), new CreateCollectionOptions());
-        collectionHelper.insertDocuments(new Document(), new Document());
+        collectionHelper.insertDocuments(new OldDocument(), new OldDocument());
         collectionHelper.runAdminCommand("{"
                 + "    configureFailPoint: \"failCommand\","
                 + "    mode: { times: 1},"
@@ -766,10 +766,10 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
                 .retryReads(true)
                 .applyToSocketSettings(builder -> builder.readTimeout(applyTimeoutMultiplierForServerless(500), TimeUnit.MILLISECONDS)))) {
 
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
 
-            MongoCursor<Document> cursor = collection.find()
+            MongoCursor<OldDocument> cursor = collection.find()
                     .batchSize(1)
                     .cursor();
 
@@ -798,7 +798,7 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
 
         long rtt = ClusterFixture.getPrimaryRTT();
         collectionHelper.create(namespace.getCollectionName(), new CreateCollectionOptions());
-        collectionHelper.insertDocuments(new Document(), new Document());
+        collectionHelper.insertDocuments(new OldDocument(), new OldDocument());
         collectionHelper.runAdminCommand("{"
                 + "    configureFailPoint: \"failCommand\","
                 + "    mode: { times: 1},"
@@ -812,10 +812,10 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder()
                 .timeout(applyTimeoutMultiplierForServerless(500), TimeUnit.MILLISECONDS))) {
 
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName()).withReadPreference(ReadPreference.primary());
 
-            MongoCursor<Document> cursor = collection.find()
+            MongoCursor<OldDocument> cursor = collection.find()
                     .batchSize(1)
                     .cursor();
 
@@ -843,14 +843,14 @@ public abstract class AbstractClientSideOperationsTimeoutProseTest {
         assumeFalse(isStandalone());
 
         try (MongoClient mongoClient = createMongoClient(getMongoClientSettingsBuilder())) {
-            MongoCollection<Document> collection = mongoClient.getDatabase(namespace.getDatabaseName())
+            MongoCollection<OldDocument> collection = mongoClient.getDatabase(namespace.getDatabaseName())
                     .getCollection(namespace.getCollectionName());
 
             try (ClientSession session = mongoClient.startSession(ClientSessionOptions.builder()
                     .defaultTimeout(applyTimeoutMultiplierForServerless(200), TimeUnit.MILLISECONDS)
                     .build())) {
                 session.startTransaction(TransactionOptions.builder().build());
-                collection.insertOne(session, new Document("x", 1));
+                collection.insertOne(session, new OldDocument("x", 1));
                 sleep(applyTimeoutMultiplierForServerless(200));
 
                 assertDoesNotThrow(session::commitTransaction);

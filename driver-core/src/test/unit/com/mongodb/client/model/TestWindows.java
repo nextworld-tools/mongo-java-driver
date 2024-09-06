@@ -23,7 +23,7 @@ import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
-import org.bson.Document;
+import org.bson.OldDocument;
 import org.bson.types.Decimal128;
 import org.junit.jupiter.api.Test;
 
@@ -45,7 +45,7 @@ final class TestWindows {
     @Test
     void of() {
         Window expected = timeRange(-1, SECOND, CURRENT);
-        Document windowDocument = new Document("range", asList(-1L, "current")).append("unit", SECOND.value());
+        OldDocument windowDocument = new OldDocument("range", asList(-1L, "current")).append("unit", SECOND.value());
         Window actualFromDocument = Windows.of(windowDocument);
         Window actualFromBsonDocument = Windows.of(windowDocument.toBsonDocument());
         assertAll(

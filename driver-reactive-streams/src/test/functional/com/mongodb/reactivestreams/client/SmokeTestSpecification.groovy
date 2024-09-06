@@ -22,7 +22,7 @@ import com.mongodb.client.model.IndexModel
 import com.mongodb.client.result.InsertOneResult
 import com.mongodb.internal.diagnostics.logging.Loggers
 import org.bson.BsonInt32
-import org.bson.Document
+import org.bson.OldDocument
 import org.bson.RawBsonDocument
 import reactor.core.publisher.Flux
 import spock.lang.IgnoreIf
@@ -41,8 +41,8 @@ class SmokeTestSpecification extends FunctionalSpecification {
         given:
         def mongoClient = getMongoClient()
         def database = mongoClient.getDatabase(databaseName)
-        def document = new Document('_id', 1)
-        def updatedDocument = new Document('_id', 1).append('a', 1)
+        def document = new OldDocument('_id', 1)
+        def updatedDocument = new OldDocument('_id', 1).append('a', 1)
 
         when:
         run('clean up old database', mongoClient.getDatabase(databaseName).&drop)
@@ -87,22 +87,22 @@ class SmokeTestSpecification extends FunctionalSpecification {
         run('find that document', collection.find().&first)[0] == document
 
         then:
-        run('update that document', collection.&updateOne, document, new Document('$set', new Document('a', 1)))[0].wasAcknowledged()
+        run('update that document', collection.&updateOne, document, new OldDocument('$set', new OldDocument('a', 1)))[0].wasAcknowledged()
 
         then:
         run('find the updated document', collection.find().&first)[0] == updatedDocument
 
         then:
-        run('aggregate the collection', collection.&aggregate, [new Document('$match', new Document('a', 1))])[0] == updatedDocument
+        run('aggregate the collection', collection.&aggregate, [new OldDocument('$match', new OldDocument('a', 1))])[0] == updatedDocument
 
         then:
-        run('remove all documents', collection.&deleteOne, new Document())[0].getDeletedCount() == 1
+        run('remove all documents', collection.&deleteOne, new OldDocument())[0].getDeletedCount() == 1
 
         then:
         run('The count is zero', collection.&countDocuments)[0] == 0
 
         then:
-        run('create an index', collection.&createIndex, new Document('test', 1))[0] == 'test_1'
+        run('create an index', collection.&createIndex, new OldDocument('test', 1))[0] == 'test_1'
 
         then:
         def indexNames = run('has the newly created index', collection.&listIndexes)*.name
@@ -111,7 +111,7 @@ class SmokeTestSpecification extends FunctionalSpecification {
         indexNames.containsAll('_id_', 'test_1')
 
         then:
-        run('create multiple indexes', collection.&createIndexes, [new IndexModel(new Document('multi', 1))])[0] == 'multi_1'
+        run('create multiple indexes', collection.&createIndexes, [new IndexModel(new OldDocument('multi', 1))])[0] == 'multi_1'
 
         then:
         def indexNamesUpdated = run('has the newly created index', collection.&listIndexes)*.name
@@ -160,7 +160,7 @@ class SmokeTestSpecification extends FunctionalSpecification {
         when:
         ClientSession session = run('start a session', getMongoClient().&startSession)[0] as ClientSession
         session.startTransaction()
-        run('insert a document', collection.&insertOne, session, new Document('_id', 1))
+        run('insert a document', collection.&insertOne, session, new OldDocument('_id', 1))
         run('commit a transaction', session.&commitTransaction)
 
         then:
@@ -178,7 +178,7 @@ class SmokeTestSpecification extends FunctionalSpecification {
         when:
         ClientSession session = run('start a session', getMongoClient().&startSession)[0] as ClientSession
         session.startTransaction()
-        run('insert a document', collection.&insertOne, session, new Document('_id', 1))
+        run('insert a document', collection.&insertOne, session, new OldDocument('_id', 1))
         run('abort a transaction', session.&abortTransaction)
 
         then:
@@ -215,11 +215,11 @@ class SmokeTestSpecification extends FunctionalSpecification {
     def 'should visit all documents from a cursor with multiple batches'() {
         given:
         def total = 1000
-        def documents = (1..total).collect { new Document('_id', it) }
+        def documents = (1..total).collect { new OldDocument('_id', it) }
         run('Insert 10000 documents', collection.&insertMany, documents)
 
         when:
-        def counted = Flux.from(collection.find(new Document()).sort(new Document('_id', 1)).batchSize(10))
+        def counted = Flux.from(collection.find(new OldDocument()).sort(new OldDocument('_id', 1)).batchSize(10))
                 .collectList().block(TIMEOUT_DURATION).size()
 
         then:
