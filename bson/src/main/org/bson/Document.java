@@ -75,16 +75,10 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     private static final long serialVersionUID = 6297731997167536582L;
 
     /**
-<<<<<<< HEAD
      * Nextworld mod
      * Changed from final to <nothing>
      */
     private LinkedHashMap<String, Object> documentAsMap;
-=======
-     * The map of keys to values.
-     */
-    private final LinkedHashMap<String, Object> documentAsMap;
->>>>>>> fc7084d89f77472b0dc0cb720f3ac7e3a40df87d
 
     /**
      * Creates an empty Document instance.
@@ -664,7 +658,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
 
     /**
      * Nextworld Mod
-     * @param Object value the value for which to generate a checksum
+     * @param value the value for which to generate a checksum
      * @return Long checksum
      */
     public static long generateCheckSum(Object value){

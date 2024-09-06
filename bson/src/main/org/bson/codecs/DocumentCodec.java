@@ -16,7 +16,6 @@
 
 package org.bson.codecs;
 
-import com.google.common.primitives.Longs;
 import org.bson.BsonDocument;
 import org.bson.BsonDocumentWriter;
 import org.bson.BsonReader;
@@ -29,20 +28,7 @@ import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.Decimal128;
 
-<<<<<<< HEAD
-
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.zip.CRC32;
-import java.util.zip.Checksum;
-=======
-import java.util.Map;
->>>>>>> fc7084d89f77472b0dc0cb720f3ac7e3a40df87d
 
 import static java.util.Arrays.asList;
 import static org.bson.assertions.Assertions.notNull;
@@ -188,16 +174,12 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
         reader.readStartDocument();
         while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
             String fieldName = reader.readName();
-<<<<<<< HEAD
-            Object readValue = readValue(reader, decoderContext);
+            Object readValue = readValue(reader, decoderContext, bsonTypeCodecMap, uuidRepresentation, registry, valueTransformer);
             document.put(fieldName, readValue);
             /**
              * Nextworld Mod
              */
             checkAndHandleNwCurrency(document, fieldName, readValue);
-=======
-            document.put(fieldName, readValue(reader, decoderContext, bsonTypeCodecMap, uuidRepresentation, registry, valueTransformer));
->>>>>>> fc7084d89f77472b0dc0cb720f3ac7e3a40df87d
         }
 
         reader.readEndDocument();
@@ -247,78 +229,4 @@ public class DocumentCodec implements CollectibleCodec<Document>, OverridableUui
             encoderContext.encodeWithChildContext(codec, writer, value);
         }
     }
-<<<<<<< HEAD
-
-    private void writeMap(final BsonWriter writer, final Map<String, Object> map, final EncoderContext encoderContext) {
-        writer.writeStartDocument();
-
-        beforeFields(writer, encoderContext, map);
-
-        for (final Map.Entry<String, Object> entry : map.entrySet()) {
-            if (skipField(encoderContext, entry.getKey())) {
-                continue;
-            }
-            String key = entry.getKey();
-
-            //Nextworld Mod
-            //Strip out the checksums so that they aren't persisted
-            if(!Objects.equals(key, "$CurrencyValueChecksum") && !Objects.equals(key, "$CurrencyBigDecimalValueChecksum")) {
-                writer.writeName(key);
-                writeValue(writer, encoderContext, entry.getValue());
-            }
-        }
-        writer.writeEndDocument();
-    }
-
-    private void writeIterable(final BsonWriter writer, final Iterable<Object> list, final EncoderContext encoderContext) {
-        writer.writeStartArray();
-        for (final Object value : list) {
-            writeValue(writer, encoderContext, value);
-        }
-        writer.writeEndArray();
-    }
-
-    private Object readValue(final BsonReader reader, final DecoderContext decoderContext) {
-        BsonType bsonType = reader.getCurrentBsonType();
-        if (bsonType == BsonType.NULL) {
-            reader.readNull();
-            return null;
-        } else if (bsonType == BsonType.ARRAY) {
-            return readList(reader, decoderContext);
-        } else {
-            Codec<?> codec = bsonTypeCodecMap.get(bsonType);
-
-            if (bsonType == BsonType.BINARY && reader.peekBinarySize() == 16) {
-                switch (reader.peekBinarySubType()) {
-                    case 3:
-                        if (uuidRepresentation == UuidRepresentation.JAVA_LEGACY
-                                || uuidRepresentation == UuidRepresentation.C_SHARP_LEGACY
-                                || uuidRepresentation == UuidRepresentation.PYTHON_LEGACY) {
-                            codec = registry.get(UUID.class);
-                        }
-                        break;
-                    case 4:
-                        if (uuidRepresentation == UuidRepresentation.STANDARD) {
-                            codec = registry.get(UUID.class);
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
-            return valueTransformer.transform(codec.decode(reader, decoderContext));
-        }
-    }
-
-    private List<Object> readList(final BsonReader reader, final DecoderContext decoderContext) {
-        reader.readStartArray();
-        List<Object> list = new ArrayList<Object>();
-        while (reader.readBsonType() != BsonType.END_OF_DOCUMENT) {
-            list.add(readValue(reader, decoderContext));
-        }
-        reader.readEndArray();
-        return list;
-    }
-=======
->>>>>>> fc7084d89f77472b0dc0cb720f3ac7e3a40df87d
 }
