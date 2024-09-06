@@ -24,6 +24,8 @@ import com.mongodb.TagSet;
 import com.mongodb.internal.selector.LatencyMinimizingServerSelector;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
+import com.mongodb.lang.NonNull;
+import com.mongodb.lang.Nullable;
 import com.mongodb.selector.CompositeServerSelector;
 import com.mongodb.selector.ServerSelector;
 import org.bson.BsonArray;
@@ -32,7 +34,6 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -67,13 +68,14 @@ public class ServerSelectionSelectionTest {
         this.definition = definition;
         this.heartbeatFrequencyMS = definition.getNumber("heartbeatFrequencyMS", new BsonInt64(10000)).longValue();
         this.error = definition.getBoolean("error", BsonBoolean.FALSE).getValue();
-        this.clusterDescription = buildClusterDescription(definition.getDocument("topology_description"));
+        this.clusterDescription = buildClusterDescription(definition.getDocument("topology_description"),
+                ServerSettings.builder().heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS).build());
     }
 
     @Test
     public void shouldPassAllOutcomes() {
         // skip this test because the driver prohibits maxStaleness or tagSets with mode of primary at a much lower level
-        assumeTrue(!description.equals("max-staleness/server_selection/ReplicaSetWithPrimary/MaxStalenessWithModePrimary.json"));
+        assumeTrue(!description.equals("max-staleness/ReplicaSetWithPrimary/MaxStalenessWithModePrimary.json"));
 
         ServerSelector serverSelector = null;
         List<ServerDescription> suitableServers = buildServerDescriptions(definition.getArray("suitable_servers", new BsonArray()));
@@ -101,39 +103,43 @@ public class ServerSelectionSelectionTest {
 
     @Parameterized.Parameters(name = "{0}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<Object[]>();
+        List<Object[]> data = new ArrayList<>();
         for (File file : JsonPoweredTestHelper.getTestFiles("/server-selection/server_selection")) {
-            data.add(new Object[]{getDescription("server-selection/server_selection", file), JsonPoweredTestHelper.getTestDocument(file)});
+            data.add(new Object[]{getServerSelectionTestDescription(file), JsonPoweredTestHelper.getTestDocument(file)});
         }
         for (File file : JsonPoweredTestHelper.getTestFiles("/max-staleness/server_selection")) {
-            data.add(new Object[]{getDescription("max-staleness/server_selection", file), JsonPoweredTestHelper.getTestDocument(file)});
+            data.add(new Object[]{getMaxStalenessTestDescription(file), JsonPoweredTestHelper.getTestDocument(file)});
         }
         return data;
     }
 
-    private static String getDescription(final String root, final File file) {
-        return root + "/" + file.getParentFile().getName() + "/" + file.getName();
+    private static String getServerSelectionTestDescription(final File file) {
+        return "server-selection" + "/" + file.getParentFile().getParentFile().getName() + "/" + file.getParentFile().getName() + "/"
+                + file.getName();
     }
 
-    private ClusterDescription buildClusterDescription(final BsonDocument topologyDescription) {
+    private static String getMaxStalenessTestDescription(final File file) {
+        return "max-staleness" + "/" + file.getParentFile().getName() + "/" + file.getName();
+    }
+
+    public static ClusterDescription buildClusterDescription(final BsonDocument topologyDescription,
+            @Nullable final ServerSettings serverSettings) {
         ClusterType clusterType = getClusterType(topologyDescription.getString("type").getValue());
         ClusterConnectionMode connectionMode = getClusterConnectionMode(clusterType);
         List<ServerDescription> servers = buildServerDescriptions(topologyDescription.getArray("servers"));
         return new ClusterDescription(connectionMode, clusterType, servers, null,
-                                             ServerSettings.builder()
-                                                     .heartbeatFrequency(heartbeatFrequencyMS, TimeUnit.MILLISECONDS)
-                                                     .build());
+                serverSettings == null ? ServerSettings.builder().build() : serverSettings);
     }
 
-    @NotNull
-    private ClusterConnectionMode getClusterConnectionMode(final ClusterType clusterType) {
+    @NonNull
+    private static ClusterConnectionMode getClusterConnectionMode(final ClusterType clusterType) {
         if (clusterType == ClusterType.LOAD_BALANCED) {
             return ClusterConnectionMode.LOAD_BALANCED;
         }
         return ClusterConnectionMode.MULTIPLE;
     }
 
-    private ClusterType getClusterType(final String type) {
+    private static ClusterType getClusterType(final String type) {
         if (type.equals("Single")) {
             return ClusterType.STANDALONE;
         } else if (type.startsWith("ReplicaSet")) {
@@ -149,15 +155,15 @@ public class ServerSelectionSelectionTest {
         throw new UnsupportedOperationException("Unknown topology type: " + type);
     }
 
-    private List<ServerDescription> buildServerDescriptions(final BsonArray serverDescriptions) {
-        List<ServerDescription> descriptions = new ArrayList<ServerDescription>();
+    private static List<ServerDescription> buildServerDescriptions(final BsonArray serverDescriptions) {
+        List<ServerDescription> descriptions = new ArrayList<>();
         for (BsonValue document : serverDescriptions) {
             descriptions.add(buildServerDescription(document.asDocument()));
         }
         return descriptions;
     }
 
-    private ServerDescription buildServerDescription(final BsonDocument serverDescription) {
+    private static ServerDescription buildServerDescription(final BsonDocument serverDescription) {
         ServerDescription.Builder builder = ServerDescription.builder();
         builder.address(new ServerAddress(serverDescription.getString("address").getValue()));
         ServerType serverType = getServerType(serverDescription.getString("type").getValue());
@@ -184,7 +190,7 @@ public class ServerSelectionSelectionTest {
         return builder.build();
     }
 
-    private ServerType getServerType(final String serverTypeString) {
+    private static ServerType getServerType(final String serverTypeString) {
         ServerType serverType;
         if (serverTypeString.equals("RSPrimary")) {
             serverType = ServerType.REPLICA_SET_PRIMARY;
@@ -213,7 +219,7 @@ public class ServerSelectionSelectionTest {
     }
 
     private List<TagSet> buildTagSets(final BsonArray tags) {
-        List<TagSet> tagSets = new ArrayList<TagSet>();
+        List<TagSet> tagSets = new ArrayList<>();
         for (BsonValue tag : tags) {
             tagSets.add(buildTagSet(tag.asDocument()));
         }
@@ -221,8 +227,8 @@ public class ServerSelectionSelectionTest {
     }
 
 
-    private TagSet buildTagSet(final BsonDocument tags) {
-        List<Tag> tagsSetTags = new ArrayList<Tag>();
+    private static TagSet buildTagSet(final BsonDocument tags) {
+        List<Tag> tagsSetTags = new ArrayList<>();
         for (String key : tags.keySet()) {
             tagsSetTags.add(new Tag(key, tags.getString(key).getValue()));
         }

@@ -16,34 +16,83 @@
 
 package com.mongodb.reactivestreams.client.unified;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.unified.UnifiedTest;
 import com.mongodb.lang.Nullable;
-import com.mongodb.reactivestreams.client.MongoClients;
-import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
-public final class ChangeStreamsTest extends UnifiedTest {
-    public ChangeStreamsTest(final String fileDescription, final String testDescription,
-                             final String schemaVersion, @Nullable final BsonArray runOnRequirements, final BsonArray entities,
-                             final BsonArray initialData, final BsonDocument definition) {
-        super(schemaVersion, runOnRequirements, entities, initialData, definition);
-    }
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.disableSleep;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.disableWaitForBatchCursorCreation;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.enableSleepAfterCursorOpen;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.enableWaitForBatchCursorCreation;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+
+final class ChangeStreamsTest extends UnifiedReactiveStreamsTest {
+
+    private static final List<String> ERROR_REQUIRED_FROM_CHANGE_STREAM_INITIALIZATION_TESTS =
+            Arrays.asList(
+                    "Test with document comment - pre 4.4"
+            );
+
+    private static final List<String> EVENT_SENSITIVE_TESTS =
+            Arrays.asList(
+                    "Test that comment is set on getMore",
+                    "Test that comment is not set on getMore - pre 4.4"
+            );
+
+    private static final List<String> REQUIRES_BATCH_CURSOR_CREATION_WAITING =
+            Arrays.asList(
+                    "Change Stream should error when an invalid aggregation stage is passed in",
+                    "The watch helper must not throw a custom exception when executed against a single server topology, "
+                            + "but instead depend on a server error"
+            );
 
     @Override
-    protected MongoClient createMongoClient(final MongoClientSettings settings) {
-        return new SyncMongoClient(MongoClients.create(settings));
+    protected void skips(final String fileDescription, final String testDescription) {
+        assumeFalse(ERROR_REQUIRED_FROM_CHANGE_STREAM_INITIALIZATION_TESTS.contains(testDescription));
+        assumeFalse(EVENT_SENSITIVE_TESTS.contains(testDescription));
     }
 
-    @Parameterized.Parameters(name = "{0}: {1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
+    @BeforeEach
+    @Override
+    public void setUp(@Nullable final String fileDescription,
+            @Nullable final String testDescription,
+            final String schemaVersion,
+            @Nullable final BsonArray runOnRequirements,
+            final BsonArray entitiesArray,
+            final BsonArray initialData,
+            final BsonDocument definition) {
+        super.setUp(
+                fileDescription,
+                testDescription,
+                schemaVersion,
+                runOnRequirements,
+                entitiesArray,
+                initialData,
+                definition);
+        enableSleepAfterCursorOpen(256);
+        if (REQUIRES_BATCH_CURSOR_CREATION_WAITING.contains(testDescription)) {
+            enableWaitForBatchCursorCreation();
+        }
+    }
+
+    @AfterEach
+    @Override
+    public void cleanUp() {
+        super.cleanUp();
+        disableSleep();
+        disableWaitForBatchCursorCreation();
+    }
+
+    private static Collection<Arguments> data() throws URISyntaxException, IOException {
         return getTestData("unified-test-format/change-streams");
     }
 }

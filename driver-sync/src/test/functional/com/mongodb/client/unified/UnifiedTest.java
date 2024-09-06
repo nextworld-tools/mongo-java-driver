@@ -16,89 +16,143 @@
 
 package com.mongodb.client.unified;
 
+import com.mongodb.ClientEncryptionSettings;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoNamespace;
+import com.mongodb.ReadPreference;
+import com.mongodb.UnixServerAddress;
+import com.mongodb.event.TestServerMonitorListener;
+import com.mongodb.internal.logging.LogMessage;
+import com.mongodb.logging.TestLoggingInterceptor;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.gridfs.GridFSBucket;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.test.CollectionHelper;
+import com.mongodb.client.vault.ClientEncryption;
+import com.mongodb.connection.ClusterDescription;
+import com.mongodb.connection.ClusterType;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.internal.connection.TestCommandListener;
 import com.mongodb.internal.connection.TestConnectionPoolListener;
+import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
+import com.mongodb.test.AfterBeforeParameterResolver;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonDouble;
+import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;
-import org.jetbrains.annotations.NotNull;
-import org.junit.After;
-import org.junit.AssumptionViolatedException;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static com.mongodb.ClusterFixture.getServerVersion;
+import static com.mongodb.ClusterFixture.isDataLakeTest;
 import static com.mongodb.client.Fixture.getMongoClient;
 import static com.mongodb.client.Fixture.getMongoClientSettings;
+import static com.mongodb.client.test.CollectionHelper.getCurrentClusterTime;
+import static com.mongodb.client.test.CollectionHelper.killAllSessions;
 import static com.mongodb.client.unified.RunOnRequirementsMatcher.runOnRequirementsMet;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static util.JsonPoweredTestHelper.getTestDocument;
 import static util.JsonPoweredTestHelper.getTestFiles;
 
-@RunWith(Parameterized.class)
+@ExtendWith(AfterBeforeParameterResolver.class)
 public abstract class UnifiedTest {
-    private final String schemaVersion;
-    private final BsonArray runOnRequirements;
-    private final BsonArray entitiesArray;
-    private final BsonArray initialData;
-    private final BsonDocument definition;
-    private final AssertionContext context = new AssertionContext();
-    private final Entities entities = new Entities();
-    private final UnifiedCrudHelper crudHelper = new UnifiedCrudHelper(entities);
-    private final UnifiedGridFSHelper gridFSHelper = new UnifiedGridFSHelper(entities);
-    private final ValueMatcher valueMatcher = new ValueMatcher(entities, context);
-    private final ErrorMatcher errorMatcher = new ErrorMatcher(context);
-    private final EventMatcher eventMatcher = new EventMatcher(valueMatcher, context);
-    private final List<FailPoint> failPoints = new ArrayList<>();
+    private static final Set<String> PRESTART_POOL_ASYNC_WORK_MANAGER_FILE_DESCRIPTIONS = Collections.singleton(
+            "wait queue timeout errors include details about checked out connections");
 
-    public UnifiedTest(final String schemaVersion, @Nullable final BsonArray runOnRequirements, final BsonArray entitiesArray,
-                       final BsonArray initialData, final BsonDocument definition) {
-        this.schemaVersion = schemaVersion;
-        this.runOnRequirements = runOnRequirements;
-        this.entitiesArray = entitiesArray;
-        this.initialData = initialData;
-        this.definition = definition;
-        this.context.push(ContextElement.ofTest(definition));
+    @Nullable
+    private String fileDescription;
+    private String schemaVersion;
+    @Nullable
+    private BsonArray runOnRequirements;
+    private BsonArray entitiesArray;
+    private BsonArray initialData;
+    private BsonDocument definition;
+    private Entities entities;
+    private UnifiedCrudHelper crudHelper;
+    private UnifiedGridFSHelper gridFSHelper;
+    private UnifiedClientEncryptionHelper clientEncryptionHelper;
+    private List<FailPoint> failPoints;
+    private UnifiedTestContext rootContext;
+    private boolean ignoreExtraEvents;
+    private BsonDocument startingClusterTime;
+
+    private class UnifiedTestContext {
+        private final AssertionContext context = new AssertionContext();
+        private final ValueMatcher valueMatcher = new ValueMatcher(entities, context);
+        private final ErrorMatcher errorMatcher = new ErrorMatcher(context, valueMatcher);
+        private final EventMatcher eventMatcher = new EventMatcher(valueMatcher, context);
+        private final LogMatcher logMatcher = new LogMatcher(valueMatcher, context);
+
+        AssertionContext getAssertionContext() {
+            return context;
+        }
+
+        ValueMatcher getValueMatcher() {
+            return valueMatcher;
+        }
+
+        ErrorMatcher getErrorMatcher() {
+            return errorMatcher;
+        }
+
+        EventMatcher getEventMatcher() {
+            return eventMatcher;
+        }
+
+        LogMatcher getLogMatcher() {
+            return logMatcher;
+        }
+    }
+
+    protected UnifiedTest() {
     }
 
     public Entities getEntities() {
         return entities;
     }
 
-    @NotNull
-    protected static Collection<Object[]> getTestData(final String directory) throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<>();
+    @NonNull
+    protected static Collection<Arguments> getTestData(final String directory) throws URISyntaxException, IOException {
+        List<Arguments> data = new ArrayList<>();
         for (File file : getTestFiles("/" + directory + "/")) {
             BsonDocument fileDocument = getTestDocument(file);
 
@@ -109,43 +163,101 @@ public abstract class UnifiedTest {
         return data;
     }
 
-    @NotNull
-    private static Object[] createTestData(final BsonDocument fileDocument, final BsonDocument testDocument) {
-        return new Object[]{
+    @NonNull
+    private static Arguments createTestData(final BsonDocument fileDocument, final BsonDocument testDocument) {
+        return Arguments.of(
                 fileDocument.getString("description").getValue(),
                 testDocument.getString("description").getValue(),
                 fileDocument.getString("schemaVersion").getValue(),
                 fileDocument.getArray("runOnRequirements", null),
                 fileDocument.getArray("createEntities", new BsonArray()),
                 fileDocument.getArray("initialData", new BsonArray()),
-                testDocument};
+                testDocument);
+    }
+
+    protected BsonDocument getDefinition() {
+        return definition;
     }
 
     protected abstract MongoClient createMongoClient(MongoClientSettings settings);
 
-    @Before
-    public void setUp() {
-        assertTrue(schemaVersion.startsWith("1.0")
-                || schemaVersion.startsWith("1.1")
-                || schemaVersion.startsWith("1.2")
-                || schemaVersion.startsWith("1.3"));
+    protected abstract GridFSBucket createGridFSBucket(MongoDatabase database);
+
+    protected abstract ClientEncryption createClientEncryption(MongoClient keyVaultClient, ClientEncryptionSettings clientEncryptionSettings);
+
+    @BeforeEach
+    public void setUp(
+            @Nullable final String fileDescription,
+            @Nullable final String testDescription,
+            final String schemaVersion,
+            @Nullable final BsonArray runOnRequirements,
+            final BsonArray entitiesArray,
+            final BsonArray initialData,
+            final BsonDocument definition) {
+        this.fileDescription = fileDescription;
+        this.schemaVersion = schemaVersion;
+        this.runOnRequirements = runOnRequirements;
+        this.entitiesArray = entitiesArray;
+        this.initialData = initialData;
+        this.definition = definition;
+        entities = new Entities();
+        crudHelper = new UnifiedCrudHelper(entities, definition.getString("description").getValue());
+        gridFSHelper = new UnifiedGridFSHelper(entities);
+        clientEncryptionHelper = new UnifiedClientEncryptionHelper(entities);
+        failPoints = new ArrayList<>();
+        rootContext = new UnifiedTestContext();
+        rootContext.getAssertionContext().push(ContextElement.ofTest(definition));
+        ignoreExtraEvents = false;
+        skips(fileDescription, testDescription);
+        assertTrue(
+                schemaVersion.equals("1.0")
+                        || schemaVersion.equals("1.1")
+                        || schemaVersion.equals("1.2")
+                        || schemaVersion.equals("1.3")
+                        || schemaVersion.equals("1.4")
+                        || schemaVersion.equals("1.5")
+                        || schemaVersion.equals("1.6")
+                        || schemaVersion.equals("1.7")
+                        || schemaVersion.equals("1.8")
+                        || schemaVersion.equals("1.9")
+                        || schemaVersion.equals("1.10")
+                        || schemaVersion.equals("1.11")
+                        || schemaVersion.equals("1.12")
+                        || schemaVersion.equals("1.13")
+                        || schemaVersion.equals("1.14")
+                        || schemaVersion.equals("1.15")
+                        || schemaVersion.equals("1.16")
+                        || schemaVersion.equals("1.17")
+                        || schemaVersion.equals("1.18")
+                        || schemaVersion.equals("1.19"),
+                String.format("Unsupported schema version %s", schemaVersion));
         if (runOnRequirements != null) {
-            assumeTrue("Run-on requirements not met",
-                    runOnRequirementsMet(runOnRequirements, getMongoClientSettings(), getServerVersion()));
+            assumeTrue(runOnRequirementsMet(runOnRequirements, getMongoClientSettings(), getServerVersion()),
+                    "Run-on requirements not met");
         }
         if (definition.containsKey("runOnRequirements")) {
-            assumeTrue("Run-on requirements not met",
-                    runOnRequirementsMet(definition.getArray("runOnRequirements", new BsonArray()), getMongoClientSettings(),
-                            getServerVersion()));
+            assumeTrue(runOnRequirementsMet(definition.getArray("runOnRequirements", new BsonArray()), getMongoClientSettings(),
+                            getServerVersion()),
+                    "Run-on requirements not met");
         }
         if (definition.containsKey("skipReason")) {
-            throw new AssumptionViolatedException(definition.getString("skipReason").getValue());
+            throw new TestAbortedException(definition.getString("skipReason").getValue());
         }
-        entities.init(entitiesArray, this::createMongoClient);
-        addInitialData();
+
+        if (!isDataLakeTest()) {
+            killAllSessions();
+        }
+
+        startingClusterTime = addInitialDataAndGetClusterTime();
+
+        entities.init(entitiesArray, startingClusterTime,
+                fileDescription != null && PRESTART_POOL_ASYNC_WORK_MANAGER_FILE_DESCRIPTIONS.contains(fileDescription),
+                this::createMongoClient,
+                this::createGridFSBucket,
+                this::createClientEncryption);
     }
 
-    @After
+    @AfterEach
     public void cleanUp() {
         for (FailPoint failPoint : failPoints) {
             failPoint.disableFailPoint();
@@ -153,75 +265,159 @@ public abstract class UnifiedTest {
         entities.close();
     }
 
-    @Test
-    public void shouldPassAllOutcomes() {
+    /**
+     * This method is called once per {@link #setUp(String, String, String, BsonArray, BsonArray, BsonArray, BsonDocument)},
+     * unless {@link #setUp(String, String, String, BsonArray, BsonArray, BsonArray, BsonDocument)} fails unexpectedly.
+     */
+    protected void skips(final String fileDescription, final String testDescription) {
+    }
+
+    @ParameterizedTest(name = "{0}: {1}")
+    @MethodSource("data")
+    public void shouldPassAllOutcomes(
+            @Nullable final String fileDescription,
+            @Nullable final String testDescription,
+            final String schemaVersion,
+            @Nullable final BsonArray runOnRequirements,
+            final BsonArray entitiesArray,
+            final BsonArray initialData,
+            final BsonDocument definition) {
         BsonArray operations = definition.getArray("operations");
         for (int i = 0; i < operations.size(); i++) {
             BsonValue cur = operations.get(i);
-            assertOperation(cur.asDocument(), i);
+            assertOperation(rootContext, cur.asDocument(), i);
         }
 
         if (definition.containsKey("outcome")) {
-            assertOutcome();
+            assertOutcome(rootContext);
         }
 
         if (definition.containsKey("expectEvents")) {
-            compareEvents(definition);
+            compareEvents(rootContext, definition);
+        }
+
+        if (definition.containsKey("expectLogMessages")) {
+            ArrayList<LogMatcher.Tweak> tweaks = new ArrayList<>(singletonList(
+                    // `LogMessage.Entry.Name.OPERATION` is not supported, therefore we skip matching its value
+                    LogMatcher.Tweak.skip(LogMessage.Entry.Name.OPERATION)));
+            if (getMongoClientSettings().getClusterSettings()
+                    .getHosts().stream().anyMatch(serverAddress -> serverAddress instanceof UnixServerAddress)) {
+                tweaks.add(LogMatcher.Tweak.skip(LogMessage.Entry.Name.SERVER_PORT));
+            }
+            compareLogMessages(rootContext, definition, tweaks);
         }
     }
 
-    private void compareEvents(final BsonDocument operation) {
-        for (BsonValue cur : operation.getArray("expectEvents")) {
+    private void compareEvents(final UnifiedTestContext context, final BsonDocument definition) {
+        for (BsonValue cur : definition.getArray("expectEvents")) {
             BsonDocument curClientEvents = cur.asDocument();
             String client = curClientEvents.getString("client").getValue();
+            boolean ignoreExtraEvents =
+                    curClientEvents.getBoolean("ignoreExtraEvents", BsonBoolean.valueOf(this.ignoreExtraEvents)).getValue();
             String eventType = curClientEvents.getString("eventType", new BsonString("command")).getValue();
+            BsonArray expectedEvents = curClientEvents.getArray("events");
             if (eventType.equals("command")) {
                 TestCommandListener listener = entities.getClientCommandListener(client);
-                eventMatcher.assertCommandEventsEquality(client, curClientEvents.getArray("events"), listener.getEvents());
+                context.getEventMatcher().assertCommandEventsEquality(client, ignoreExtraEvents, expectedEvents,
+                        listener.getEvents());
             } else if (eventType.equals("cmap")) {
                 TestConnectionPoolListener listener = entities.getConnectionPoolListener(client);
-                eventMatcher.assertConnectionPoolEventsEquality(client, curClientEvents.getArray("events"), listener.getEvents());
+                context.getEventMatcher().assertConnectionPoolEventsEquality(client, ignoreExtraEvents, expectedEvents,
+                        listener.getEvents());
+            } else if (eventType.equals("sdam")) {
+                TestServerMonitorListener listener = entities.getServerMonitorListener(client);
+                context.getEventMatcher().assertServerMonitorEventsEquality(client, ignoreExtraEvents, expectedEvents, listener.getEvents());
             } else {
                 throw new UnsupportedOperationException("Unexpected event type: " + eventType);
             }
         }
     }
 
-    private void assertOutcome() {
+    private void compareLogMessages(final UnifiedTestContext rootContext, final BsonDocument definition,
+            final Iterable<LogMatcher.Tweak> tweaks) {
+        for (BsonValue cur : definition.getArray("expectLogMessages")) {
+            BsonDocument curLogMessagesForClient = cur.asDocument();
+            boolean ignoreExtraMessages = curLogMessagesForClient.getBoolean("ignoreExtraMessages", BsonBoolean.FALSE).getValue();
+            String clientId = curLogMessagesForClient.getString("client").getValue();
+            TestLoggingInterceptor loggingInterceptor =
+                    entities.getClientLoggingInterceptor(clientId);
+            rootContext.getLogMatcher().assertLogMessageEquality(clientId, ignoreExtraMessages,
+                    curLogMessagesForClient.getArray("messages"), loggingInterceptor.getMessages(), tweaks);
+        }
+    }
+
+    private void assertOutcome(final UnifiedTestContext context) {
         for (BsonValue cur : definition.getArray("outcome")) {
             BsonDocument curDocument = cur.asDocument();
             MongoNamespace namespace = new MongoNamespace(curDocument.getString("databaseName").getValue(),
                     curDocument.getString("collectionName").getValue());
             List<BsonDocument> expectedOutcome = curDocument.getArray("documents").stream().map(BsonValue::asDocument).collect(toList());
             List<BsonDocument> actualOutcome = new CollectionHelper<>(new BsonDocumentCodec(), namespace).find();
-            context.push(ContextElement.ofOutcome(namespace, expectedOutcome, actualOutcome));
-            assertEquals(context.getMessage("Outcomes are not equal"), expectedOutcome, actualOutcome);
-            context.pop();
+            context.getAssertionContext().push(ContextElement.ofOutcome(namespace, expectedOutcome, actualOutcome));
+            assertEquals(expectedOutcome, actualOutcome, context.getAssertionContext().getMessage("Outcomes are not equal"));
+            context.getAssertionContext().pop();
         }
     }
 
-    private void assertOperation(final BsonDocument operation, final int operationIndex) {
-        OperationResult result = executeOperation(operation, operationIndex);
-        context.push(ContextElement.ofCompletedOperation(operation, result, operationIndex));
+    private void assertOperationAndThrow(final UnifiedTestContext context, final BsonDocument operation, final int operationIndex) {
+        OperationResult result = executeOperation(context, operation, operationIndex);
+        assertOperationResult(context, operation, operationIndex, result);
+
+        if (result.getException() != null) {
+            throw (RuntimeException) result.getException();
+        }
+    }
+
+    private void assertOperation(final UnifiedTestContext context, final BsonDocument operation, final int operationIndex) {
+        OperationResult result = executeOperation(context, operation, operationIndex);
+        assertOperationResult(context, operation, operationIndex, result);
+    }
+
+    private static void assertOperationResult(final UnifiedTestContext context, final BsonDocument operation, final int operationIndex,
+            final OperationResult result) {
+        context.getAssertionContext().push(ContextElement.ofCompletedOperation(operation, result, operationIndex));
+
         if (!operation.getBoolean("ignoreResultAndError", BsonBoolean.FALSE).getValue()) {
             if (operation.containsKey("expectResult")) {
-                assertNotNull(context.getMessage("The operation expects a result but an exception occurred"), result.getResult());
-                valueMatcher.assertValuesMatch(operation.get("expectResult"), result.getResult());
+                assertNull(result.getException(),
+                        context.getAssertionContext().getMessage("The operation expects a result but an exception occurred"));
+                context.getValueMatcher().assertValuesMatch(operation.get("expectResult"), result.getResult());
             } else if (operation.containsKey("expectError")) {
-                assertNotNull(context.getMessage("The operation expects an error but no exception was thrown"), result.getException());
-                errorMatcher.assertErrorsMatch(operation.getDocument("expectError"), result.getException());
+                assertNotNull(result.getException(),
+                        context.getAssertionContext().getMessage("The operation expects an error but no exception was thrown"));
+                context.getErrorMatcher().assertErrorsMatch(operation.getDocument("expectError"), result.getException());
             } else {
-                assertNull(context.getMessage("The operation expects no error but an exception occurred"), result.getException());
+                assertNull(result.getException(),
+                        context.getAssertionContext().getMessage("The operation expects no error but an exception occurred"));
             }
         }
-        context.pop();
+        context.getAssertionContext().pop();
     }
 
-    private OperationResult executeOperation(final BsonDocument operation, final int operationNum) {
-        context.push(ContextElement.ofStartedOperation(operation, operationNum));
+    private OperationResult executeOperation(final UnifiedTestContext context, final BsonDocument operation, final int operationNum) {
+        context.getAssertionContext().push(ContextElement.ofStartedOperation(operation, operationNum));
         String name = operation.getString("name").getValue();
+        String object = operation.getString("object").getValue();
         try {
             switch (name) {
+                case "createEntities":
+                    return executeCreateEntities(operation);
+                case "wait":
+                    return executeWait(operation);
+                case "waitForEvent":
+                    return executeWaitForEvent(context, operation);
+                case "waitForPrimaryChange":
+                    return executeWaitPrimaryChange(context, operation);
+                case "waitForThread":
+                    return executeWaitForThread(context, operation);
+                case "recordTopologyDescription":
+                    return executeRecordTopologyDescription(operation);
+                case "assertTopologyType":
+                    return executeAssertTopologyType(context, operation);
+                case "runOnThread":
+                    return executeRunOnThread(context, operation);
+                case "assertEventCount":
+                    return executeAssertEventCount(context, operation);
                 case "failPoint":
                     return executeFailPoint(operation);
                 case "targetedFailPoint":
@@ -241,7 +437,7 @@ public abstract class UnifiedTest {
                 case "assertDifferentLsidOnLastTwoCommands":
                     return executeAssertDifferentLsidOnLastTwoCommands(operation);
                 case "assertNumberConnectionsCheckedOut":
-                    return executeAssertNumberConnectionsCheckedOut(operation);
+                    return executeAssertNumberConnectionsCheckedOut(context, operation);
                 case "assertSessionTransactionState":
                     return executeAssertSessionTransactionState(operation);
                 case "assertCollectionExists":
@@ -271,9 +467,16 @@ public abstract class UnifiedTest {
                 case "aggregate":
                     return crudHelper.executeAggregate(operation);
                 case "find":
+                    if ("bucket".equals(object)){
+                        return gridFSHelper.executeFind(operation);
+                    }
                     return crudHelper.executeFind(operation);
+                case "findOne":
+                    return crudHelper.executeFindOne(operation);
                 case "distinct":
                     return crudHelper.executeDistinct(operation);
+                case "mapReduce":
+                    return crudHelper.executeMapReduce(operation);
                 case "countDocuments":
                     return crudHelper.executeCountDocuments(operation);
                 case "estimatedDocumentCount":
@@ -286,16 +489,43 @@ public abstract class UnifiedTest {
                     return crudHelper.executeFindOneAndDelete(operation);
                 case "listDatabases":
                     return crudHelper.executeListDatabases(operation);
+                case "listDatabaseNames":
+                    return crudHelper.executeListDatabaseNames(operation);
                 case "listCollections":
                     return crudHelper.executeListCollections(operation);
+                case "listCollectionNames":
+                    return crudHelper.executeListCollectionNames(operation);
                 case "listIndexes":
                     return crudHelper.executeListIndexes(operation);
+                case "listIndexNames":
+                    return crudHelper.executeListIndexNames(operation);
                 case "dropCollection":
                     return crudHelper.executeDropCollection(operation);
                 case "createCollection":
                     return crudHelper.executeCreateCollection(operation);
+                case "modifyCollection":
+                    return crudHelper.executeModifyCollection(operation);
+                case "rename":
+                    if ("bucket".equals(object)){
+                        return gridFSHelper.executeRename(operation);
+                    }
+                    return crudHelper.executeRenameCollection(operation);
+                case "createSearchIndex":
+                    return crudHelper.executeCreateSearchIndex(operation);
+                case "createSearchIndexes":
+                    return crudHelper.executeCreateSearchIndexes(operation);
+                case "updateSearchIndex":
+                    return crudHelper.executeUpdateSearchIndex(operation);
+                case "dropSearchIndex":
+                    return crudHelper.executeDropSearchIndex(operation);
+                case "listSearchIndexes":
+                    return crudHelper.executeListSearchIndexes(operation);
                 case "createIndex":
                     return crudHelper.executeCreateIndex(operation);
+                case "dropIndex":
+                    return crudHelper.executeDropIndex(operation);
+                case "dropIndexes":
+                    return crudHelper.executeDropIndexes(operation);
                 case "startTransaction":
                     return crudHelper.executeStartTransaction(operation);
                 case "commitTransaction":
@@ -303,7 +533,7 @@ public abstract class UnifiedTest {
                 case "abortTransaction":
                     return crudHelper.executeAbortTransaction(operation);
                 case "withTransaction":
-                    return crudHelper.executeWithTransaction(operation, this::assertOperation);
+                    return crudHelper.executeWithTransaction(operation, (op, idx) -> assertOperationAndThrow(context, op, idx));
                 case "createFindCursor":
                     return crudHelper.createFindCursor(operation);
                 case "createChangeStream":
@@ -312,25 +542,51 @@ public abstract class UnifiedTest {
                     return crudHelper.close(operation);
                 case "iterateUntilDocumentOrError":
                     return crudHelper.executeIterateUntilDocumentOrError(operation);
+                case "iterateOnce":
+                    return crudHelper.executeIterateOnce(operation);
                 case "delete":
                     return gridFSHelper.executeDelete(operation);
+                case "drop":
+                    return gridFSHelper.executeDrop(operation);
                 case "download":
                     return gridFSHelper.executeDownload(operation);
+                case "downloadByName":
+                    return gridFSHelper.executeDownloadByName(operation);
                 case "upload":
                     return gridFSHelper.executeUpload(operation);
                 case "runCommand":
                     return crudHelper.executeRunCommand(operation);
                 case "loop":
-                    return loop(operation);
+                    return loop(context, operation);
+                case "createDataKey":
+                    return clientEncryptionHelper.executeCreateDataKey(operation);
+                case "addKeyAltName":
+                    return clientEncryptionHelper.executeAddKeyAltName(operation);
+                case "deleteKey":
+                    return clientEncryptionHelper.executeDeleteKey(operation);
+                case "removeKeyAltName":
+                    return clientEncryptionHelper.executeRemoveKeyAltName(operation);
+                case "getKey":
+                    return clientEncryptionHelper.executeGetKey(operation);
+                case "getKeys":
+                    return clientEncryptionHelper.executeGetKeys(operation);
+                case "getKeyByAltName":
+                    return clientEncryptionHelper.executeGetKeyByAltName(operation);
+                case "rewrapManyDataKey":
+                    return clientEncryptionHelper.executeRewrapManyDataKey(operation);
+                case "encrypt":
+                    return clientEncryptionHelper.executeEncrypt(operation);
+                case "decrypt":
+                    return clientEncryptionHelper.executeDecrypt(operation);
                 default:
                     throw new UnsupportedOperationException("Unsupported test operation: " + name);
             }
         } finally {
-            context.pop();
+            context.getAssertionContext().pop();
         }
     }
 
-    private OperationResult loop(final BsonDocument operation) {
+    private OperationResult loop(final UnifiedTestContext context, final BsonDocument operation) {
         BsonDocument arguments = operation.getDocument("arguments");
 
         int numIterations = 0;
@@ -345,7 +601,7 @@ public abstract class UnifiedTest {
             for (int i = 0; i < array.size(); i++) {
                 BsonValue cur = array.get(i);
                 try {
-                    assertOperation(cur.asDocument().clone(), i);
+                    assertOperation(context, cur.asDocument().clone(), i);
                     numSuccessfulOperations++;
                 } catch (AssertionError e) {
                     if (storeFailures) {
@@ -356,7 +612,7 @@ public abstract class UnifiedTest {
                         throw e;
                     }
                     break;
-                } catch (RuntimeException e) {
+                } catch (Exception e) {
                     if (storeErrors) {
                         errorDescriptionDocuments.add(createDocumentFromException(e));
                     } else if (storeFailures) {
@@ -393,6 +649,208 @@ public abstract class UnifiedTest {
 
     protected boolean terminateLoop() {
         return true;
+    }
+
+    private OperationResult executeCreateEntities(final BsonDocument operation) {
+        entities.init(operation.getDocument("arguments").getArray("entities"),
+                startingClusterTime,
+                false,
+                this::createMongoClient,
+                this::createGridFSBucket,
+                this::createClientEncryption);
+        return OperationResult.NONE;
+    }
+
+    private OperationResult executeWait(final BsonDocument operation) {
+        try {
+            Thread.sleep(operation.getDocument("arguments").getNumber("ms").longValue());
+            return OperationResult.NONE;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private OperationResult executeWaitForEvent(final UnifiedTestContext context, final BsonDocument operation) {
+        BsonDocument arguments = operation.getDocument("arguments");
+        String clientId = arguments.getString("client").getValue();
+        BsonDocument event = arguments.getDocument("event");
+        String eventName = event.getFirstKey();
+        int count = arguments.getNumber("count").intValue();
+
+        switch (eventName) {
+            case "serverDescriptionChangedEvent":
+                context.getEventMatcher().waitForServerDescriptionChangedEvents(clientId, event, count,
+                        entities.getServerListener(clientId));
+                break;
+            case "topologyDescriptionChangedEvent":
+                context.getEventMatcher().waitForClusterDescriptionChangedEvents(clientId, event, count,
+                        entities.getClusterListener(clientId));
+                break;
+            case "poolClearedEvent":
+            case "poolReadyEvent":
+            case "connectionCreatedEvent":
+            case "connectionReadyEvent":
+                context.getEventMatcher().waitForConnectionPoolEvents(clientId, event, count, entities.getConnectionPoolListener(clientId));
+                break;
+            case "serverHeartbeatStartedEvent":
+            case "serverHeartbeatSucceededEvent":
+            case "serverHeartbeatFailedEvent":
+                context.getEventMatcher().waitForServerMonitorEvents(clientId, TestServerMonitorListener.eventType(eventName), event, count,
+                        entities.getServerMonitorListener(clientId));
+                break;
+            default:
+                throw new UnsupportedOperationException("Unsupported event: " + eventName);
+        }
+
+        return OperationResult.NONE;
+    }
+
+    private OperationResult executeAssertEventCount(final UnifiedTestContext context, final BsonDocument operation) {
+        BsonDocument arguments = operation.getDocument("arguments");
+        String clientId = arguments.getString("client").getValue();
+        BsonDocument event = arguments.getDocument("event");
+        String eventName = event.getFirstKey();
+        int count = arguments.getNumber("count").intValue();
+
+        switch (eventName) {
+            case "serverDescriptionChangedEvent":
+                context.getEventMatcher().assertServerDescriptionChangeEventCount(clientId, event, count,
+                        entities.getServerListener(clientId).getServerDescriptionChangedEvents());
+                break;
+            case "topologyDescriptionChangedEvent":
+                context.getEventMatcher().assertClusterDescriptionChangeEventCount(clientId, event, count,
+                        entities.getClusterListener(clientId).getClusterDescriptionChangedEvents());
+                break;
+            case "poolClearedEvent":
+            case "poolReadyEvent":
+                context.getEventMatcher().assertConnectionPoolEventCount(clientId, event, count,
+                        entities.getConnectionPoolListener(clientId).getEvents());
+                break;
+            case "serverHeartbeatStartedEvent":
+            case "serverHeartbeatSucceededEvent":
+            case "serverHeartbeatFailedEvent":
+                context.getEventMatcher().assertServerMonitorEventCount(clientId, TestServerMonitorListener.eventType(eventName), event, count,
+                        entities.getServerMonitorListener(clientId));
+                break;
+            default:
+                throw new UnsupportedOperationException("Unsupported event: " + eventName);
+        }
+
+        return OperationResult.NONE;
+    }
+
+    private OperationResult executeWaitPrimaryChange(final UnifiedTestContext context, final BsonDocument operation) {
+        context.getAssertionContext().push(ContextElement.ofWaitForPrimaryChange());
+        BsonDocument arguments = operation.getDocument("arguments");
+        MongoClient client = entities.getClient(arguments.getString("client").getValue());
+        ClusterDescription priorClusterDescription =
+                entities.getTopologyDescription(arguments.getString("priorTopologyDescription").getValue());
+        ClusterDescription currentClusterDescription = client.getClusterDescription();
+        long timeoutNanos =
+                TimeUnit.NANOSECONDS.convert(arguments.getNumber("timeoutMS", new BsonInt32(10000)).longValue(), TimeUnit.MILLISECONDS);
+        long startTime = System.nanoTime();
+        while (primaryIsSame(priorClusterDescription, currentClusterDescription) || noPrimary(currentClusterDescription)) {
+            if (System.nanoTime() - startTime > timeoutNanos) {
+                fail(context.getAssertionContext().getMessage("Timed out waiting for primary change"));
+            }
+            try {
+                //noinspection BusyWait
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            currentClusterDescription = client.getClusterDescription();
+        }
+        context.getAssertionContext().pop();
+        return OperationResult.NONE;
+    }
+
+    private boolean noPrimary(final ClusterDescription clusterDescription) {
+        return ReadPreference.primary().choose(clusterDescription).isEmpty();
+    }
+
+    private boolean primaryIsSame(final ClusterDescription priorClusterDescription, final ClusterDescription currentClusterDescription) {
+        List<ServerDescription> priorPrimaries = ReadPreference.primary().choose(priorClusterDescription);
+        List<ServerDescription> currentPrimaries = ReadPreference.primary().choose(currentClusterDescription);
+        if (priorPrimaries.isEmpty() && currentPrimaries.isEmpty()) {
+            return true;
+        }
+        if (priorPrimaries.size() == 1 && currentPrimaries.size() == 1) {
+            return priorPrimaries.get(0).getAddress().equals(currentPrimaries.get(0).getAddress());
+        } else {
+            return false;
+        }
+    }
+
+    private OperationResult executeWaitForThread(final UnifiedTestContext context, final BsonDocument operation) {
+        BsonDocument arguments = operation.getDocument("arguments");
+        String threadId = arguments.getString("thread").getValue();
+        context.getAssertionContext().push(ContextElement.ofWaitForThread(threadId));
+        List<Future<?>> tasks = entities.getThreadTasks(threadId);
+        for (Future<?> task : tasks) {
+            try {
+                task.get(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (ExecutionException executionException) {
+                try {
+                    throw executionException.getCause();
+                } catch (Throwable e) {
+                    fail(context.getAssertionContext().getMessage(e.getMessage()));
+                }
+            } catch (TimeoutException e) {
+                fail(context.getAssertionContext().getMessage(e.getMessage()));
+            }
+        }
+        entities.clearThreadTasks(threadId);
+        context.getAssertionContext().pop();
+        return OperationResult.NONE;
+    }
+
+    private OperationResult executeRecordTopologyDescription(final BsonDocument operation) {
+        BsonDocument arguments = operation.getDocument("arguments");
+        ClusterDescription clusterDescription = entities.getClient(arguments.getString("client").getValue()).getClusterDescription();
+        String topologyDescriptionId = arguments.getString("id").getValue();
+        entities.addTopologyDescription(topologyDescriptionId, clusterDescription);
+        return OperationResult.NONE;
+    }
+
+    private OperationResult executeAssertTopologyType(final UnifiedTestContext context, final BsonDocument operation) {
+        BsonDocument arguments = operation.getDocument("arguments");
+        ClusterDescription clusterDescription = entities.getTopologyDescription(arguments.getString("topologyDescription").getValue());
+        String expectedTopologyType = arguments.getString("topologyType").getValue();
+
+        context.getAssertionContext().push(ContextElement.ofTopologyType(expectedTopologyType));
+
+        assertEquals(getClusterType(expectedTopologyType), clusterDescription.getType(),
+                context.getAssertionContext().getMessage("Unexpected topology type"));
+
+        context.getAssertionContext().pop();
+        return OperationResult.NONE;
+    }
+
+    private ClusterType getClusterType(final String topologyType) {
+        if (topologyType.equalsIgnoreCase("Sharded")) {
+            return ClusterType.SHARDED;
+        } else if (topologyType.equalsIgnoreCase("LoadBalanced")) {
+            return ClusterType.LOAD_BALANCED;
+        } else if (topologyType.startsWith("ReplicaSet")) {
+            return ClusterType.REPLICA_SET;
+        } else if (topologyType.equalsIgnoreCase("Unknown")) {
+            return ClusterType.UNKNOWN;
+        } else {
+            throw new IllegalArgumentException("Unsupported topology type: " + topologyType);
+        }
+    }
+
+    private OperationResult executeRunOnThread(final UnifiedTestContext context, final BsonDocument operation) {
+        UnifiedTestContext newContext = new UnifiedTestContext();
+        BsonDocument arguments = operation.getDocument("arguments");
+        String threadId = arguments.getString("thread").getValue();
+        ExecutorService thread = entities.getThread(threadId);
+        Future<?> future = thread.submit(() -> assertOperation(newContext, arguments.getDocument("operation"), 0));
+        entities.addThreadTask(threadId, future);
+        return OperationResult.NONE;
     }
 
     private OperationResult executeFailPoint(final BsonDocument operation) {
@@ -445,11 +903,11 @@ public abstract class UnifiedTest {
         return OperationResult.NONE;
     }
 
-    private OperationResult executeAssertNumberConnectionsCheckedOut(final BsonDocument operation) {
+    private OperationResult executeAssertNumberConnectionsCheckedOut(final UnifiedTestContext context, final BsonDocument operation) {
         TestConnectionPoolListener listener = entities.getConnectionPoolListener(
                 operation.getDocument("arguments").getString("client").getValue());
-        assertEquals(context.getMessage("Number of checked out connections must match expected"),
-                operation.getDocument("arguments").getNumber("connections").intValue(), listener.getNumConnectionsCheckedOut());
+        assertEquals(operation.getDocument("arguments").getNumber("connections").intValue(), listener.getNumConnectionsCheckedOut(),
+                context.getAssertionContext().getMessage("Number of checked out connections must match expected"));
         return OperationResult.NONE;
     }
 
@@ -466,14 +924,14 @@ public abstract class UnifiedTest {
                 operation.getDocument("arguments").getString("client").getValue());
         List<CommandEvent> events = lastTwoCommandEvents(listener);
         String eventsJson = listener.getCommandStartedEvents().stream()
-                .map(e -> ((CommandStartedEvent) e).getCommand().toJson())
+                .map(e -> e.getCommand().toJson())
                 .collect(Collectors.joining(", "));
         BsonDocument expected = ((CommandStartedEvent) events.get(0)).getCommand().getDocument("lsid");
         BsonDocument actual = ((CommandStartedEvent) events.get(1)).getCommand().getDocument("lsid");
         if (same) {
-            assertEquals(eventsJson, expected, actual);
+            assertEquals(expected, actual, eventsJson);
         } else {
-            assertNotEquals(eventsJson, expected, actual);
+            assertNotEquals(expected, actual, eventsJson);
         }
         return OperationResult.NONE;
     }
@@ -482,9 +940,9 @@ public abstract class UnifiedTest {
         BsonDocument arguments = operation.getDocument("arguments");
         ClientSession session = entities.getSession(arguments.getString("session").getValue());
         String state = arguments.getString("state").getValue();
-        //noinspection SwitchStatementWithTooFewBranches
         switch (state) {
             case "starting":
+            case "in_progress":
                 assertTrue(session.hasActiveTransaction());
                 break;
             default:
@@ -532,19 +990,19 @@ public abstract class UnifiedTest {
     }
 
     private List<CommandEvent> lastTwoCommandEvents(final TestCommandListener listener) {
-        List<CommandEvent> events = listener.getCommandStartedEvents();
+        List<CommandStartedEvent> events = listener.getCommandStartedEvents();
         assertTrue(events.size() >= 2);
-        return events.subList(events.size() - 2, events.size());
+        return new ArrayList<>(events.subList(events.size() - 2, events.size()));
     }
 
-    private void addInitialData() {
+    private BsonDocument addInitialDataAndGetClusterTime() {
         for (BsonValue cur : initialData.getValues()) {
             BsonDocument curDataSet = cur.asDocument();
             CollectionHelper<BsonDocument> helper = new CollectionHelper<>(new BsonDocumentCodec(),
                     new MongoNamespace(curDataSet.getString("databaseName").getValue(),
                             curDataSet.getString("collectionName").getValue()));
 
-            helper.create(WriteConcern.MAJORITY);
+            helper.create(WriteConcern.MAJORITY, curDataSet.getDocument("createOptions", new BsonDocument()));
 
             BsonArray documentsArray = curDataSet.getArray("documents", new BsonArray());
             if (!documentsArray.isEmpty()) {
@@ -552,5 +1010,14 @@ public abstract class UnifiedTest {
                         WriteConcern.MAJORITY);
             }
         }
+        return getCurrentClusterTime();
+    }
+
+    protected void ignoreExtraCommandEvents(final boolean ignoreExtraEvents) {
+        this.ignoreExtraEvents = ignoreExtraEvents;
+    }
+
+    protected void ignoreExtraEvents() {
+        this.ignoreExtraEvents = true;
     }
 }

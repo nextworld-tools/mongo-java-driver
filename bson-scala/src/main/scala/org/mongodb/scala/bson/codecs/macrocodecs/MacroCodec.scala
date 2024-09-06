@@ -80,7 +80,7 @@ trait MacroCodec[T] extends Codec[T] {
    * The field used to save the class name when saving sealed case classes.
    */
   val classFieldName = "_t"
-  lazy val hasClassFieldName: Boolean = caseClassesMap.size > 1
+  lazy val hasClassFieldName: Boolean = caseClassesMapInv.keySet != Set(encoderClass)
   lazy val caseClassesMapInv: Map[Class[_], String] = caseClassesMap.map(_.swap)
   protected val registry: CodecRegistry =
     CodecRegistries.fromRegistries(List(codecRegistry, CodecRegistries.fromCodecs(this)).asJava)
@@ -104,7 +104,7 @@ trait MacroCodec[T] extends Codec[T] {
       if (typeArgs.isEmpty) {
         reader.skipValue()
       } else {
-        map += (name -> readValue(reader, decoderContext, typeArgs.head, typeArgs.tail, fieldTypeArgsMap))
+        map += (name -> readValue(reader, decoderContext, typeArgs.head, typeArgs.tail))
       }
     }
     reader.readEndDocument()
@@ -180,13 +180,12 @@ trait MacroCodec[T] extends Codec[T] {
       reader: BsonReader,
       decoderContext: DecoderContext,
       clazz: Class[V],
-      typeArgs: List[Class[_]],
-      fieldTypeArgsMap: Map[String, List[Class[_]]]
+      typeArgs: List[Class[_]]
   ): V = {
     val currentType = reader.getCurrentBsonType
     currentType match {
-      case BsonType.DOCUMENT => readDocument(reader, decoderContext, clazz, typeArgs, fieldTypeArgsMap)
-      case BsonType.ARRAY    => readArray(reader, decoderContext, clazz, typeArgs, fieldTypeArgsMap)
+      case BsonType.DOCUMENT => readDocument(reader, decoderContext, clazz, typeArgs)
+      case BsonType.ARRAY    => readArray(reader, decoderContext, clazz, typeArgs)
       case BsonType.NULL =>
         reader.readNull()
         null.asInstanceOf[V] // scalastyle:ignore
@@ -198,8 +197,7 @@ trait MacroCodec[T] extends Codec[T] {
       reader: BsonReader,
       decoderContext: DecoderContext,
       clazz: Class[V],
-      typeArgs: List[Class[_]],
-      fieldTypeArgsMap: Map[String, List[Class[_]]]
+      typeArgs: List[Class[_]]
   ): V = {
 
     if (typeArgs.isEmpty) {
@@ -210,7 +208,7 @@ trait MacroCodec[T] extends Codec[T] {
     reader.readStartArray()
     val list = mutable.ListBuffer[Any]()
     while (reader.readBsonType ne BsonType.END_OF_DOCUMENT) {
-      list.append(readValue(reader, decoderContext, typeArgs.head, typeArgs.tail, fieldTypeArgsMap))
+      list.append(readValue(reader, decoderContext, typeArgs.head, typeArgs.tail))
     }
     reader.readEndArray()
     if (classOf[Set[_]].isAssignableFrom(clazz)) {
@@ -228,8 +226,7 @@ trait MacroCodec[T] extends Codec[T] {
       reader: BsonReader,
       decoderContext: DecoderContext,
       clazz: Class[V],
-      typeArgs: List[Class[_]],
-      fieldTypeArgsMap: Map[String, List[Class[_]]]
+      typeArgs: List[Class[_]]
   ): V = {
     if (classToCaseClassMap.getOrElse(clazz, false) || typeArgs.isEmpty) {
       registry.get(clazz).decode(reader, decoderContext)
@@ -238,16 +235,14 @@ trait MacroCodec[T] extends Codec[T] {
       reader.readStartDocument()
       while (reader.readBsonType ne BsonType.END_OF_DOCUMENT) {
         val name = reader.readName
-        val fieldClazzTypeArgs = fieldTypeArgsMap.getOrElse(name, typeArgs)
-        if (fieldClazzTypeArgs.isEmpty) {
+        if (typeArgs.isEmpty) {
           reader.skipValue()
         } else {
           map += (name -> readValue(
             reader,
             decoderContext,
-            fieldClazzTypeArgs.head,
-            fieldClazzTypeArgs.tail,
-            fieldTypeArgsMap
+            typeArgs.head,
+            typeArgs.tail
           ))
         }
       }

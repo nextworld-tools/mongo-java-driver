@@ -50,6 +50,10 @@ public final class SimpleWithStaticModel {
         // Mimics the static kotlin synthetic annotations field
     }
 
+    public void getStringField$Alternative() {
+        // Non static void getter field
+    }
+
     public void setStringField(final String stringField) {
         this.stringField = stringField;
     }
@@ -62,7 +66,7 @@ public final class SimpleWithStaticModel {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        final SimpleWithStaticModel that = (SimpleWithStaticModel) o;
+        SimpleWithStaticModel that = (SimpleWithStaticModel) o;
         return Objects.equals(integerField, that.integerField) && Objects.equals(stringField, that.stringField);
     }
 

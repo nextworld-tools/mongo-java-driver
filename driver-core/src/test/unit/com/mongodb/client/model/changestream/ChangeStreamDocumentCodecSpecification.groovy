@@ -16,9 +16,12 @@
 
 package com.mongodb.client.model.changestream
 
+import org.bson.BsonBoolean
+import org.bson.BsonDateTime
 import org.bson.BsonDocument
 import org.bson.BsonDocumentReader
 import org.bson.BsonDocumentWriter
+import org.bson.BsonInt32
 import org.bson.BsonInt64
 import org.bson.BsonReader
 import org.bson.BsonTimestamp
@@ -46,6 +49,7 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
         then:
         BsonDocument.parse(json) == writer.getDocument()
 
+        when:
         BsonReader bsonReader = new BsonDocumentReader(writer.getDocument())
         ChangeStreamDocument actual = codec.decode(bsonReader, DecoderContext.builder().build())
 
@@ -54,109 +58,114 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
 
         where:
         changeStreamDocument << [
-                new ChangeStreamDocument<Document>(OperationType.INSERT,
+                new ChangeStreamDocument<Document>(OperationType.INSERT.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         Document.parse('{_id: 1, userName: "alice123", name: "Alice"}'),
+                        null,
                         BsonDocument.parse('{userName: "alice123", _id: 1}'),
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null,
+                        new SplitEvent(3, 4),
+                        null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.UPDATE,
+                new ChangeStreamDocument<Document>(OperationType.UPDATE.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         null,
+                        null,
                         BsonDocument.parse('{_id: 1}'),
-                        new BsonTimestamp(1234, 2)
-                        ,
+                        new BsonTimestamp(1234, 2),
                         new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}'), null),
-                        null, null
+                        null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.UPDATE,
+                new ChangeStreamDocument<Document>(OperationType.UPDATE.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         Document.parse('{_id: 1, userName: "alice123", name: "Alice"}'),
+                        Document.parse('{_id: 1, userName: "alice1234", name: "Alice"}'),
                         BsonDocument.parse('{_id: 1}'),
-                        new BsonTimestamp(1234, 2)
-                        ,
+                        new BsonTimestamp(1234, 2),
                         new UpdateDescription(['phoneNumber'], BsonDocument.parse('{email: "alice@10gen.com"}'),
                                 singletonList(new TruncatedArray('education', 2))),
-                        null, null
+                        null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.REPLACE,
+                new ChangeStreamDocument<Document>(OperationType.REPLACE.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         Document.parse('{_id: 1, userName: "alice123", name: "Alice"}'),
+                        Document.parse('{_id: 1, userName: "alice1234", name: "Alice"}'),
                         BsonDocument.parse('{_id: 1}'),
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.DELETE,
+                new ChangeStreamDocument<Document>(OperationType.DELETE.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         null,
+                        Document.parse('{_id: 1, userName: "alice123", name: "Alice"}'),
                         BsonDocument.parse('{_id: 1}'),
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.DROP,
+                new ChangeStreamDocument<Document>(OperationType.DROP.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         null,
                         null,
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        null,
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.RENAME,
+                new ChangeStreamDocument<Document>(OperationType.RENAME.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         BsonDocument.parse('{db: "engineering", coll: "people"}'),
                         null,
                         null,
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        null,
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.DROP_DATABASE,
+                new ChangeStreamDocument<Document>(OperationType.DROP_DATABASE.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering"}'),
                         null,
                         null,
                         null,
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        null,
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.INVALIDATE,
+                new ChangeStreamDocument<Document>(OperationType.INVALIDATE.value,
                         BsonDocument.parse('{token: true}'),
                         null,
                         null,
                         null,
                         null,
-                        new BsonTimestamp(1234, 2)
-                        ,
-                        null, null, null
+                        null,
+                        new BsonTimestamp(1234, 2),
+                        null, null, null, null, null, null
                 ),
-                new ChangeStreamDocument<Document>(OperationType.INSERT,
+                new ChangeStreamDocument<Document>(OperationType.INSERT.value,
                         BsonDocument.parse('{token: true}'),
                         BsonDocument.parse('{db: "engineering", coll: "users"}'),
                         null,
                         Document.parse('{_id: 1, userName: "alice123", name: "Alice"}'),
+                        null,
                         BsonDocument.parse('{userName: "alice123", _id: 1}'),
                         new BsonTimestamp(1234, 2),
                         null,
                         new BsonInt64(1),
-                        BsonDocument.parse('{id: 1, uid: 2}')
+                        BsonDocument.parse('{id: 1, uid: 2}'),
+                        new BsonDateTime(42), null,
+                        new BsonDocument('extra', BsonBoolean.TRUE).append('value', new BsonInt32(1))
                 ),
         ]
         clazz << [Document, Document, Document, Document, Document, Document, Document, Document, Document, Document
@@ -179,6 +188,10 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
       _id: 1,
       userName: 'alice123',
       name: 'Alice'
+   },
+   splitEvent: {
+      fragment: 3,
+      of: 4
    }
 }
 ''',
@@ -231,6 +244,11 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
       _id: 1,
       name: 'Alice',
       userName: 'alice123'
+   },
+   fullDocumentBeforeChange: {
+      _id: 1,
+      name: 'Alice',
+      userName: 'alice1234'
    }
 }
 ''',
@@ -250,6 +268,11 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
       _id: 1,
       userName: 'alice123',
       name: 'Alice'
+   },
+      fullDocumentBeforeChange: {
+      _id: 1,
+      name: 'Alice',
+      userName: 'alice1234'
    }
 }
 ''',
@@ -264,6 +287,11 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
    },
    documentKey: {
       _id: 1
+   },
+   fullDocumentBeforeChange: {
+      _id: 1,
+      name: 'Alice',
+      userName: 'alice123'
    }
 }
 ''',
@@ -332,7 +360,10 @@ class ChangeStreamDocumentCodecSpecification extends Specification {
    lsid: {
       id: 1,
       uid: 2
-   }
+   },
+   wallTime: {$date: 42},
+   extra: true,
+   value: 1
 }
 ''',
         ]

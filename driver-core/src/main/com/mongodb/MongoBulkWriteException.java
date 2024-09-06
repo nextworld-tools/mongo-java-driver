@@ -21,14 +21,15 @@ import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.bulk.WriteConcernError;
 import com.mongodb.lang.Nullable;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
  * An exception that represents all errors associated with a bulk write operation.
  *
  * @since 3.0
+ * @serial exclude
  */
 public class MongoBulkWriteException extends MongoServerException {
 
@@ -38,23 +39,6 @@ public class MongoBulkWriteException extends MongoServerException {
     private final List<BulkWriteError> errors;
     private final ServerAddress serverAddress;
     private final WriteConcernError writeConcernError;
-
-    /**
-     * Constructs a new instance.
-     *
-     * @param writeResult              the write result
-     * @param writeErrors              the list of errors
-     * @param writeConcernError        the write concern error
-     * @param serverAddress            the server address.
-     *
-     * @deprecated Prefer {@link MongoBulkWriteException#MongoBulkWriteException(BulkWriteResult, List, WriteConcernError,
-     *      ServerAddress, Set)} instead
-     */
-    @Deprecated
-    public MongoBulkWriteException(final BulkWriteResult writeResult, final List<BulkWriteError> writeErrors,
-                                   @Nullable final WriteConcernError writeConcernError, final ServerAddress serverAddress) {
-        this(writeResult, writeErrors, writeConcernError, serverAddress, Collections.emptySet());
-    }
 
     /**
      * Constructs a new instance.
@@ -78,10 +62,6 @@ public class MongoBulkWriteException extends MongoServerException {
         this.serverAddress = serverAddress;
 
         addLabels(errorLabels);
-
-        if (writeConcernError != null) {
-            addLabels(writeConcernError.getErrorLabels());
-        }
     }
 
     /**
@@ -131,7 +111,7 @@ public class MongoBulkWriteException extends MongoServerException {
             return false;
         }
 
-        final MongoBulkWriteException that = (MongoBulkWriteException) o;
+        MongoBulkWriteException that = (MongoBulkWriteException) o;
 
         if (!errors.equals(that.errors)) {
             return false;
@@ -139,7 +119,7 @@ public class MongoBulkWriteException extends MongoServerException {
         if (!serverAddress.equals(that.serverAddress)) {
             return false;
         }
-        if (writeConcernError != null ? !writeConcernError.equals(that.writeConcernError) : that.writeConcernError != null) {
+        if (!Objects.equals(writeConcernError, that.writeConcernError)) {
             return false;
         }
         if (!writeResult.equals(that.writeResult)) {

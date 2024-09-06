@@ -23,12 +23,24 @@ import com.mongodb.connection.ServerType;
 /**
  * The message settings
  *
- * @since 3.0
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 @Immutable
 public final class MessageSettings {
+    /**
+     * <a href="https://www.mongodb.com/docs/current/reference/command/hello/#mongodb-data-hello.maxBsonObjectSize">
+     * {@code maxBsonObjectSize}</a>.
+     */
     private static final int DEFAULT_MAX_DOCUMENT_SIZE = 0x1000000;  // 16MB
+    /**
+     * <a href="https://www.mongodb.com/docs/current/reference/command/hello/#mongodb-data-hello.maxMessageSizeBytes">
+     * {@code maxMessageSizeBytes}</a>.
+     */
     private static final int DEFAULT_MAX_MESSAGE_SIZE = 0x2000000;   // 32MB
+    /**
+     * <a href="https://www.mongodb.com/docs/current/reference/command/hello/#mongodb-data-hello.maxWriteBatchSize">
+     * {@code maxWriteBatchSize}</a>.
+     */
     private static final int DEFAULT_MAX_BATCH_COUNT = 1000;
 
     private final int maxDocumentSize;
@@ -36,6 +48,8 @@ public final class MessageSettings {
     private final int maxBatchCount;
     private final int maxWireVersion;
     private final ServerType serverType;
+    private final boolean sessionSupported;
+    private final boolean cryptd;
 
     /**
      * Gets the builder
@@ -56,6 +70,8 @@ public final class MessageSettings {
         private int maxBatchCount = DEFAULT_MAX_BATCH_COUNT;
         private int maxWireVersion;
         private ServerType serverType;
+        private boolean sessionSupported;
+        private boolean cryptd;
 
         /**
          * Build it.
@@ -108,6 +124,22 @@ public final class MessageSettings {
             this.serverType = serverType;
             return this;
         }
+
+        public Builder sessionSupported(final boolean sessionSupported) {
+            this.sessionSupported = sessionSupported;
+            return this;
+        }
+
+        /**
+         * Set whether the server is a mongocryptd.
+         *
+         * @param cryptd true if the server is a mongocryptd.
+         * @return this
+         */
+        public Builder cryptd(final boolean cryptd) {
+            this.cryptd = cryptd;
+            return this;
+        }
     }
 
     /**
@@ -144,6 +176,14 @@ public final class MessageSettings {
     public ServerType getServerType() {
         return serverType;
     }
+    public boolean isCryptd() {
+        return cryptd;
+    }
+
+    public boolean isSessionSupported() {
+        return sessionSupported;
+    }
+
 
     private MessageSettings(final Builder builder) {
         this.maxDocumentSize = builder.maxDocumentSize;
@@ -151,5 +191,7 @@ public final class MessageSettings {
         this.maxBatchCount = builder.maxBatchCount;
         this.maxWireVersion = builder.maxWireVersion;
         this.serverType = builder.serverType;
+        this.sessionSupported = builder.sessionSupported;
+        this.cryptd = builder.cryptd;
     }
 }

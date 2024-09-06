@@ -16,9 +16,7 @@
 
 package com.mongodb.internal.operation
 
-
 import com.mongodb.MongoCommandException
-import com.mongodb.MongoExecutionTimeoutException
 import com.mongodb.MongoNamespace
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
@@ -30,6 +28,7 @@ import com.mongodb.client.model.CreateCollectionOptions
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ValidationOptions
 import com.mongodb.client.test.CollectionHelper
+import com.mongodb.internal.client.model.AggregationLevel
 import org.bson.BsonArray
 import org.bson.BsonBoolean
 import org.bson.BsonDocument
@@ -41,17 +40,12 @@ import org.bson.codecs.BsonValueCodecProvider
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
-import static com.mongodb.ClusterFixture.disableMaxTimeFailPoint
-import static com.mongodb.ClusterFixture.enableMaxTimeFailPoint
-import static com.mongodb.ClusterFixture.executeAsync
 import static com.mongodb.ClusterFixture.getBinding
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
 import static com.mongodb.ClusterFixture.isSharded
-import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static com.mongodb.WriteConcern.ACKNOWLEDGED
 import static com.mongodb.client.model.Filters.gte
-import static java.util.concurrent.TimeUnit.MILLISECONDS
-import static java.util.concurrent.TimeUnit.SECONDS
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders
 
 class AggregateToCollectionOperationSpecification extends OperationFunctionalSpecification {
@@ -72,11 +66,10 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         def pipeline = [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
 
         when:
-        AggregateToCollectionOperation operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ACKNOWLEDGED)
+        AggregateToCollectionOperation operation = createOperation(getNamespace(), pipeline, ACKNOWLEDGED)
 
         then:
         operation.getAllowDiskUse() == null
-        operation.getMaxTime(MILLISECONDS) == 0
         operation.getPipeline() == pipeline
         operation.getBypassDocumentValidation() == null
         operation.getWriteConcern() == ACKNOWLEDGED
@@ -88,15 +81,14 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         def pipeline = [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
 
         when:
-        AggregateToCollectionOperation operation = new AggregateToCollectionOperation(getNamespace(), pipeline, WriteConcern.MAJORITY)
+        AggregateToCollectionOperation operation =
+                createOperation(getNamespace(), pipeline, WriteConcern.MAJORITY)
                 .allowDiskUse(true)
-                .maxTime(10, MILLISECONDS)
                 .bypassDocumentValidation(true)
                 .collation(defaultCollation)
 
         then:
         operation.getAllowDiskUse()
-        operation.getMaxTime(MILLISECONDS) == 10
         operation.getBypassDocumentValidation() == true
         operation.getWriteConcern() == WriteConcern.MAJORITY
         operation.getCollation() == defaultCollation
@@ -107,15 +99,13 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         def pipeline = [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
 
         when:
-        AggregateToCollectionOperation operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ReadConcern.DEFAULT)
+        AggregateToCollectionOperation operation = createOperation(getNamespace(), pipeline, ReadConcern.DEFAULT)
                 .allowDiskUse(true)
-                .maxTime(10, MILLISECONDS)
                 .bypassDocumentValidation(true)
                 .collation(defaultCollation)
 
         then:
         operation.getAllowDiskUse()
-        operation.getMaxTime(MILLISECONDS) == 10
         operation.getBypassDocumentValidation() == true
         operation.getReadConcern() == ReadConcern.DEFAULT
         operation.getCollation() == defaultCollation
@@ -123,7 +113,7 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
 
     def 'should not accept an empty pipeline'() {
         when:
-        new AggregateToCollectionOperation(getNamespace(), [], ACKNOWLEDGED)
+        createOperation(getNamespace(), [], ACKNOWLEDGED)
 
 
         then:
@@ -132,11 +122,10 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
 
     def 'should be able to output to a collection'() {
         when:
-        AggregateToCollectionOperation operation =
-                new AggregateToCollectionOperation(getNamespace(),
-                                                   [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))],
-                        ACKNOWLEDGED)
-        execute(operation, async);
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
+                [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))],
+                ACKNOWLEDGED)
+        execute(operation, async)
 
         then:
         getCollectionHelper(aggregateCollectionNamespace).count() == 3
@@ -145,13 +134,12 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 2) })
+    @IgnoreIf({ serverVersionLessThan(4, 2) })
     def 'should be able to merge into a collection'() {
         when:
-        AggregateToCollectionOperation operation =
-                new AggregateToCollectionOperation(getNamespace(),
-                        [new BsonDocument('$merge', new BsonDocument('into', new BsonString(aggregateCollectionNamespace.collectionName)))])
-        execute(operation, async);
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
+                [new BsonDocument('$merge', new BsonDocument('into', new BsonString(aggregateCollectionNamespace.collectionName)))])
+        execute(operation, async)
 
         then:
         getCollectionHelper(aggregateCollectionNamespace).count() == 3
@@ -162,12 +150,10 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
 
     def 'should be able to match then output to a collection'() {
         when:
-        AggregateToCollectionOperation operation =
-                new AggregateToCollectionOperation(getNamespace(),
-                                                   [new BsonDocument('$match', new BsonDocument('job', new BsonString('plumber'))),
-                                                    new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))],
-                        ACKNOWLEDGED)
-        execute(operation, async);
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
+                [new BsonDocument('$match', new BsonDocument('job', new BsonString('plumber'))),
+                 new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))], ACKNOWLEDGED)
+        execute(operation, async)
 
         then:
         getCollectionHelper(aggregateCollectionNamespace).count() == 1
@@ -176,39 +162,15 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         async << [true, false]
     }
 
-    def 'should throw execution timeout exception from execute'() {
-        given:
-        AggregateToCollectionOperation operation =
-                new AggregateToCollectionOperation(getNamespace(),
-                                                   [new BsonDocument('$match', new BsonDocument('job', new BsonString('plumber'))),
-                                                    new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))],
-                        ACKNOWLEDGED)
-                        .maxTime(1, SECONDS)
-        enableMaxTimeFailPoint()
-
-        when:
-        execute(operation, async);
-
-        then:
-        thrown(MongoExecutionTimeoutException)
-
-        cleanup:
-        disableMaxTimeFailPoint()
-
-        where:
-        async << [true, false]
-    }
-
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
-        AggregateToCollectionOperation operation =
-                new AggregateToCollectionOperation(getNamespace(),
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
                         [new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))],
                         new WriteConcern(5))
 
         when:
-        async ? executeAsync(operation) : operation.execute(getBinding())
+        execute(operation, async)
 
         then:
         def ex = thrown(MongoWriteConcernException)
@@ -219,7 +181,7 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 2) })
+    @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should support bypassDocumentValidation'() {
         given:
         def collectionOutHelper = getCollectionHelper(new MongoNamespace(getDatabaseName(), 'collectionOut'))
@@ -228,9 +190,9 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         getCollectionHelper().insertDocuments(BsonDocument.parse('{ level: 9 }'))
 
         when:
-        def operation = new AggregateToCollectionOperation(getNamespace(), [BsonDocument.parse('{$out: "collectionOut"}')],
-                ACKNOWLEDGED)
-        execute(operation, async);
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
+                [BsonDocument.parse('{$out: "collectionOut"}')], ACKNOWLEDGED)
+        execute(operation, async)
 
         then:
         thrown(MongoCommandException)
@@ -257,7 +219,8 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
     def 'should create the expected command'() {
         when:
         def pipeline = [BsonDocument.parse('{$out: "collectionOut"}')]
-        def operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ReadConcern.MAJORITY, WriteConcern.MAJORITY)
+        AggregateToCollectionOperation operation = new AggregateToCollectionOperation(getNamespace(), pipeline,
+                ReadConcern.MAJORITY, WriteConcern.MAJORITY)
                 .bypassDocumentValidation(true)
         def expectedCommand = new BsonDocument('aggregate', new BsonString(getNamespace().getCollectionName()))
                 .append('pipeline', new BsonArray(pipeline))
@@ -278,46 +241,28 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         if (useCursor) {
             expectedCommand.append('cursor', new BsonDocument())
         }
+        if (useHint) {
+            operation.hint(new BsonString('x_1'))
+            expectedCommand.append('hint', new BsonString('x_1'))
+        }
 
         then:
-        testOperation(operation, serverVersion, expectedCommand, false, BsonDocument.parse('{ok: 1}'),
+        testOperation(operation, serverVersion, expectedCommand, async, BsonDocument.parse('{ok: 1}'),
                 true, false, ReadPreference.primary(), false)
 
         where:
-        serverVersion | includeBypassValidation | includeReadConcern | includeWriteConcern | includeCollation | async  | useCursor
-        [3, 6, 0]     | true                    | true               | true                | true             | true   | true
-        [3, 6, 0]     | true                    | true               | true                | true             | false  | true
-        [3, 4, 0]     | true                    | true               | true                | true             | true   | false
-        [3, 4, 0]     | true                    | true               | true                | true             | false  | false
-        [3, 2, 0]     | true                    | false              | false               | false            | true   | false
-        [3, 2, 0]     | true                    | false              | false               | false            | false  | false
-        [3, 0, 0]     | false                   | false              | false               | false            | true   | false
-        [3, 0, 0]     | false                   | false              | false               | false            | false  | false
+        serverVersion | includeBypassValidation | includeReadConcern | includeWriteConcern | includeCollation | async  | useCursor | useHint
+        [3, 6, 0]     | true                    | true               | true                | true             | true   | true      | true
+        [3, 6, 0]     | true                    | true               | true                | true             | false  | true      | false
     }
 
-    def 'should throw an exception when passing an unsupported collation'() {
-        given:
-        def pipeline = [BsonDocument.parse('{$out: "collectionOut"}')]
-        def operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ACKNOWLEDGED).collation(defaultCollation)
-
-        when:
-        testOperationThrows(operation, [3, 2, 0], async)
-
-        then:
-        def exception = thrown(IllegalArgumentException)
-        exception.getMessage().startsWith('Collation not supported by wire version:')
-
-        where:
-        async << [false, false]
-    }
-
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         given:
         getCollectionHelper().insertDocuments(BsonDocument.parse('{_id: 1, str: "foo"}'))
         def pipeline = [BsonDocument.parse('{$match: {str: "FOO"}}'),
                         new BsonDocument('$out', new BsonString(aggregateCollectionNamespace.collectionName))]
-        def operation = new AggregateToCollectionOperation(getNamespace(), pipeline, ACKNOWLEDGED).collation(defaultCollation)
+        AggregateToCollectionOperation operation = createOperation(getNamespace(), pipeline, ACKNOWLEDGED)
                 .collation(caseInsensitiveCollation)
 
         when:
@@ -330,16 +275,16 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         async << [true, false]
     }
 
-    @IgnoreIf({ isSharded() || !serverVersionAtLeast(3, 6) })
+    @IgnoreIf({ isSharded() || serverVersionLessThan(3, 6) })
     def 'should apply comment'() {
         given:
         def profileCollectionHelper = getCollectionHelper(new MongoNamespace(getDatabaseName(), 'system.profile'))
-        new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(2)), new BsonDocumentCodec())
-                .execute(getBinding())
+        new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(2)),
+                new BsonDocumentCodec()).execute(getBinding())
         def expectedComment = 'this is a comment'
-        def operation = new AggregateToCollectionOperation(getNamespace(),
+        AggregateToCollectionOperation operation = createOperation(getNamespace(),
                 [Aggregates.out('outputCollection').toBsonDocument(BsonDocument, registry)], ACKNOWLEDGED)
-                .comment(expectedComment)
+                .comment(new BsonString(expectedComment))
 
         when:
         execute(operation, async)
@@ -349,11 +294,24 @@ class AggregateToCollectionOperationSpecification extends OperationFunctionalSpe
         ((Document) profileDocument.get('command')).get('comment') == expectedComment
 
         cleanup:
-        new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(0)), new BsonDocumentCodec())
-                .execute(getBinding())
-        profileCollectionHelper.drop();
+        new CommandReadOperation<>(getDatabaseName(), new BsonDocument('profile', new BsonInt32(0)),
+                new BsonDocumentCodec()).execute(getBinding())
+        profileCollectionHelper.drop()
 
         where:
         async << [true, false]
     }
+
+    def createOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline) {
+        new AggregateToCollectionOperation(namespace, pipeline, null, null, AggregationLevel.COLLECTION)
+    }
+
+    def createOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final WriteConcern writeConcern) {
+        new AggregateToCollectionOperation(namespace, pipeline, null, writeConcern, AggregationLevel.COLLECTION)
+    }
+
+    def createOperation(final MongoNamespace namespace, final List<BsonDocument> pipeline, final ReadConcern readConcern) {
+        new AggregateToCollectionOperation(namespace, pipeline, readConcern, null, AggregationLevel.COLLECTION)
+    }
+
 }

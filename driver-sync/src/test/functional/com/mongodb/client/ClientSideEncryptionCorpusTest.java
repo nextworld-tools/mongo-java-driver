@@ -24,6 +24,7 @@ import com.mongodb.WriteConcern;
 import com.mongodb.client.model.vault.EncryptOptions;
 import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
+import com.mongodb.fixture.EncryptionFixture.KmsProviderType;
 import org.bson.BsonBinary;
 import org.bson.BsonBinarySubType;
 import org.bson.BsonDocument;
@@ -49,6 +50,7 @@ import static com.mongodb.ClusterFixture.hasEncryptionTestsEnabled;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.Fixture.getMongoClientSettings;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
+import static com.mongodb.fixture.EncryptionFixture.getKmsProviders;
 import static java.util.Arrays.asList;
 import static org.bson.codecs.configuration.CodecRegistries.fromCodecs;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
@@ -71,7 +73,7 @@ public class ClientSideEncryptionCorpusTest {
 
     @Before
     public void setUp() throws IOException, URISyntaxException {
-        assumeTrue(serverVersionAtLeast(4, 1));
+        assumeTrue(serverVersionAtLeast(4, 2));
         assumeTrue("Corpus tests disabled", hasEncryptionTestsEnabled());
 
         MongoClientSettings clientSettings = getMongoClientSettingsBuilder()
@@ -97,30 +99,18 @@ public class ClientSideEncryptionCorpusTest {
         dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-aws.json"));
         dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-azure.json"));
         dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-gcp.json"));
+        dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-kmip.json"));
         dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-local.json"));
 
         // Step 4: Configure our objects
-        Map<String, Map<String, Object>> kmsProviders = new HashMap<String, Map<String, Object>>() {{
-            put("aws",  new HashMap<String, Object>() {{
-                put("accessKeyId", System.getProperty("org.mongodb.test.awsAccessKeyId"));
-                put("secretAccessKey", System.getProperty("org.mongodb.test.awsSecretAccessKey"));
-            }});
-            put("azure",  new HashMap<String, Object>() {{
-                put("tenantId", System.getProperty("org.mongodb.test.azureTenantId"));
-                put("clientId", System.getProperty("org.mongodb.test.azureClientId"));
-                put("clientSecret", System.getProperty("org.mongodb.test.azureClientSecret"));
-            }});
-            put("gcp",  new HashMap<String, Object>() {{
-                put("email", System.getProperty("org.mongodb.test.gcpEmail"));
-                put("privateKey", System.getProperty("org.mongodb.test.gcpPrivateKey"));
-            }});
-            put("local", new HashMap<String, Object>() {{
-                put("key", "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBM"
-                            + "UN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk");
-                }});
-        }};
+        Map<String, Map<String, Object>> kmsProviders = getKmsProviders(
+                KmsProviderType.AWS,
+                KmsProviderType.AZURE,
+                KmsProviderType.GCP,
+                KmsProviderType.KMIP,
+                KmsProviderType.LOCAL);
 
-        HashMap<String, BsonDocument> schemaMap = new HashMap<String, BsonDocument>();
+        HashMap<String, BsonDocument> schemaMap = new HashMap<>();
         schemaMap.put("db.coll", schemaDocument);
 
         AutoEncryptionSettings.Builder autoEncryptionSettingsBuilder = AutoEncryptionSettings.builder()
@@ -168,6 +158,7 @@ public class ClientSideEncryptionCorpusTest {
             byte[] awsKeyId = Base64.getDecoder().decode("AWSAAAAAAAAAAAAAAAAAAA==");
             byte[] azureKeyId = Base64.getDecoder().decode("AZUREAAAAAAAAAAAAAAAAA==");
             byte[] gcpKeyId = Base64.getDecoder().decode("GCPAAAAAAAAAAAAAAAAAAA==");
+            byte[] kmipKeyId = Base64.getDecoder().decode("KMIPAAAAAAAAAAAAAAAAAA==");
             byte[] localKeyId = Base64.getDecoder().decode("LOCALAAAAAAAAAAAAAAAAA==");
 
             if (method.equals("auto")) {
@@ -199,6 +190,9 @@ public class ClientSideEncryptionCorpusTest {
                         break;
                     case "gcp":
                         opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, gcpKeyId));
+                        break;
+                    case "kmip":
+                        opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, kmipKeyId));
                         break;
                     case "local":
                         opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, localKeyId));

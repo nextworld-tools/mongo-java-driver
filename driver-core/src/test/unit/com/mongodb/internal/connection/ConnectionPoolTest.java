@@ -17,11 +17,9 @@
 package com.mongodb.internal.connection;
 
 import com.mongodb.connection.SocketSettings;
-import com.mongodb.connection.SocketStreamFactory;
 import com.mongodb.connection.SslSettings;
-import com.mongodb.connection.StreamFactory;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
 import org.bson.BsonDocument;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -31,7 +29,6 @@ import java.util.concurrent.Callable;
 // Implementation of
 // https://github.com/mongodb/specifications/blob/master/source/connection-monitoring-and-pooling/connection-monitoring-and-pooling.rst
 // specification tests
-@SuppressWarnings("deprecation")
 @RunWith(Parameterized.class)
 public class ConnectionPoolTest extends AbstractConnectionPoolTest {
     private static final Logger LOGGER = Loggers.getLogger(ConnectionPoolTest.class.getSimpleName());
@@ -44,32 +41,26 @@ public class ConnectionPoolTest extends AbstractConnectionPoolTest {
     protected Callable<Exception> createCallable(final BsonDocument operation) {
         String name = operation.getString("name").getValue();
         if (name.equals("checkOut")) {
-            return new Callable<Exception>() {
-                @Override
-                public Exception call() {
-                    try {
-                        InternalConnection connection = getPool().get();
-                        if (operation.containsKey("label")) {
-                            getConnectionMap().put(operation.getString("label").getValue(), connection);
-                        }
-                        return null;
-                    } catch (Exception e) {
-                        LOGGER.error("", e);
-                        return e;
+            return () -> {
+                try {
+                    InternalConnection connection = getPool().get(createOperationContext());
+                    if (operation.containsKey("label")) {
+                        getConnectionMap().put(operation.getString("label").getValue(), connection);
                     }
+                    return null;
+                } catch (Exception e) {
+                    LOGGER.error("", e);
+                    return e;
                 }
             };
         } else if (name.equals("checkIn")) {
-            return new Callable<Exception>() {
-                @Override
-                public Exception call() {
-                    try {
-                        InternalConnection connection = getConnectionMap().get(operation.getString("connection").getValue());
-                        connection.close();
-                        return null;
-                    } catch (Exception e) {
-                        return e;
-                    }
+            return () -> {
+                try {
+                    InternalConnection connection = getConnectionMap().get(operation.getString("connection").getValue());
+                    connection.close();
+                    return null;
+                } catch (Exception e) {
+                    return e;
                 }
             };
         } else {
@@ -79,6 +70,6 @@ public class ConnectionPoolTest extends AbstractConnectionPoolTest {
 
     @Override
     protected StreamFactory createStreamFactory(final SocketSettings socketSettings, final SslSettings sslSettings) {
-        return new SocketStreamFactory(socketSettings, sslSettings);
+        return new SocketStreamFactory(new DefaultInetAddressResolver(), socketSettings, sslSettings);
     }
 }

@@ -19,7 +19,11 @@ package com.mongodb.reactivestreams.client.syncadapter;
 import com.mongodb.Function;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoIterable;
+import com.mongodb.client.internal.MappingIterable;
 import com.mongodb.lang.Nullable;
+import com.mongodb.reactivestreams.client.internal.BatchCursorPublisher;
+import com.mongodb.reactivestreams.client.internal.ListCollectionNamesPublisherImpl;
+import org.bson.Document;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
@@ -27,6 +31,7 @@ import java.util.Collection;
 import java.util.function.Consumer;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.CONTEXT;
 
 class SyncMongoIterable<T> implements MongoIterable<T> {
     private final Publisher<T> wrapped;
@@ -49,12 +54,12 @@ class SyncMongoIterable<T> implements MongoIterable<T> {
 
     @Override
     public T first() {
-        return Mono.from(wrapped).block(TIMEOUT_DURATION);
+        return Mono.from(furtherUnwrapWrapped().first()).contextWrite(CONTEXT).block(TIMEOUT_DURATION);
     }
 
     @Override
     public <U> MongoIterable<U> map(final Function<T, U> mapper) {
-        throw new UnsupportedOperationException();
+        return new MappingIterable<>(this, mapper);
     }
 
     @Override
@@ -80,5 +85,17 @@ class SyncMongoIterable<T> implements MongoIterable<T> {
     public MongoIterable<T> batchSize(final int batchSize) {
         this.batchSize = batchSize;
         return this;
+    }
+
+    private BatchCursorPublisher<T> furtherUnwrapWrapped() {
+        if (this.wrapped instanceof ListCollectionNamesPublisherImpl) {
+            BatchCursorPublisher<Document> wrappedDocumentPublisher = ((ListCollectionNamesPublisherImpl) this.wrapped).getWrapped();
+            // this casting obviously does not always work, but should work in tests
+            @SuppressWarnings("unchecked")
+            BatchCursorPublisher<T> wrappedTPublisher = (BatchCursorPublisher<T>) wrappedDocumentPublisher;
+            return wrappedTPublisher;
+        } else {
+            return (BatchCursorPublisher<T>) this.wrapped;
+        }
     }
 }

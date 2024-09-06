@@ -34,13 +34,11 @@ import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
 import static com.mongodb.reactivestreams.client.Fixture.drop;
 import static com.mongodb.reactivestreams.client.Fixture.getDefaultDatabase;
 import static com.mongodb.reactivestreams.client.Fixture.getMongoClient;
-import static com.mongodb.reactivestreams.client.Fixture.serverVersionAtLeast;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.IntStream.rangeClosed;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 public class BatchCursorPublisherErrorTest {
@@ -49,7 +47,6 @@ public class BatchCursorPublisherErrorTest {
 
     @BeforeEach
     public void setup() {
-        assumeTrue(serverVersionAtLeast(3, 6));
         collection = getDefaultDatabase().getCollection("changeStreamsCancellationTest");
         Mono.from(collection.insertMany(rangeClosed(1, 11)
                 .boxed()
@@ -65,6 +62,7 @@ public class BatchCursorPublisherErrorTest {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @TestFactory
     @DisplayName("test batch cursors close the cursor if onNext throws an error")
     List<DynamicTest> testBatchCursorThrowsAnError() {
@@ -74,6 +72,7 @@ public class BatchCursorPublisherErrorTest {
                 dynamicTest("Distinct Publisher", () -> assertErrorHandling(collection.distinct("a", Integer.class))),
                 dynamicTest("Find Publisher", () -> assertErrorHandling(collection.find())),
                 dynamicTest("List Collections Publisher", () -> assertErrorHandling(getDefaultDatabase().listCollections())),
+                dynamicTest("List Collection Names Publisher", () -> assertErrorHandling(getDefaultDatabase().listCollectionNames())),
                 dynamicTest("List Databases Publisher", () -> assertErrorHandling(getMongoClient().listDatabaseNames())),
                 dynamicTest("List Indexes Publisher", () -> assertErrorHandling(collection.listIndexes())),
                 dynamicTest("Map Reduce Publisher", () -> assertErrorHandling(collection.mapReduce(

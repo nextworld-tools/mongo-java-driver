@@ -25,8 +25,8 @@ import org.bson.BsonInt32;
 import org.bson.BsonString;
 import org.bson.Document;
 import org.bson.codecs.DocumentCodec;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
@@ -35,17 +35,16 @@ import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.reactivestreams.client.Fixture.getDefaultDatabaseName;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 // See https://github.com/mongodb/specifications/tree/master/source/change-streams/tests/README.rst#prose-tests
 public class WriteConcernProseTest extends DatabaseTestCase {
     private BsonDocument failPointDocument;
     private CollectionHelper<Document> collectionHelper;
 
-    @Before
+    @BeforeEach
     @Override
     public void setUp() {
         assumeTrue(canRunTests());
@@ -61,7 +60,7 @@ public class WriteConcernProseTest extends DatabaseTestCase {
             insertOneDocument();
         } catch (MongoWriteConcernException e) {
             assertEquals(e.getWriteConcernError().getCode(), 100);
-            assertTrue(e.getWriteConcernError().getCodeName().equals("UnsatisfiableWriteConcern"));
+            assertEquals("UnsatisfiableWriteConcern", e.getWriteConcernError().getCodeName());
             assertEquals(e.getWriteConcernError().getDetails(), new BsonDocument("writeConcern",
                     new BsonDocument("w", new BsonInt32(2))
                             .append("wtimeout", new BsonInt32(0))

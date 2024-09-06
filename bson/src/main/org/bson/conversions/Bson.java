@@ -19,7 +19,9 @@ package org.bson.conversions;
 import org.bson.BsonDocument;
 import org.bson.codecs.BsonCodecProvider;
 import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.CollectionCodecProvider;
 import org.bson.codecs.DocumentCodecProvider;
+import org.bson.codecs.EnumCodecProvider;
 import org.bson.codecs.IterableCodecProvider;
 import org.bson.codecs.JsonObjectCodecProvider;
 import org.bson.codecs.MapCodecProvider;
@@ -42,11 +44,13 @@ public interface Bson {
      *     <li>{@link ValueCodecProvider}</li>
      *     <li>{@link BsonValueCodecProvider}</li>
      *     <li>{@link DocumentCodecProvider}</li>
+     *     <li>{@link CollectionCodecProvider}</li>
      *     <li>{@link IterableCodecProvider}</li>
      *     <li>{@link MapCodecProvider}</li>
      *     <li>{@link Jsr310CodecProvider}</li>
      *     <li>{@link JsonObjectCodecProvider}</li>
      *     <li>{@link BsonCodecProvider}</li>
+     *     <li>{@link EnumCodecProvider}</li>
      * </ul>
      * <p>
      * Additional providers may be added in a future release.
@@ -59,11 +63,13 @@ public interface Bson {
                     new ValueCodecProvider(),
                     new BsonValueCodecProvider(),
                     new DocumentCodecProvider(),
+                    new CollectionCodecProvider(),
                     new IterableCodecProvider(),
                     new MapCodecProvider(),
                     new Jsr310CodecProvider(),
                     new JsonObjectCodecProvider(),
-                    new BsonCodecProvider()));
+                    new BsonCodecProvider(),
+                    new EnumCodecProvider()));
 
     /**
      * Render into a BsonDocument.

@@ -17,14 +17,21 @@
 package com.mongodb.reactivestreams.client.internal;
 
 import com.mongodb.ReadConcern;
+import com.mongodb.client.cursor.TimeoutMode;
+import com.mongodb.internal.TimeoutSettings;
 import com.mongodb.internal.async.AsyncBatchCursor;
+import com.mongodb.internal.operation.AsyncOperations;
 import com.mongodb.internal.operation.AsyncReadOperation;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ClientSession;
+import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import com.mongodb.reactivestreams.client.ListCollectionsPublisher;
+import org.bson.BsonString;
+import org.bson.BsonValue;
 import org.bson.conversions.Bson;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.mongodb.assertions.Assertions.notNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -32,8 +39,10 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 final class ListCollectionsPublisherImpl<T> extends BatchCursorPublisher<T> implements ListCollectionsPublisher<T> {
 
     private final boolean collectionNamesOnly;
+    private boolean authorizedCollections;
     private Bson filter;
     private long maxTimeMS;
+    private BsonValue comment;
 
     ListCollectionsPublisherImpl(
             @Nullable final ClientSession clientSession,
@@ -43,24 +52,57 @@ final class ListCollectionsPublisherImpl<T> extends BatchCursorPublisher<T> impl
         this.collectionNamesOnly = collectionNamesOnly;
     }
 
-    public ListCollectionsPublisherImpl<T> maxTime(final long maxTime, final TimeUnit timeUnit) {
+    public ListCollectionsPublisher<T> maxTime(final long maxTime, final TimeUnit timeUnit) {
         notNull("timeUnit", timeUnit);
         this.maxTimeMS = MILLISECONDS.convert(maxTime, timeUnit);
         return this;
     }
 
-    public ListCollectionsPublisherImpl<T> batchSize(final int batchSize) {
+    public ListCollectionsPublisher<T> batchSize(final int batchSize) {
         super.batchSize(batchSize);
         return this;
     }
 
-    public ListCollectionsPublisherImpl<T> filter(@Nullable final Bson filter) {
+    public ListCollectionsPublisher<T> filter(@Nullable final Bson filter) {
         this.filter = filter;
         return this;
     }
 
+    @Override
+    public ListCollectionsPublisher<T> comment(@Nullable final String comment) {
+        this.comment = comment != null ? new BsonString(comment) : null;
+        return this;
+    }
+
+    @Override
+    public ListCollectionsPublisher<T> comment(@Nullable final BsonValue comment) {
+        this.comment = comment;
+        return this;
+    }
+
+
+    @SuppressWarnings("ReactiveStreamsUnusedPublisher")
+    @Override
+    public ListCollectionsPublisher<T> timeoutMode(final TimeoutMode timeoutMode) {
+        super.timeoutMode(timeoutMode);
+        return this;
+    }
+
+    /**
+     * @see ListCollectionNamesPublisher#authorizedCollections(boolean)
+     */
+    void authorizedCollections(final boolean authorizedCollections) {
+        this.authorizedCollections = authorizedCollections;
+    }
+
+
     AsyncReadOperation<AsyncBatchCursor<T>> asAsyncReadOperation(final int initialBatchSize) {
         return getOperations().listCollections(getNamespace().getDatabaseName(), getDocumentClass(), filter, collectionNamesOnly,
-                initialBatchSize, maxTimeMS);
+                authorizedCollections, initialBatchSize, comment, getTimeoutMode());
+    }
+
+    @Override
+    Function<AsyncOperations<?>, TimeoutSettings> getTimeoutSettings() {
+        return (asyncOperations -> asyncOperations.createTimeoutSettings(maxTimeMS));
     }
 }

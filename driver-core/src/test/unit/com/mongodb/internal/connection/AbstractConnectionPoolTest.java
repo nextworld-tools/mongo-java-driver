@@ -18,6 +18,7 @@ package com.mongodb.internal.connection;
 
 import com.mongodb.ClusterFixture;
 import com.mongodb.JsonTestServerVersionChecker;
+import com.mongodb.LoggerSettings;
 import com.mongodb.MongoDriverInformation;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ServerAddress;
@@ -28,7 +29,6 @@ import com.mongodb.connection.ConnectionPoolSettings;
 import com.mongodb.connection.ServerId;
 import com.mongodb.connection.SocketSettings;
 import com.mongodb.connection.SslSettings;
-import com.mongodb.connection.StreamFactory;
 import com.mongodb.event.ConnectionCheckOutFailedEvent;
 import com.mongodb.event.ConnectionCheckOutStartedEvent;
 import com.mongodb.event.ConnectionCheckedInEvent;
@@ -38,12 +38,16 @@ import com.mongodb.event.ConnectionCreatedEvent;
 import com.mongodb.event.ConnectionPoolClearedEvent;
 import com.mongodb.event.ConnectionPoolClosedEvent;
 import com.mongodb.event.ConnectionPoolCreatedEvent;
+import com.mongodb.event.ConnectionPoolReadyEvent;
 import com.mongodb.event.ConnectionReadyEvent;
+import com.mongodb.event.ServerListener;
 import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.internal.inject.SameObjectProvider;
 import com.mongodb.internal.operation.CommandReadOperation;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
+import org.bson.BsonInt64;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;
@@ -53,6 +57,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Mockito;
 import util.JsonPoweredTestHelper;
 
 import java.io.File;
@@ -72,13 +77,23 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT_FACTORY;
+import static com.mongodb.ClusterFixture.TIMEOUT_SETTINGS;
+import static com.mongodb.assertions.Assertions.assertFalse;
+import static com.mongodb.internal.thread.InterruptionUtil.interruptAndCreateMongoInterruptedException;
 import static java.lang.String.format;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 
 // Implementation of
 // https://github.com/mongodb/specifications/blob/master/source/connection-monitoring-and-pooling/connection-monitoring-and-pooling.rst
@@ -88,20 +103,21 @@ import static org.junit.Assume.assumeNotNull;
 public abstract class AbstractConnectionPoolTest {
     private static final int ANY_INT = 42;
     private static final String ANY_STRING = "42";
+    private static final Set<String> PRESTART_POOL_ASYNC_WORK_MANAGER_FILE_NAMES = Collections.singleton("wait-queue-timeout.json");
 
     private final String fileName;
     private final String description;
     private final BsonDocument definition;
     private final boolean skipTest;
     private ConnectionPoolSettings settings;
-    private final Map<String, ExecutorService> executorServiceMap = new HashMap<String, ExecutorService>();
-    private final Map<String, Future<Exception>> futureMap = new HashMap<String, Future<Exception>>();
+    private final Map<String, ExecutorService> executorServiceMap = new HashMap<>();
+    private final Map<String, Future<Exception>> futureMap = new HashMap<>();
 
     private TestConnectionPoolListener listener;
     @Nullable
     private BsonDocument configureFailPointCommand;
 
-    private final Map<String, InternalConnection> connectionMap = new HashMap<String, InternalConnection>();
+    private final Map<String, InternalConnection> connectionMap = new HashMap<>();
     private ConnectionPool pool;
 
     public AbstractConnectionPoolTest(
@@ -115,8 +131,7 @@ public abstract class AbstractConnectionPoolTest {
     @Before
     public void setUp() {
         assumeFalse(skipTest);
-        ConnectionPoolSettings.Builder settingsBuilder = ConnectionPoolSettings.builder()
-                .maintenanceFrequency(1, TimeUnit.MILLISECONDS);
+        ConnectionPoolSettings.Builder settingsBuilder = ConnectionPoolSettings.builder();
         BsonDocument poolOptions = definition.getDocument("poolOptions", new BsonDocument());
 
         if (poolOptions.containsKey("maxPoolSize")) {
@@ -126,35 +141,61 @@ public abstract class AbstractConnectionPoolTest {
             settingsBuilder.minSize(poolOptions.getNumber("minPoolSize").intValue());
         }
         if (poolOptions.containsKey("maxIdleTimeMS")) {
-            settingsBuilder.maxConnectionIdleTime(poolOptions.getNumber("maxIdleTimeMS").intValue(), TimeUnit.MILLISECONDS);
+            settingsBuilder.maxConnectionIdleTime(poolOptions.getNumber("maxIdleTimeMS").intValue(), MILLISECONDS);
         }
         if (poolOptions.containsKey("waitQueueTimeoutMS")) {
-            settingsBuilder.maxWaitTime(poolOptions.getNumber("waitQueueTimeoutMS").intValue(), TimeUnit.MILLISECONDS);
+            settingsBuilder.maxWaitTime(poolOptions.getNumber("waitQueueTimeoutMS").intValue(), MILLISECONDS);
+        }
+        if (poolOptions.containsKey("backgroundThreadIntervalMS")) {
+            long intervalMillis = poolOptions.getNumber("backgroundThreadIntervalMS").longValue();
+            assertFalse(intervalMillis == 0);
+            if (intervalMillis < 0) {
+                settingsBuilder.maintenanceInitialDelay(Long.MAX_VALUE, MILLISECONDS);
+            } else {
+                /* Using frequency/period instead of an interval as required by the specification is incorrect, for example,
+                 * because it opens up a possibility to run the background thread non-stop if runs are as long as or longer than the period.
+                 * Nevertheless, I am reusing what we already have in the driver instead of clogging up the implementation. */
+                settingsBuilder.maintenanceFrequency(
+                        poolOptions.getNumber("backgroundThreadIntervalMS").longValue(), MILLISECONDS);
+            }
+        }
+        if (poolOptions.containsKey("maxConnecting")) {
+            settingsBuilder.maxConnecting(poolOptions.getInt32("maxConnecting").intValue());
         }
 
         listener = new TestConnectionPoolListener();
         settingsBuilder.addConnectionPoolListener(listener);
         settings = settingsBuilder.build();
+        InternalConnectionPoolSettings internalSettings = InternalConnectionPoolSettings.builder()
+                .prestartAsyncWorkManager(PRESTART_POOL_ASYNC_WORK_MANAGER_FILE_NAMES.contains(fileName))
+                .build();
         Style style = Style.of(definition.getString("style").getValue());
         switch (style) {
             case UNIT: {
                 ServerId serverId = new ServerId(new ClusterId(), new ServerAddress("host1"));
-                pool = new DefaultConnectionPool(serverId, new TestInternalConnectionFactory(), settings);
+                pool = new DefaultConnectionPool(serverId, new TestInternalConnectionFactory(), settings, internalSettings,
+                        SameObjectProvider.initialized(mock(SdamServerDescriptionManager.class)), OPERATION_CONTEXT_FACTORY);
                 break;
             }
             case INTEGRATION: {
                 ServerId serverId = new ServerId(new ClusterId(), ClusterFixture.getPrimary());
+                ClusterConnectionMode connectionMode = ClusterConnectionMode.MULTIPLE;
+                SameObjectProvider<SdamServerDescriptionManager> sdamProvider = SameObjectProvider.uninitialized();
                 pool = new ConnectionIdAdjustingConnectionPool(new DefaultConnectionPool(serverId,
                         new InternalStreamConnectionFactory(
-                                ClusterConnectionMode.SINGLE,
+                                connectionMode,
                                 createStreamFactory(SocketSettings.builder().build(), ClusterFixture.getSslSettings()),
                                 ClusterFixture.getCredentialWithCache(),
-                                fileName + ": " + description,
+                                poolOptions.getString("appName", new BsonString(fileName + ": " + description)).getValue(),
                                 MongoDriverInformation.builder().build(),
                                 Collections.emptyList(),
+                                LoggerSettings.builder().build(),
                                 new TestCommandListener(),
-                                ClusterFixture.getServerApi()),
-                        settings));
+                                ClusterFixture.getServerApi()
+                        ),
+                        settings, internalSettings, sdamProvider, OPERATION_CONTEXT_FACTORY));
+                sdamProvider.initialize(new DefaultSdamServerDescriptionManager(mockedCluster(), serverId, mock(ServerListener.class),
+                        mock(ServerMonitor.class), pool, connectionMode));
                 setFailPoint();
                 break;
             }
@@ -162,13 +203,15 @@ public abstract class AbstractConnectionPoolTest {
                 throw new AssertionError(format("Style %s is not implemented", style));
             }
         }
-        pool.start();
+        if (internalSettings.isPrestartAsyncWorkManager()) {
+            waitForPoolAsyncWorkManagerStart();
+        }
     }
 
     @After
     @SuppressWarnings("try")
     public void tearDown() {
-        try (ConnectionPool autoCloseable = pool) {
+        try (ConnectionPool unused = pool) {
             disableFailPoint();
         } finally {
             for (ExecutorService cur : executorServiceMap.values()) {
@@ -181,7 +224,7 @@ public abstract class AbstractConnectionPoolTest {
     public void shouldPassAllOutcomes() throws Exception {
         try {
             for (BsonValue cur : definition.getArray("operations")) {
-                final BsonDocument operation = cur.asDocument();
+                BsonDocument operation = cur.asDocument();
                 String name = operation.getString("name").getValue();
 
                 if (name.equals("start")) {
@@ -202,9 +245,13 @@ public abstract class AbstractConnectionPoolTest {
                 } else if (name.equals("waitForEvent")) {
                     Class<?> eventClass = getEventClass(operation.getString("event").getValue());
                     assumeNotNull(eventClass);
-                    listener.waitForEvent(eventClass, operation.getNumber("count").intValue(), 5, TimeUnit.SECONDS);
+                    long timeoutMillis = operation.getNumber("timeout", new BsonInt64(TimeUnit.SECONDS.toMillis(5)))
+                            .longValue();
+                    listener.waitForEvent(eventClass, operation.getNumber("count").intValue(), timeoutMillis, MILLISECONDS);
                 } else if (name.equals("clear")) {
-                    pool.invalidate();
+                    pool.invalidate(null);
+                } else if (name.equals("ready")) {
+                    pool.ready();
                 } else if (name.equals("close")) {
                     pool.close();
                 } else if (name.equals("checkOut") || name.equals("checkIn")) {
@@ -244,42 +291,74 @@ public abstract class AbstractConnectionPoolTest {
                 BsonDocument expectedEvent = cur.asDocument();
                 String type = expectedEvent.getString("type").getValue();
                 if (type.equals("ConnectionPoolCreated")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "options");
                     ConnectionPoolCreatedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionPoolCreatedEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
                     assertEquals(settings, actualEvent.getSettings());
                 } else if (type.equals("ConnectionPoolCleared")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address");
                     ConnectionPoolClearedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionPoolClearedEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
+                } else if (type.equals("ConnectionPoolReady")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address");
+                    ConnectionPoolReadyEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionPoolReadyEvent.class);
+                    assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
                 } else if (type.equals("ConnectionPoolClosed")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address");
                     ConnectionPoolClosedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionPoolClosedEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
                 } else if (type.equals("ConnectionCreated")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "connectionId");
                     ConnectionCreatedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionCreatedEvent.class);
+                    assertAddressMatch(expectedEvent, actualEvent.getConnectionId().getServerId().getAddress());
                     assertConnectionIdMatch(expectedEvent, actualEvent.getConnectionId());
                 } else if (type.equals("ConnectionReady")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "connectionId", "duration");
                     ConnectionReadyEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionReadyEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getConnectionId().getServerId().getAddress());
+                    assertConnectionIdMatch(expectedEvent, actualEvent.getConnectionId());
+                    assertDurationMatch(expectedEvent, actualEvent);
                 } else if (type.equals("ConnectionClosed")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "connectionId", "reason");
                     ConnectionClosedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionClosedEvent.class);
+                    assertAddressMatch(expectedEvent, actualEvent.getConnectionId().getServerId().getAddress());
                     assertConnectionIdMatch(expectedEvent, actualEvent.getConnectionId());
                     assertReasonMatch(expectedEvent, actualEvent);
                 } else if (type.equals("ConnectionCheckOutStarted")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address");
                     ConnectionCheckOutStartedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionCheckOutStartedEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
                 } else if (type.equals("ConnectionCheckOutFailed")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "reason", "duration");
                     ConnectionCheckOutFailedEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionCheckOutFailedEvent.class);
                     assertAddressMatch(expectedEvent, actualEvent.getServerId().getAddress());
                     assertReasonMatch(expectedEvent, actualEvent);
+                    assertDurationMatch(expectedEvent, actualEvent);
                 } else if (type.equals("ConnectionCheckedOut")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "connectionId", "duration");
                     ConnectionCheckedOutEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionCheckedOutEvent.class);
+                    assertAddressMatch(expectedEvent, actualEvent.getConnectionId().getServerId().getAddress());
                     assertConnectionIdMatch(expectedEvent, actualEvent.getConnectionId());
+                    assertDurationMatch(expectedEvent, actualEvent);
                 } else if (type.equals("ConnectionCheckedIn")) {
+                    assertHasOnlySupportedKeys(expectedEvent, "type", "address", "connectionId");
                     ConnectionCheckedInEvent actualEvent = getNextEvent(actualEventsIterator, ConnectionCheckedInEvent.class);
+                    assertAddressMatch(expectedEvent, actualEvent.getConnectionId().getServerId().getAddress());
                     assertConnectionIdMatch(expectedEvent, actualEvent.getConnectionId());
                 } else {
                     throw new UnsupportedOperationException("Unsupported event type " + type);
                 }
             }
+        }
+    }
+
+    private static void assertHasOnlySupportedKeys(final BsonDocument document, final String... supportedKeys) {
+        List<String> supportedKeysList = asList(supportedKeys);
+        List<String> unsupportedKeys = document.keySet().stream()
+                .filter(key -> !supportedKeysList.contains(key))
+                .collect(Collectors.toList());
+        if (!unsupportedKeys.isEmpty()) {
+            fail(format("The runner encountered not yet supported keys %s in %s", unsupportedKeys, document));
         }
     }
 
@@ -305,6 +384,10 @@ public abstract class AbstractConnectionPoolTest {
             default:
                 fail("Unexpected reason to close connection " + connectionClosedEvent.getReason());
         }
+    }
+
+    protected OperationContext createOperationContext() {
+        return ClusterFixture.createOperationContext(TIMEOUT_SETTINGS.withMaxWaitTimeMS(settings.getMaxWaitTime(MILLISECONDS)));
     }
 
     private void assertReasonMatch(final BsonDocument expectedEvent, final ConnectionCheckOutFailedEvent connectionCheckOutFailedEvent) {
@@ -333,7 +416,7 @@ public abstract class AbstractConnectionPoolTest {
         if (expectedEvent.isString(addressKey)) {
             String expectedAddress = expectedEvent.getString(addressKey).getValue();
             if (!expectedAddress.equals(ANY_STRING)) {
-                assertEquals(format("Address does not match (expected event is %s)", expectedEvent.toString()),
+                assertEquals(format("Address does not match (expected event is %s)", expectedEvent),
                         new ServerAddress(expectedAddress), actualAddress);
             }
         } else if (expectedEvent.containsKey(addressKey)) {
@@ -342,21 +425,47 @@ public abstract class AbstractConnectionPoolTest {
     }
 
     private void assertConnectionIdMatch(final BsonDocument expectedEvent, final ConnectionId actualConnectionId) {
-        int actualConnectionIdLocalValue = actualConnectionId.getLocalValue();
-        int adjustedConnectionIdLocalValue = adjustedConnectionIdLocalValue(actualConnectionIdLocalValue);
+        long actualConnectionIdLocalValue = actualConnectionId.getLocalValue();
+        long adjustedConnectionIdLocalValue = adjustedConnectionIdLocalValue(actualConnectionIdLocalValue);
         String connectionIdKey = "connectionId";
         if (expectedEvent.containsKey(connectionIdKey)) {
             int expectedConnectionId = expectedEvent.getInt32(connectionIdKey).intValue();
             if (expectedConnectionId != ANY_INT) {
                 assertEquals(format(
                         "Connection id does not match (expected event is %s; actual local value before adjustment is %s)",
-                        expectedEvent.toString(), actualConnectionIdLocalValue),
+                                expectedEvent, actualConnectionIdLocalValue),
                         expectedConnectionId, adjustedConnectionIdLocalValue);
             }
         }
     }
 
-    private int adjustedConnectionIdLocalValue(final int connectionIdLocalValue) {
+    private static void assertDurationMatch(final BsonDocument expectedEvent, final ConnectionReadyEvent actualEvent) {
+        assertDurationMatch(expectedEvent, actualEvent.getElapsedTime(TimeUnit.MILLISECONDS));
+    }
+
+    private static void assertDurationMatch(final BsonDocument expectedEvent, final ConnectionCheckOutFailedEvent actualEvent) {
+        assertDurationMatch(expectedEvent, actualEvent.getElapsedTime(TimeUnit.MILLISECONDS));
+    }
+
+    private static void assertDurationMatch(final BsonDocument expectedEvent, final ConnectionCheckedOutEvent actualEvent) {
+        assertDurationMatch(expectedEvent, actualEvent.getElapsedTime(TimeUnit.MILLISECONDS));
+    }
+
+    private static void assertDurationMatch(final BsonDocument expectedEvent, final long actualDurationMillis) {
+        String durationKey = "duration";
+        if (expectedEvent.isNumber(durationKey)) {
+            assertTrue("actualDurationMillis must not be negative", actualDurationMillis >= 0);
+            long expectedDurationMillis = expectedEvent.getNumber(durationKey).longValue();
+            if (expectedDurationMillis != ANY_INT) {
+                fail(format("Unsupported duration value %d. Pay attention to the expected value unit when supporting the value",
+                        expectedDurationMillis));
+            }
+        } else if (expectedEvent.containsKey(durationKey)) {
+            fail(format("Unsupported value %s", expectedEvent.get(durationKey)));
+        }
+    }
+
+    private long adjustedConnectionIdLocalValue(final long connectionIdLocalValue) {
         if (pool instanceof ConnectionIdAdjustingConnectionPool) {
             return ((ConnectionIdAdjustingConnectionPool) pool).adjustedConnectionIdLocalValue(connectionIdLocalValue);
         } else {
@@ -365,7 +474,7 @@ public abstract class AbstractConnectionPoolTest {
     }
 
     private List<Object> getNonIgnoredActualEvents() {
-        List<Object> nonIgnoredActualEvents = new ArrayList<Object>();
+        List<Object> nonIgnoredActualEvents = new ArrayList<>();
         Set<Class<?>> ignoredEventClasses = getIgnoredEventClasses();
         for (Object cur : listener.getEvents()) {
             if (!ignoredEventClasses.contains(cur.getClass())) {
@@ -376,10 +485,7 @@ public abstract class AbstractConnectionPoolTest {
     }
 
     private Set<Class<?>> getIgnoredEventClasses() {
-        Set<Class<?>> ignoredEventClasses = new HashSet<Class<?>>();
-        ignoredEventClasses.add(com.mongodb.event.ConnectionPoolOpenedEvent.class);
-        ignoredEventClasses.add(com.mongodb.event.ConnectionAddedEvent.class);
-        ignoredEventClasses.add(com.mongodb.event.ConnectionRemovedEvent.class);
+        Set<Class<?>> ignoredEventClasses = new HashSet<>();
         for (BsonValue cur : definition.getArray("ignore", new BsonArray())) {
             String type = cur.asString().getValue();
             Class<?> eventClass = getEventClass(type);
@@ -405,6 +511,8 @@ public abstract class AbstractConnectionPoolTest {
             return ConnectionClosedEvent.class;
         } else if (type.equals("ConnectionPoolCleared")) {
             return ConnectionPoolClearedEvent.class;
+        } else if (type.equals("ConnectionPoolReady")) {
+            return ConnectionPoolReadyEvent.class;
         } else if (type.equals("ConnectionReady")) {
             return ConnectionReadyEvent.class;
         } else if (type.equals("ConnectionCheckOutStarted")) {
@@ -426,8 +534,9 @@ public abstract class AbstractConnectionPoolTest {
         return expectedType.cast(next);
     }
 
-    private static BsonDocument executeAdminCommand(final BsonDocument command) {
-        return new CommandReadOperation<>("admin", command, new BsonDocumentCodec()).execute(ClusterFixture.getBinding());
+    private static void executeAdminCommand(final BsonDocument command) {
+        new CommandReadOperation<>("admin", command, new BsonDocumentCodec())
+                .execute(ClusterFixture.getBinding());
     }
 
     private void setFailPoint() {
@@ -458,8 +567,8 @@ public abstract class AbstractConnectionPoolTest {
 
     @Parameterized.Parameters(name = "{0}: {1}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<Object[]>();
-        for (File file : JsonPoweredTestHelper.getTestFiles("/connection-monitoring-and-pooling")) {
+        List<Object[]> data = new ArrayList<>();
+        for (File file : JsonPoweredTestHelper.getTestFiles("/connection-monitoring-and-pooling/cmap-format")) {
             BsonDocument testDocument = JsonPoweredTestHelper.getTestDocument(file);
             data.add(new Object[]{
                     file.getName(),
@@ -469,6 +578,23 @@ public abstract class AbstractConnectionPoolTest {
             });
         }
         return data;
+    }
+
+    public static void waitForPoolAsyncWorkManagerStart() {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            throw interruptAndCreateMongoInterruptedException(null, e);
+        }
+    }
+
+    private static Cluster mockedCluster() {
+        Cluster cluster = mock(Cluster.class);
+        Mockito.doAnswer(invocation -> {
+            invocation.getArgument(0, Runnable.class).run();
+            return null;
+        }).when(cluster).withLock(any(Runnable.class));
+        return cluster;
     }
 
     private enum Style {
@@ -481,46 +607,34 @@ public abstract class AbstractConnectionPoolTest {
     }
 
     private static final class ConnectionIdAdjustingConnectionPool implements ConnectionPool {
-        private static final int UNINITIALIZED = Integer.MAX_VALUE;
+        private static final long UNINITIALIZED = Long.MAX_VALUE;
 
         private final DefaultConnectionPool pool;
-        private final AtomicInteger connectionIdLocalValueAdjustment;
+        private final AtomicLong connectionIdLocalValueAdjustment;
 
         private ConnectionIdAdjustingConnectionPool(final DefaultConnectionPool pool) {
             this.pool = pool;
-            connectionIdLocalValueAdjustment = new AtomicInteger(UNINITIALIZED);
+            connectionIdLocalValueAdjustment = new AtomicLong(UNINITIALIZED);
         }
 
         private void updateConnectionIdLocalValueAdjustment(final InternalConnection conn) {
             connectionIdLocalValueAdjustment.accumulateAndGet(conn.getDescription().getConnectionId().getLocalValue() - 1, Math::min);
         }
 
-        int adjustedConnectionIdLocalValue(final int connectionIdLocalValue) {
+        long adjustedConnectionIdLocalValue(final long connectionIdLocalValue) {
             return connectionIdLocalValue - connectionIdLocalValueAdjustment.get();
         }
 
         @Override
-        public void start() {
-            pool.start();
-        }
-
-        @Override
-        public InternalConnection get() {
-            InternalConnection result = pool.get();
+        public InternalConnection get(final OperationContext operationContext) {
+            InternalConnection result = pool.get(operationContext);
             updateConnectionIdLocalValueAdjustment(result);
             return result;
         }
 
         @Override
-        public InternalConnection get(final long timeout, final TimeUnit timeUnit) {
-            InternalConnection result = pool.get(timeout, timeUnit);
-            updateConnectionIdLocalValueAdjustment(result);
-            return result;
-        }
-
-        @Override
-        public void getAsync(final SingleResultCallback<InternalConnection> callback) {
-            pool.getAsync((result, problem) -> {
+        public void getAsync(final OperationContext operationContext, final SingleResultCallback<InternalConnection> callback) {
+            pool.getAsync(operationContext, (result, problem) -> {
                 try {
                     if (result != null) {
                         updateConnectionIdLocalValueAdjustment(result);
@@ -532,13 +646,18 @@ public abstract class AbstractConnectionPoolTest {
         }
 
         @Override
-        public void invalidate() {
-            pool.invalidate();
+        public void invalidate(@Nullable final Throwable cause) {
+            pool.invalidate(cause);
         }
 
         @Override
         public void invalidate(final ObjectId serviceId, final int generation) {
             pool.invalidate(serviceId, generation);
+        }
+
+        @Override
+        public void ready() {
+            pool.ready();
         }
 
         @Override

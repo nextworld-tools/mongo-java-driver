@@ -16,8 +16,9 @@
 
 package com.mongodb.reactivestreams.client.internal;
 
-import com.mongodb.MongoNamespace;
+import com.mongodb.ReadConcern;
 import com.mongodb.ReadPreference;
+import com.mongodb.WriteConcern;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.CreateViewOptions;
@@ -26,20 +27,27 @@ import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
+import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import com.mongodb.reactivestreams.client.ListCollectionsPublisher;
+import com.mongodb.reactivestreams.client.MongoDatabase;
 import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistries;
+import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.reactivestreams.Publisher;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class MongoDatabaseImplTest extends TestHelper {
@@ -48,6 +56,35 @@ public class MongoDatabaseImplTest extends TestHelper {
 
     private final MongoDatabaseImpl database = new MongoDatabaseImpl(OPERATION_PUBLISHER.withDatabase("db"));
     private final MongoOperationPublisher<Document> mongoOperationPublisher = database.getMongoOperationPublisher();
+
+    @Test
+    public void withCodecRegistry() {
+        // Cannot do equality test as registries are wrapped
+        CodecRegistry codecRegistry = CodecRegistries.fromCodecs(new MyLongCodec());
+        MongoDatabase newDatabase = database.withCodecRegistry(codecRegistry);
+        assertTrue(newDatabase.getCodecRegistry().get(Long.class) instanceof TestHelper.MyLongCodec);
+    }
+
+    @Test
+    public void withReadConcern() {
+        assertEquals(ReadConcern.AVAILABLE, database.withReadConcern(ReadConcern.AVAILABLE).getReadConcern());
+    }
+
+    @Test
+    public void withReadPreference() {
+        assertEquals(ReadPreference.secondaryPreferred(), database.withReadPreference(ReadPreference.secondaryPreferred())
+                .getReadPreference());
+    }
+
+    @Test
+    public void withTimeout() {
+        assertEquals(1000, database.withTimeout(1000, TimeUnit.MILLISECONDS).getTimeout(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void withWriteConcern() {
+        assertEquals(WriteConcern.MAJORITY, database.withWriteConcern(WriteConcern.MAJORITY).getWriteConcern());
+    }
 
     @Test
     void testAggregate() {
@@ -130,13 +167,23 @@ public class MongoDatabaseImplTest extends TestHelper {
                                   () -> assertThrows(IllegalArgumentException.class, () -> database.listCollectionNames(null))
                   ),
                   () -> {
-                      ListCollectionsPublisher<Document> expected =
-                              new ListCollectionsPublisherImpl<>(null, mongoOperationPublisher, true);
+                      ListCollectionNamesPublisher expected =
+                              new ListCollectionNamesPublisherImpl(
+                                      new ListCollectionsPublisherImpl<>(null, mongoOperationPublisher, true));
                       assertPublisherIsTheSameAs(expected, database.listCollectionNames(), "Default");
                   },
                   () -> {
-                      ListCollectionsPublisher<Document> expected =
-                              new ListCollectionsPublisherImpl<>(clientSession, mongoOperationPublisher, true);
+                      ListCollectionNamesPublisher expected =
+                              new ListCollectionNamesPublisherImpl(
+                                      new ListCollectionsPublisherImpl<>(null, mongoOperationPublisher, true))
+                                      .authorizedCollections(true);
+                      assertPublisherIsTheSameAs(expected, database.listCollectionNames().authorizedCollections(true),
+                              "nameOnly & authorizedCollections");
+                  },
+                  () -> {
+                      ListCollectionNamesPublisher expected =
+                              new ListCollectionNamesPublisherImpl(
+                                      new ListCollectionsPublisherImpl<>(clientSession, mongoOperationPublisher, true));
                       assertPublisherIsTheSameAs(expected, database.listCollectionNames(clientSession), "With client session");
                   }
         );
@@ -157,27 +204,23 @@ public class MongoDatabaseImplTest extends TestHelper {
                   ),
                   () -> {
                       Publisher<Void> expected = mongoOperationPublisher
-                              .createCollection(null, new MongoNamespace(database.getName(), collectionName),
-                                                new CreateCollectionOptions());
+                              .createCollection(null, collectionName, new CreateCollectionOptions());
                       assertPublisherIsTheSameAs(expected, database.createCollection(collectionName), "Default");
                   },
                   () -> {
                       CreateCollectionOptions options = new CreateCollectionOptions().sizeInBytes(500).capped(true);
-                      Publisher<Void> expected = mongoOperationPublisher
-                              .createCollection(null, new MongoNamespace(database.getName(), collectionName), options);
+                      Publisher<Void> expected = mongoOperationPublisher.createCollection(null, collectionName, options);
                       assertPublisherIsTheSameAs(expected, database.createCollection(collectionName, options), "With options");
                   },
                   () -> {
-                      Publisher<Void> expected = mongoOperationPublisher
-                              .createCollection(clientSession, new MongoNamespace(database.getName(), collectionName),
-                                                new CreateCollectionOptions());
+                      Publisher<Void> expected = mongoOperationPublisher.createCollection(clientSession, collectionName,
+                              new CreateCollectionOptions());
                       assertPublisherIsTheSameAs(expected, database.createCollection(clientSession, collectionName),
                                                  "With client session");
                   },
                   () -> {
                       CreateCollectionOptions options = new CreateCollectionOptions().sizeInBytes(500).capped(true);
-                      Publisher<Void> expected = mongoOperationPublisher
-                              .createCollection(clientSession, new MongoNamespace(database.getName(), collectionName), options);
+                      Publisher<Void> expected = mongoOperationPublisher.createCollection(clientSession, collectionName, options);
                       assertPublisherIsTheSameAs(expected, database.createCollection(clientSession, collectionName, options),
                                                  "With client session & options");
                   }

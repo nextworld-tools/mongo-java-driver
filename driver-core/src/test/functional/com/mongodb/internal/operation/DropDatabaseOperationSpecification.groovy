@@ -31,6 +31,7 @@ import static com.mongodb.ClusterFixture.getBinding
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
 import static com.mongodb.ClusterFixture.isSharded
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 
 class DropDatabaseOperationSpecification extends OperationFunctionalSpecification {
 
@@ -41,50 +42,31 @@ class DropDatabaseOperationSpecification extends OperationFunctionalSpecificatio
         assert databaseNameExists(databaseName)
 
         when:
-        new DropDatabaseOperation(databaseName).execute(getBinding())
+        execute(new DropDatabaseOperation(databaseName, WriteConcern.ACKNOWLEDGED), async)
 
         then:
         !databaseNameExists(databaseName)
+
+        where:
+        async << [true, false]
     }
 
-
-    @IgnoreIf({ isSharded() })
-    def 'should drop a database that exists asynchronously'() {
-        given:
-        getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
-        assert databaseNameExists(databaseName)
-
-        when:
-        executeAsync(new DropDatabaseOperation(databaseName))
-
-        then:
-        !databaseNameExists(databaseName)
-    }
 
     def 'should not error when dropping a collection that does not exist'() {
         given:
         def dbName = 'nonExistingDatabase'
 
         when:
-        new DropDatabaseOperation(dbName).execute(getBinding())
+        execute(new DropDatabaseOperation(dbName, WriteConcern.ACKNOWLEDGED), async)
 
         then:
         !databaseNameExists(dbName)
+
+        where:
+        async << [true, false]
     }
 
-
-    def 'should not error when dropping a collection that does not exist asynchronously'() {
-        given:
-        def dbName = 'nonExistingDatabase'
-
-        when:
-        executeAsync(new DropDatabaseOperation(dbName))
-
-        then:
-        !databaseNameExists(dbName)
-    }
-
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))
@@ -112,7 +94,7 @@ class DropDatabaseOperationSpecification extends OperationFunctionalSpecificatio
     }
 
     def databaseNameExists(String databaseName) {
-        new ListDatabasesOperation(new DocumentCodec()).execute(getBinding()).next()*.name.contains(databaseName);
+        new ListDatabasesOperation(new DocumentCodec()).execute(getBinding()).next()*.name.contains(databaseName)
     }
 
 }

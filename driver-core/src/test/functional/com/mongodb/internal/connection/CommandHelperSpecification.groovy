@@ -16,29 +16,26 @@
 
 package com.mongodb.internal.connection
 
-
+import com.mongodb.LoggerSettings
 import com.mongodb.MongoCommandException
-import com.mongodb.ServerAddress
 import com.mongodb.connection.ClusterConnectionMode
 import com.mongodb.connection.ClusterId
-import com.mongodb.connection.ConnectionDescription
-import com.mongodb.connection.ConnectionId
 import com.mongodb.connection.ServerId
-import com.mongodb.connection.ServerType
 import com.mongodb.connection.SocketSettings
-import com.mongodb.connection.netty.NettyStreamFactory
+import com.mongodb.internal.connection.netty.NettyStreamFactory
 import org.bson.BsonDocument
 import org.bson.BsonInt32
-import org.bson.BsonTimestamp
 import spock.lang.Specification
 
 import java.util.concurrent.CountDownLatch
 
+import static com.mongodb.ClusterFixture.LEGACY_HELLO
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
+import static com.mongodb.ClusterFixture.getClusterConnectionMode
 import static com.mongodb.ClusterFixture.getCredentialWithCache
 import static com.mongodb.ClusterFixture.getPrimary
 import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.ClusterFixture.getSslSettings
-import static com.mongodb.internal.connection.CommandHelper.executeCommand
 import static com.mongodb.internal.connection.CommandHelper.executeCommandAsync
 
 class CommandHelperSpecification extends Specification {
@@ -47,38 +44,22 @@ class CommandHelperSpecification extends Specification {
     def setup() {
         connection = new InternalStreamConnectionFactory(ClusterConnectionMode.SINGLE,
                 new NettyStreamFactory(SocketSettings.builder().build(), getSslSettings()),
-                getCredentialWithCache(), null, null, [], null, getServerApi())
+                getCredentialWithCache(), null, null, [], LoggerSettings.builder().build(), null, getServerApi())
                 .create(new ServerId(new ClusterId(), getPrimary()))
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
     }
 
     def cleanup() {
         connection?.close()
     }
 
-    def 'should gossip cluster time'() {
-        given:
-        def connection = Mock(InternalStreamConnection) {
-            getDescription() >> new ConnectionDescription(new ConnectionId(new ServerId(new ClusterId(), new ServerAddress())),
-                    6, ServerType.REPLICA_SET_PRIMARY, 1000, 1000, 1000, [])
-        }
-        def clusterClock = new ClusterClock()
-        clusterClock.advance(new BsonDocument('clusterTime', new BsonTimestamp(42L)))
-
-        when:
-        executeCommand('admin', new BsonDocument('ismaster', new BsonInt32(1)), clusterClock, getServerApi(), connection)
-
-        then:
-        1 * connection.sendAndReceive(_, _, ) { it instanceof ClusterClockAdvancingSessionContext }
-    }
-
-
     def 'should execute command asynchronously'() {
         when:
         BsonDocument receivedDocument = null
         Throwable receivedException = null
         def latch1 = new CountDownLatch(1)
-        executeCommandAsync('admin', new BsonDocument('ismaster', new BsonInt32(1)), getServerApi(), connection)
+        executeCommandAsync('admin', new BsonDocument(LEGACY_HELLO, new BsonInt32(1)), getClusterConnectionMode(),
+                getServerApi(), connection, OPERATION_CONTEXT)
                 { document, exception -> receivedDocument = document; receivedException = exception; latch1.countDown() }
         latch1.await()
 
@@ -89,7 +70,8 @@ class CommandHelperSpecification extends Specification {
 
         when:
         def latch2 = new CountDownLatch(1)
-        executeCommandAsync('admin', new BsonDocument('non-existent-command', new BsonInt32(1)), getServerApi(), connection)
+        executeCommandAsync('admin', new BsonDocument('non-existent-command', new BsonInt32(1)), getClusterConnectionMode(),
+                getServerApi(), connection, OPERATION_CONTEXT)
                 { document, exception -> receivedDocument = document; receivedException = exception; latch2.countDown() }
         latch2.await()
 

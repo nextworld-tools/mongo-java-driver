@@ -114,7 +114,7 @@ public class DBCollectionTest extends DatabaseTestCase {
     @Test
     public void insertEmptyListShouldThrowIllegalArgumentException() {
         try {
-            collection.insert(Collections.<DBObject>emptyList());
+            collection.insert(Collections.emptyList());
             fail("Should throw IllegalArgumentException");
         } catch (IllegalArgumentException e) {
            // empty
@@ -186,43 +186,18 @@ public class DBCollectionTest extends DatabaseTestCase {
     }
 
     @Test
-    public void testDotInDBObject() {
-        try {
-            collection.save(new BasicDBObject("x.y", 1));
-            fail("Should throw exception");
-        } catch (IllegalArgumentException e) {
-            // all good
-        }
+    public void testDotInDBObjectSucceeds() {
+        collection.save(new BasicDBObject("x.y", 1));
+        collection.save(new BasicDBObject("x", new BasicDBObject("a.b", 1)));
 
-        try {
-            collection.save(new BasicDBObject("x", new BasicDBObject("a.b", 1)));
-            fail("Should throw exception");
-        } catch (IllegalArgumentException e) {
-            // all good
-        }
-
-        try {
-            Map<String, Integer> map = new HashMap<String, Integer>();
-            map.put("a.b", 1);
-            collection.save(new BasicDBObject("x", map));
-            fail("Should throw exception");
-        } catch (IllegalArgumentException e) {
-            // all good
-        }
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testJAVA794() {
-        Map<String, String> nested = new HashMap<String, String>();
-        nested.put("my.dot.field", "foo");
-        List<Map<String, String>> list = new ArrayList<Map<String, String>>();
-        list.add(nested);
-        collection.save(new BasicDBObject("_document_", new BasicDBObject("array", list)));
+        Map<String, Integer> map = new HashMap<>();
+        map.put("a.b", 1);
+        collection.save(new BasicDBObject("x", map));
     }
 
     @Test
     public void testInsertWithDBEncoder() {
-        List<DBObject> objects = new ArrayList<DBObject>();
+        List<DBObject> objects = new ArrayList<>();
         objects.add(new BasicDBObject("a", 1));
         collection.insert(objects, WriteConcern.ACKNOWLEDGED, new MyEncoder());
         assertEquals(MyEncoder.getConstantObject(), collection.findOne());
@@ -231,7 +206,7 @@ public class DBCollectionTest extends DatabaseTestCase {
     @Test
     public void testInsertWithDBEncoderFactorySet() {
         collection.setDBEncoderFactory(new MyEncoderFactory());
-        List<DBObject> objects = new ArrayList<DBObject>();
+        List<DBObject> objects = new ArrayList<>();
         objects.add(new BasicDBObject("a", 1));
         collection.insert(objects, WriteConcern.ACKNOWLEDGED, null);
         assertEquals(MyEncoder.getConstantObject(), collection.findOne());
@@ -506,25 +481,23 @@ public class DBCollectionTest extends DatabaseTestCase {
         assertEquals(uuid, collection.findOne().get("uuid"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testDotKeysArrayFail() {
-        //JAVA-794
+    @Test
+    public void testDotKeysArraySucceeds() {
         DBObject obj = new BasicDBObject("x", 1).append("y", 2)
                                                 .append("array", new Object[]{new BasicDBObject("foo.bar", "baz")});
         collection.insert(obj);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testDotKeysListFail() {
-        //JAVA-794
+    @Test
+    public void testDotKeysListSucceeds() {
         DBObject obj = new BasicDBObject("x", 1).append("y", 2)
                                                 .append("array", asList(new BasicDBObject("foo.bar", "baz")));
         collection.insert(obj);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testDotKeysMapInArrayFail() {
-        final Map<String, Object> map = new HashMap<String, Object>(1);
+    @Test
+    public void testDotKeysMapInArraySucceeds() {
+        Map<String, Object> map = new HashMap<>(1);
         map.put("foo.bar", 2);
         DBObject obj = new BasicDBObject("x", 1).append("y", 2).append("array", new Object[]{map});
         collection.insert(obj);
@@ -610,12 +583,7 @@ public class DBCollectionTest extends DatabaseTestCase {
 
     @Test
     public void testCompoundCodecWithCustomEncoderFactory() {
-        collection.setDBEncoderFactory(new DBEncoderFactory() {
-            @Override
-            public DBEncoder create() {
-                return new DefaultDBEncoder();
-            }
-        });
+        collection.setDBEncoderFactory(() -> new DefaultDBEncoder());
         assertThat(collection.getObjectCodec(), instanceOf(CompoundDBObjectCodec.class));
         CompoundDBObjectCodec codec = (CompoundDBObjectCodec) collection.getObjectCodec();
         assertThat(codec.getEncoder(), instanceOf(DBEncoderFactoryAdapter.class));
@@ -623,12 +591,7 @@ public class DBCollectionTest extends DatabaseTestCase {
 
     @Test
     public void testCompoundCodecWithCustomDecoderFactory() {
-        collection.setDBDecoderFactory(new DBDecoderFactory() {
-            @Override
-            public DBDecoder create() {
-                return new DefaultDBDecoder();
-            }
-        });
+        collection.setDBDecoderFactory(() -> new DefaultDBDecoder());
         assertThat(collection.getObjectCodec(), instanceOf(CompoundDBObjectCodec.class));
         CompoundDBObjectCodec codec = (CompoundDBObjectCodec) collection.getObjectCodec();
         assertThat(codec.getDecoder(), instanceOf(DBDecoderAdapter.class));
@@ -669,7 +632,7 @@ public class DBCollectionTest extends DatabaseTestCase {
         assertEquals(4, result.getMatchedCount());
         assertEquals(3, result.getRemovedCount());
         assertEquals(4, result.getModifiedCount());
-        assertEquals(Arrays.asList(new BulkWriteUpsert(1, upsertOneId),
+        assertEquals(asList(new BulkWriteUpsert(1, upsertOneId),
                                    new BulkWriteUpsert(2, upsertTwoId)),
                      result.getUpserts());
 
@@ -810,7 +773,7 @@ public class DBCollectionTest extends DatabaseTestCase {
         } catch (WriteConcernException e) {
             assertEquals(1, e.getWriteConcernResult().getCount());
             assertTrue(e.getWriteConcernResult().isUpdateOfExisting());
-            assertEquals(null, e.getWriteConcernResult().getUpsertedId());
+            assertNull(e.getWriteConcernResult().getUpsertedId());
         }
     }
 
@@ -1315,6 +1278,7 @@ public class DBCollectionTest extends DatabaseTestCase {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void testBypassDocumentValidationForNonInlineMapReduce() {
         //given
@@ -1377,15 +1341,12 @@ public class DBCollectionTest extends DatabaseTestCase {
         @Override
         public int writeObject(final OutputBuffer outputBuffer, final BSONObject document) {
             int start = outputBuffer.getPosition();
-            BsonBinaryWriter bsonWriter = new BsonBinaryWriter(outputBuffer);
-            try {
+            try (BsonBinaryWriter bsonWriter = new BsonBinaryWriter(outputBuffer)) {
                 bsonWriter.writeStartDocument();
                 bsonWriter.writeInt32("_id", 1);
                 bsonWriter.writeString("s", "foo");
                 bsonWriter.writeEndDocument();
                 return outputBuffer.getPosition() - start;
-            } finally {
-                bsonWriter.close();
             }
         }
 

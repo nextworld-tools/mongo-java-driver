@@ -25,6 +25,7 @@ import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.CreateIndexOptions;
 import com.mongodb.client.model.DeleteOptions;
+import com.mongodb.client.model.DropCollectionOptions;
 import com.mongodb.client.model.DropIndexOptions;
 import com.mongodb.client.model.EstimatedDocumentCountOptions;
 import com.mongodb.client.model.FindOneAndDeleteOptions;
@@ -36,6 +37,7 @@ import com.mongodb.client.model.InsertManyOptions;
 import com.mongodb.client.model.InsertOneOptions;
 import com.mongodb.client.model.RenameCollectionOptions;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.SearchIndexModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
@@ -50,7 +52,7 @@ import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.DistinctPublisher;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.ListIndexesPublisher;
-import com.mongodb.reactivestreams.client.MapReducePublisher;
+import com.mongodb.reactivestreams.client.ListSearchIndexesPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonDocument;
 import org.bson.Document;
@@ -60,8 +62,11 @@ import org.reactivestreams.Publisher;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import static com.mongodb.assertions.Assertions.assertNotNull;
 import static com.mongodb.assertions.Assertions.notNull;
+import static com.mongodb.assertions.Assertions.notNullElements;
 
 
 final class MongoCollectionImpl<T> implements MongoCollection<T> {
@@ -73,7 +78,7 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
 
     @Override
     public MongoNamespace getNamespace() {
-        return mongoOperationPublisher.getNamespace();
+        return assertNotNull(mongoOperationPublisher.getNamespace());
     }
 
     @Override
@@ -99,6 +104,12 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     @Override
     public ReadConcern getReadConcern() {
         return mongoOperationPublisher.getReadConcern();
+    }
+
+    @Override
+    public Long getTimeout(final TimeUnit timeUnit) {
+        Long timeoutMS = mongoOperationPublisher.getTimeoutMS();
+        return (timeoutMS != null) ? notNull("timeUnit", timeUnit).convert(timeoutMS, TimeUnit.MILLISECONDS) : null;
     }
 
     MongoOperationPublisher<T> getPublisherHelper() {
@@ -128,6 +139,11 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
     @Override
     public MongoCollection<T> withReadConcern(final ReadConcern readConcern) {
         return new MongoCollectionImpl<>(mongoOperationPublisher.withReadConcern(readConcern));
+    }
+
+    @Override
+    public MongoCollection<T> withTimeout(final long timeout, final TimeUnit timeUnit) {
+        return new MongoCollectionImpl<>(mongoOperationPublisher.withTimeout(timeout, timeUnit));
     }
 
     @Override
@@ -300,27 +316,31 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
                                                pipeline, ChangeStreamLevel.COLLECTION);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public MapReducePublisher<T> mapReduce(final String mapFunction, final String reduceFunction) {
+    public com.mongodb.reactivestreams.client.MapReducePublisher<T> mapReduce(final String mapFunction, final String reduceFunction) {
         return mapReduce(mapFunction, reduceFunction, getDocumentClass());
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public <TResult> MapReducePublisher<TResult> mapReduce(final String mapFunction, final String reduceFunction,
-                                                           final Class<TResult> resultClass) {
+    public <TResult> com.mongodb.reactivestreams.client.MapReducePublisher<TResult> mapReduce(final String mapFunction,
+            final String reduceFunction, final Class<TResult> resultClass) {
         return new MapReducePublisherImpl<>(null, mongoOperationPublisher.withDocumentClass(resultClass), mapFunction,
                                             reduceFunction);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public MapReducePublisher<T> mapReduce(final ClientSession clientSession, final String mapFunction,
+    public com.mongodb.reactivestreams.client.MapReducePublisher<T> mapReduce(final ClientSession clientSession, final String mapFunction,
                                            final String reduceFunction) {
         return mapReduce(clientSession, mapFunction, reduceFunction, getDocumentClass());
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public <TResult> MapReducePublisher<TResult> mapReduce(final ClientSession clientSession, final String mapFunction,
-                                                           final String reduceFunction, final Class<TResult> resultClass) {
+    public <TResult> com.mongodb.reactivestreams.client.MapReducePublisher<TResult> mapReduce(final ClientSession clientSession,
+            final String mapFunction, final String reduceFunction, final Class<TResult> resultClass) {
         return new MapReducePublisherImpl<>(notNull("clientSession", clientSession),
                                             mongoOperationPublisher.withDocumentClass(resultClass), mapFunction, reduceFunction);
     }
@@ -624,12 +644,72 @@ final class MongoCollectionImpl<T> implements MongoCollection<T> {
 
     @Override
     public Publisher<Void> drop() {
-        return mongoOperationPublisher.dropCollection(null);
+        return mongoOperationPublisher.dropCollection(null, new DropCollectionOptions());
     }
 
     @Override
     public Publisher<Void> drop(final ClientSession clientSession) {
-        return mongoOperationPublisher.dropCollection(notNull("clientSession", clientSession));
+        return mongoOperationPublisher.dropCollection(notNull("clientSession", clientSession), new DropCollectionOptions());
+    }
+
+    @Override
+    public Publisher<Void> drop(final DropCollectionOptions dropCollectionOptions) {
+        return mongoOperationPublisher.dropCollection(null, dropCollectionOptions);
+    }
+
+    @Override
+    public Publisher<Void> drop(final ClientSession clientSession, final DropCollectionOptions dropCollectionOptions) {
+        return mongoOperationPublisher.dropCollection(notNull("clientSession", clientSession), dropCollectionOptions);
+    }
+
+    @Override
+    public Publisher<String> createSearchIndex(final String indexName, final Bson definition) {
+        notNull("indexName", indexName);
+        notNull("definition", definition);
+
+        return mongoOperationPublisher.createSearchIndex(indexName, definition);
+    }
+
+    @Override
+    public Publisher<String> createSearchIndex(final Bson definition) {
+        notNull("definition", definition);
+
+        return mongoOperationPublisher.createSearchIndex(null, definition);
+    }
+
+    @Override
+    public Publisher<String> createSearchIndexes(final List<SearchIndexModel> searchIndexModels) {
+        notNullElements("searchIndexModels", searchIndexModels);
+
+        return mongoOperationPublisher.createSearchIndexes(searchIndexModels);
+    }
+
+    @Override
+    public Publisher<Void> updateSearchIndex(final String indexName, final Bson definition) {
+        notNull("indexName", indexName);
+        notNull("definition", definition);
+
+        return mongoOperationPublisher.updateSearchIndex(indexName, definition);
+    }
+
+    @Override
+    public Publisher<Void> dropSearchIndex(final String indexName) {
+        notNull("name", indexName);
+        return mongoOperationPublisher.dropSearchIndex(indexName);
+    }
+
+    @Override
+    public ListSearchIndexesPublisher<Document> listSearchIndexes() {
+      return listSearchIndexes(Document.class);
+    }
+
+    @Override
+    public <TResult> ListSearchIndexesPublisher<TResult> listSearchIndexes(final Class<TResult> resultClass) {
+        notNull("resultClass", resultClass);
+
+        return new ListSearchIndexesPublisherImpl<>(mongoOperationPublisher
+                .withReadConcern(ReadConcern.DEFAULT)
+                .withDocumentClass(resultClass));
     }
 
     @Override

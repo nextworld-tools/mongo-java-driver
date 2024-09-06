@@ -23,21 +23,32 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.internal.MongoClientImpl;
 import com.mongodb.client.internal.OperationExecutor;
-import com.mongodb.connection.BufferProvider;
 import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.event.ClusterListener;
+import com.mongodb.internal.IgnorableRequestContext;
+import com.mongodb.internal.TimeoutContext;
+import com.mongodb.internal.TimeoutSettings;
 import com.mongodb.internal.binding.ConnectionSource;
 import com.mongodb.internal.binding.ReadWriteBinding;
 import com.mongodb.internal.binding.SingleServerBinding;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
-import com.mongodb.internal.connection.PowerOfTwoBufferPool;
+import com.mongodb.internal.connection.NoOpSessionContext;
+import com.mongodb.internal.connection.OperationContext;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.internal.thread.DaemonThreadFactory;
+import com.mongodb.internal.validator.NoOpFieldNameValidator;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
+import org.bson.BsonInt64;
+import org.bson.BsonString;
 import org.bson.Document;
+import org.bson.codecs.BsonDocumentCodec;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 
@@ -49,9 +60,12 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static com.mongodb.internal.connection.ClientMetadataHelper.createClientMetadataDocument;
 import static com.mongodb.internal.connection.ServerAddressHelper.createServerAddress;
+import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -67,7 +81,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  *   .applyConnectionString("mongodb://localhost")
  *   .build())
  * </pre>
- * <p>You can connect to a <a href="https://docs.mongodb.com/manual/replication/">replica set</a> by passing a
+ * <p>You can connect to a <a href="https://www.mongodb.com/docs/manual/replication/">replica set</a> by passing a
  * list of servers to a MongoClient constructor. For example:</p>
  * <pre>
  * new MongoClient("mongodb://localhost:27017,localhost:27018,localhost:27019")
@@ -109,16 +123,16 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @since 2.10.0
  */
 public class MongoClient implements Closeable {
+    private static final Logger LOGGER = Loggers.getLogger("client");
 
     private final ConcurrentMap<String, DB> dbCache = new ConcurrentHashMap<>();
 
     private final MongoClientOptions options;
 
-    private final BufferProvider bufferProvider = new PowerOfTwoBufferPool();
-
     private final ConcurrentLinkedQueue<ServerCursorAndNamespace> orphanedCursors = new ConcurrentLinkedQueue<>();
     private final ExecutorService cursorCleaningService;
     private final MongoClientImpl delegate;
+    private final AtomicBoolean closed;
 
     /**
      * Gets the default codec registry.  It includes the following providers:
@@ -129,6 +143,7 @@ public class MongoClient implements Closeable {
      * <li>{@link com.mongodb.DBRefCodecProvider}</li>
      * <li>{@link com.mongodb.DBObjectCodecProvider}</li>
      * <li>{@link org.bson.codecs.DocumentCodecProvider}</li>
+     * <li>{@link org.bson.codecs.CollectionCodecProvider}</li>
      * <li>{@link org.bson.codecs.IterableCodecProvider}</li>
      * <li>{@link org.bson.codecs.MapCodecProvider}</li>
      * <li>{@link com.mongodb.client.model.geojson.codecs.GeoJsonCodecProvider}</li>
@@ -229,9 +244,13 @@ public class MongoClient implements Closeable {
     private MongoClient(final MongoClientSettings settings,
                        @Nullable final MongoClientOptions options,
                        @Nullable final MongoDriverInformation mongoDriverInformation) {
-        delegate = new MongoClientImpl(settings, wrapMongoDriverInformation(mongoDriverInformation));
+        MongoDriverInformation wrappedMongoDriverInformation = wrapMongoDriverInformation(mongoDriverInformation);
+        delegate = new MongoClientImpl(settings, wrappedMongoDriverInformation);
         this.options = options != null ? options : MongoClientOptions.builder(settings).build();
         cursorCleaningService = this.options.isCursorFinalizerEnabled() ? createCursorCleaningService() : null;
+        this.closed = new AtomicBoolean();
+        BsonDocument clientMetadataDocument = createClientMetadataDocument(settings.getApplicationName(), mongoDriverInformation);
+        LOGGER.info(format("MongoClient with metadata %s created with settings %s", clientMetadataDocument.toJson(), settings));
     }
 
     private static MongoDriverInformation wrapMongoDriverInformation(@Nullable final MongoDriverInformation mongoDriverInformation) {
@@ -764,9 +783,11 @@ public class MongoClient implements Closeable {
      * databases obtained from it can no longer be used.
      */
     public void close() {
-        delegate.close();
-        if (cursorCleaningService != null) {
-            cursorCleaningService.shutdownNow();
+        if (!closed.getAndSet(true)) {
+            delegate.close();
+            if (cursorCleaningService != null) {
+                cursorCleaningService.shutdownNow();
+            }
         }
     }
 
@@ -789,10 +810,6 @@ public class MongoClient implements Closeable {
         return delegate.getServerSessionPool();
     }
 
-    BufferProvider getBufferProvider() {
-        return bufferProvider;
-    }
-
     @Nullable
     ExecutorService getCursorCleaningService() {
         return cursorCleaningService;
@@ -811,6 +828,10 @@ public class MongoClient implements Closeable {
         return delegate;
     }
 
+    TimeoutSettings getTimeoutSettings() {
+        return delegate.getTimeoutSettings();
+    }
+
     private ExecutorService createCursorCleaningService() {
         ScheduledExecutorService newTimer = Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory("CleanCursors"));
         newTimer.scheduleAtFixedRate(this::cleanCursors, 1, 1, SECONDS);
@@ -821,13 +842,17 @@ public class MongoClient implements Closeable {
         ServerCursorAndNamespace cur;
         while ((cur = orphanedCursors.poll()) != null) {
             ReadWriteBinding binding = new SingleServerBinding(delegate.getCluster(), cur.serverCursor.getAddress(),
-                    options.getServerApi());
+                    new OperationContext(IgnorableRequestContext.INSTANCE, NoOpSessionContext.INSTANCE,
+                            new TimeoutContext(getTimeoutSettings()), options.getServerApi()));
             try {
                 ConnectionSource source = binding.getReadConnectionSource();
                 try {
                     Connection connection = source.getConnection();
                     try {
-                        connection.killCursor(cur.namespace, singletonList(cur.serverCursor.getId()));
+                        BsonDocument killCursorsCommand = new BsonDocument("killCursors", new BsonString(cur.namespace.getCollectionName()))
+                                .append("cursors", new BsonArray(singletonList(new BsonInt64(cur.serverCursor.getId()))));
+                        connection.command(cur.namespace.getDatabaseName(), killCursorsCommand, NoOpFieldNameValidator.INSTANCE,
+                                ReadPreference.primary(), new BsonDocumentCodec(), source.getOperationContext());
                     } finally {
                         connection.release();
                     }

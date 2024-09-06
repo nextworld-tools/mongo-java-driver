@@ -19,9 +19,11 @@ package com.mongodb.reactivestreams.client.syncadapter;
 import com.mongodb.CursorType;
 import com.mongodb.ExplainVerbosity;
 import com.mongodb.client.FindIterable;
+import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.FindPublisher;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import reactor.core.publisher.Mono;
@@ -29,6 +31,7 @@ import reactor.core.publisher.Mono;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.CONTEXT;
 import static java.util.Objects.requireNonNull;
 
 class SyncFindIterable<T> extends SyncMongoIterable<T> implements FindIterable<T> {
@@ -88,13 +91,6 @@ class SyncFindIterable<T> extends SyncMongoIterable<T> implements FindIterable<T
     }
 
     @Override
-    @Deprecated
-    public FindIterable<T> oplogReplay(final boolean oplogReplay) {
-        wrapped.oplogReplay(oplogReplay);
-        return this;
-    }
-
-    @Override
     public FindIterable<T> partial(final boolean partial) {
         wrapped.partial(partial);
         return this;
@@ -126,6 +122,12 @@ class SyncFindIterable<T> extends SyncMongoIterable<T> implements FindIterable<T
     }
 
     @Override
+    public FindIterable<T> comment(@Nullable final BsonValue comment) {
+        wrapped.comment(comment);
+        return this;
+    }
+
+    @Override
     public FindIterable<T> hint(@Nullable final Bson hint) {
         wrapped.hint(hint);
         return this;
@@ -134,6 +136,12 @@ class SyncFindIterable<T> extends SyncMongoIterable<T> implements FindIterable<T
     @Override
     public FindIterable<T> hintString(@Nullable final String hint) {
         wrapped.hintString(hint);
+        return this;
+    }
+
+    @Override
+    public FindIterable<T> let(@Nullable final Bson variables) {
+        wrapped.let(variables);
         return this;
     }
 
@@ -168,22 +176,28 @@ class SyncFindIterable<T> extends SyncMongoIterable<T> implements FindIterable<T
     }
 
     @Override
+    public FindIterable<T> timeoutMode(final TimeoutMode timeoutMode) {
+        wrapped.timeoutMode(timeoutMode);
+        return this;
+    }
+
+    @Override
     public Document explain() {
-        return requireNonNull(Mono.from(wrapped.explain()).block(TIMEOUT_DURATION));
+        return requireNonNull(Mono.from(wrapped.explain()).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
     public Document explain(final ExplainVerbosity verbosity) {
-        return requireNonNull(Mono.from(wrapped.explain(verbosity)).block(TIMEOUT_DURATION));
+        return requireNonNull(Mono.from(wrapped.explain(verbosity)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
     public <E> E explain(final Class<E> explainResultClass) {
-        return requireNonNull(Mono.from(wrapped.explain(explainResultClass)).block(TIMEOUT_DURATION));
+        return requireNonNull(Mono.from(wrapped.explain(explainResultClass)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 
     @Override
     public <E> E explain(final Class<E> explainResultClass, final ExplainVerbosity verbosity) {
-        return requireNonNull(Mono.from(wrapped.explain(explainResultClass, verbosity)).block(TIMEOUT_DURATION));
+        return requireNonNull(Mono.from(wrapped.explain(explainResultClass, verbosity)).contextWrite(CONTEXT).block(TIMEOUT_DURATION));
     }
 }

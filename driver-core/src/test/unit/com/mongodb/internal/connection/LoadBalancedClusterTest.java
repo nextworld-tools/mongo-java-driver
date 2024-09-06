@@ -19,6 +19,7 @@ package com.mongodb.internal.connection;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoConfigurationException;
 import com.mongodb.MongoException;
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
@@ -29,8 +30,8 @@ import com.mongodb.connection.ServerConnectionState;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.connection.ServerSettings;
 import com.mongodb.connection.ServerType;
+import com.mongodb.lang.NonNull;
 import com.mongodb.selector.ServerSelector;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Tag;
@@ -50,6 +51,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT;
+import static com.mongodb.ClusterFixture.TIMEOUT_SETTINGS;
+import static com.mongodb.ClusterFixture.createOperationContext;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,14 +94,14 @@ public class LoadBalancedClusterTest {
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, mock(DnsSrvRecordMonitorFactory.class));
 
         // when
-        ServerTuple serverTuple = cluster.selectServer(mock(ServerSelector.class));
+        ServerTuple serverTuple = cluster.selectServer(mock(ServerSelector.class), OPERATION_CONTEXT);
 
         // then
         assertServerTupleExpectations(serverAddress, expectedServer, serverTuple);
 
         // when
         FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
-        cluster.selectServerAsync(mock(ServerSelector.class), callback);
+        cluster.selectServerAsync(mock(ServerSelector.class), OPERATION_CONTEXT, callback);
         serverTuple = callback.get();
 
         // then
@@ -119,13 +123,13 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1)));
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         // when
-        ServerTuple serverTuple = cluster.selectServer(mock(ServerSelector.class));
+        ServerTuple serverTuple = cluster.selectServer(mock(ServerSelector.class), OPERATION_CONTEXT);
 
         // then
         assertServerTupleExpectations(resolvedServerAddress, expectedServer, serverTuple);
@@ -146,14 +150,14 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1)));
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         // when
         FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
-        cluster.selectServerAsync(mock(ServerSelector.class), callback);
+        cluster.selectServerAsync(mock(ServerSelector.class), OPERATION_CONTEXT, callback);
         ServerTuple serverTuple = callback.get();
 
         // then
@@ -172,13 +176,14 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory();
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1))
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2))
                         .hosts(Arrays.asList(new ServerAddress("host1"), new ServerAddress("host2"))));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
-        MongoClientException exception = assertThrows(MongoClientException.class, () -> cluster.selectServer(mock(ServerSelector.class)));
+        MongoClientException exception = assertThrows(MongoClientException.class, () -> cluster.selectServer(mock(ServerSelector.class),
+                OPERATION_CONTEXT));
         assertEquals("In load balancing mode, the host must resolve to a single SRV record, but instead it resolved to multiple hosts",
                 exception.getMessage());
     }
@@ -195,14 +200,14 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory();
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1))
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2))
                         .hosts(Arrays.asList(new ServerAddress("host1"), new ServerAddress("host2"))));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
-        cluster.selectServerAsync(mock(ServerSelector.class), callback);
+        cluster.selectServerAsync(mock(ServerSelector.class), OPERATION_CONTEXT, callback);
 
         MongoClientException exception = assertThrows(MongoClientException.class, callback::get);
         assertEquals("In load balancing mode, the host must resolve to a single SRV record, but instead it resolved to multiple hosts",
@@ -217,7 +222,6 @@ public class LoadBalancedClusterTest {
         ClusterableServer expectedServer = mock(ClusterableServer.class);
 
         ClusterSettings clusterSettings = ClusterSettings.builder()
-                .serverSelectionTimeout(5, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -225,13 +229,40 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1)).sleepTime(Duration.ofHours(1)));
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)).sleepTime(Duration.ofHours(1)));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
-        MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, () -> cluster.selectServer(mock(ServerSelector.class)));
-        assertEquals("Timed out after 5 ms while waiting to resolve SRV records for foo.bar.com.", exception.getMessage());
+        MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, () -> cluster.selectServer(mock(ServerSelector.class),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5))));
+        assertTrue(exception.getMessage().contains("while waiting to resolve SRV records for foo.bar.com"));
+    }
+
+    @Test
+    public void shouldTimeoutSelectServerWhenThereIsSRVLookupAndTimeoutMsIsSet() {
+        // given
+        String srvHostName = "foo.bar.com";
+        ServerAddress resolvedServerAddress = new ServerAddress("host1");
+        ClusterableServer expectedServer = mock(ClusterableServer.class);
+
+        ClusterSettings clusterSettings = ClusterSettings.builder()
+                .mode(ClusterConnectionMode.LOAD_BALANCED)
+                .srvHost(srvHostName)
+                .build();
+
+        ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
+
+        DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)).sleepTime(Duration.ofHours(1)));
+
+        cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
+
+        //when & then
+        MongoOperationTimeoutException exception = assertThrows(MongoOperationTimeoutException.class, () -> cluster.selectServer(mock(ServerSelector.class),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5).withTimeout(10L, MILLISECONDS))));
+        assertTrue(exception.getMessage().contains("while waiting to resolve SRV records for foo.bar.com"));
     }
 
     @Test
@@ -242,7 +273,6 @@ public class LoadBalancedClusterTest {
         ClusterableServer expectedServer = mock(ClusterableServer.class);
 
         ClusterSettings clusterSettings = ClusterSettings.builder()
-                .serverSelectionTimeout(10, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -250,16 +280,17 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1))
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2))
                         .sleepTime(Duration.ofMillis(1))
                         .exception(new MongoConfigurationException("Unable to resolve SRV record")));
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
-        MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, () -> cluster.selectServer(mock(ServerSelector.class)));
-        assertEquals("Timed out after 10 ms while waiting to resolve SRV records for foo.bar.com. "
-                        + "Resolution exception was 'com.mongodb.MongoConfigurationException: Unable to resolve SRV record'",
-                exception.getMessage());
+        MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, () -> cluster.selectServer(mock(ServerSelector.class),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(10))));
+
+        assertTrue(exception.getMessage().contains("while waiting to resolve SRV records for foo.bar.com"));
+        assertTrue(exception.getMessage().contains("Resolution exception was 'com.mongodb.MongoConfigurationException: Unable to resolve SRV record'"));
     }
 
     @Test
@@ -271,7 +302,6 @@ public class LoadBalancedClusterTest {
 
         ClusterSettings clusterSettings = ClusterSettings
                 .builder()
-                .serverSelectionTimeout(5, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -279,16 +309,17 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1)).sleepTime(Duration.ofHours(1)));
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)).sleepTime(Duration.ofHours(1)));
 
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
-        cluster.selectServerAsync(mock(ServerSelector.class), callback);
+        cluster.selectServerAsync(mock(ServerSelector.class),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5)), callback);
 
         MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, callback::get);
-        assertEquals("Timed out after 5 ms while waiting to resolve SRV records for foo.bar.com.", exception.getMessage());
+        assertTrue(exception.getMessage().contains("while waiting to resolve SRV records for foo.bar.com"));
     }
 
     @Test
@@ -299,7 +330,6 @@ public class LoadBalancedClusterTest {
         ClusterableServer expectedServer = mock(ClusterableServer.class);
 
         ClusterSettings clusterSettings = ClusterSettings.builder()
-                .serverSelectionTimeout(10, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -307,38 +337,37 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mockServerFactory(resolvedServerAddress, expectedServer);
 
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1))
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2))
                         .sleepTime(Duration.ofMillis(1))
                         .exception(new MongoConfigurationException("Unable to resolve SRV record")));
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
-        cluster.selectServerAsync(mock(ServerSelector.class), callback);
+        cluster.selectServerAsync(mock(ServerSelector.class),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(10)), callback);
 
         MongoTimeoutException exception = assertThrows(MongoTimeoutException.class, callback::get);
-        assertEquals("Timed out after 10 ms while waiting to resolve SRV records for foo.bar.com. "
-                        + "Resolution exception was 'com.mongodb.MongoConfigurationException: Unable to resolve SRV record'",
-                exception.getMessage());
+        assertTrue(exception.getMessage().contains("while waiting to resolve SRV records for foo.bar.com"));
+        assertTrue(exception.getMessage().contains("Resolution exception was 'com.mongodb.MongoConfigurationException: Unable to resolve SRV record'"));
     }
 
     @Test
     void shouldNotInitServerAfterClosing() {
         // prepare mocks
+        ClusterSettings clusterSettings = ClusterSettings.builder().mode(ClusterConnectionMode.LOAD_BALANCED).srvHost("foo.bar.com").build();
         ClusterableServerFactory serverFactory = mock(ClusterableServerFactory.class);
         when(serverFactory.getSettings()).thenReturn(mock(ServerSettings.class));
         DnsSrvRecordMonitorFactory srvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(srvRecordMonitorFactory.create(any(), any(DnsSrvRecordInitializer.class))).thenReturn(mock(DnsSrvRecordMonitor.class));
+        when(srvRecordMonitorFactory.create(any(), eq(clusterSettings.getSrvServiceName()), any(DnsSrvRecordInitializer.class))).thenReturn(mock(DnsSrvRecordMonitor.class));
         ArgumentCaptor<DnsSrvRecordInitializer> serverInitializerCaptor = ArgumentCaptor.forClass(DnsSrvRecordInitializer.class);
         // create `cluster` and capture its `DnsSrvRecordInitializer` (server initializer)
-        LoadBalancedCluster cluster = new LoadBalancedCluster(new ClusterId(),
-                ClusterSettings.builder().mode(ClusterConnectionMode.LOAD_BALANCED).srvHost("foo.bar.com").build(),
-                serverFactory, srvRecordMonitorFactory);
-        verify(srvRecordMonitorFactory, times(1)).create(any(), serverInitializerCaptor.capture());
+        LoadBalancedCluster cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, srvRecordMonitorFactory);
+        verify(srvRecordMonitorFactory, times(1)).create(any(), eq(clusterSettings.getSrvServiceName()), serverInitializerCaptor.capture());
         // close `cluster`, call `DnsSrvRecordInitializer.initialize` and check that it does not result in creating a `ClusterableServer`
         cluster.close();
         serverInitializerCaptor.getValue().initialize(Collections.singleton(new ServerAddress()));
-        verify(serverFactory, never()).create(any(), any(), any(), any());
+        verify(serverFactory, never()).create(any(), any());
     }
 
     @Test
@@ -347,12 +376,12 @@ public class LoadBalancedClusterTest {
         ClusterableServerFactory serverFactory = mock(ClusterableServerFactory.class);
         when(serverFactory.getSettings()).thenReturn(mock(ServerSettings.class));
         ClusterableServer server = mock(ClusterableServer.class);
-        when(serverFactory.create(any(), any(), any(), any())).thenReturn(server);
+        when(serverFactory.create(any(), any())).thenReturn(server);
         // create `cluster` and check that it creates a `ClusterableServer`
         LoadBalancedCluster cluster = new LoadBalancedCluster(new ClusterId(),
                 ClusterSettings.builder().mode(ClusterConnectionMode.LOAD_BALANCED).build(), serverFactory,
                 mock(DnsSrvRecordMonitorFactory.class));
-        verify(serverFactory, times(1)).create(any(), any(), any(), any());
+        verify(serverFactory, times(1)).create(any(), any());
         // close `cluster` and check that it closes `server`
         cluster.close();
         verify(server, atLeastOnce()).close();
@@ -366,7 +395,6 @@ public class LoadBalancedClusterTest {
         ClusterableServer expectedServer = mock(ClusterableServer.class);
 
         ClusterSettings clusterSettings = ClusterSettings.builder()
-                .serverSelectionTimeout(5, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -375,8 +403,8 @@ public class LoadBalancedClusterTest {
 
         Duration srvResolutionTime = Duration.ofSeconds(5);
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
-                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(1)).sleepTime(srvResolutionTime));
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
+                invocation -> new TestDnsSrvRecordMonitor(invocation.getArgument(2)).sleepTime(srvResolutionTime));
         cluster = new LoadBalancedCluster(new ClusterId(), clusterSettings, serverFactory, dnsSrvRecordMonitorFactory);
 
         int numThreads = 100;
@@ -387,7 +415,8 @@ public class LoadBalancedClusterTest {
                 boolean success = false;
                 while (!success) {
                     try {
-                        cluster.selectServer(mock(ServerSelector.class));
+                        cluster.selectServer(mock(ServerSelector.class),
+                                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5)));
                         success = true;
                     } catch (MongoTimeoutException e) {
                         // this is expected
@@ -395,7 +424,8 @@ public class LoadBalancedClusterTest {
                 }
                 // Keep going for a little while
                 for (int j = 0; j < 100; j++) {
-                    cluster.selectServer(mock(ServerSelector.class));
+                    cluster.selectServer(mock(ServerSelector.class),
+                            createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5)));
                 }
             }));
         }
@@ -415,7 +445,6 @@ public class LoadBalancedClusterTest {
         ClusterableServer expectedServer = mock(ClusterableServer.class);
 
         ClusterSettings clusterSettings = ClusterSettings.builder()
-                .serverSelectionTimeout(5, MILLISECONDS)
                 .mode(ClusterConnectionMode.LOAD_BALANCED)
                 .srvHost(srvHostName)
                 .build();
@@ -425,9 +454,9 @@ public class LoadBalancedClusterTest {
         Duration srvResolutionTime = Duration.ofSeconds(5);
         DnsSrvRecordMonitorFactory dnsSrvRecordMonitorFactory = mock(DnsSrvRecordMonitorFactory.class);
         AtomicReference<TestDnsSrvRecordMonitor> dnsSrvRecordMonitorReference = new AtomicReference<>();
-        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), any())).thenAnswer(
+        when(dnsSrvRecordMonitorFactory.create(eq(srvHostName), eq(clusterSettings.getSrvServiceName()), any())).thenAnswer(
                 invocation -> {
-                    TestDnsSrvRecordMonitor dnsSrvRecordMonitor = new TestDnsSrvRecordMonitor(invocation.getArgument(1))
+                    TestDnsSrvRecordMonitor dnsSrvRecordMonitor = new TestDnsSrvRecordMonitor(invocation.getArgument(2))
                             .sleepTime(srvResolutionTime);
                     dnsSrvRecordMonitorReference.set(dnsSrvRecordMonitor);
                     return dnsSrvRecordMonitor;
@@ -445,13 +474,15 @@ public class LoadBalancedClusterTest {
                 while (!dnsSrvRecordMonitorReference.get().isInitialized()) {
                     FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
                     callbacks.add(callback);
-                    cluster.selectServerAsync(mock(ServerSelector.class), callback);
+                    cluster.selectServerAsync(mock(ServerSelector.class),
+                            createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5)), callback);
                 }
                 // Keep going for a little while
                 for (int j = 0; j < 100; j++) {
                     FutureResultCallback<ServerTuple> callback = new FutureResultCallback<>();
                     callbacks.add(callback);
-                    cluster.selectServerAsync(mock(ServerSelector.class), callback);
+                    cluster.selectServerAsync(mock(ServerSelector.class),
+                            createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(5)), callback);
                 }
             }));
         }
@@ -488,15 +519,15 @@ public class LoadBalancedClusterTest {
         assertEquals(ServerType.LOAD_BALANCER, serverDescription.getType());
     }
 
-    @NotNull
+    @NonNull
     private ClusterableServerFactory mockServerFactory(final ServerAddress serverAddress, final ClusterableServer expectedServer) {
         ClusterableServerFactory serverFactory = mock(ClusterableServerFactory.class);
         when(serverFactory.getSettings()).thenReturn(ServerSettings.builder().build());
-        when(serverFactory.create(eq(serverAddress), any(), any(), any())).thenReturn(expectedServer);
+        when(serverFactory.create(any(), eq(serverAddress))).thenReturn(expectedServer);
         return serverFactory;
     }
 
-    @NotNull
+    @NonNull
     private ClusterableServerFactory mockServerFactory() {
         ClusterableServerFactory serverFactory = mock(ClusterableServerFactory.class);
         when(serverFactory.getSettings()).thenReturn(ServerSettings.builder().build());

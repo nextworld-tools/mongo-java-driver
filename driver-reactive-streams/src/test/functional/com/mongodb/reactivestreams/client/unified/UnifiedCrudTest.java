@@ -16,41 +16,21 @@
 
 package com.mongodb.reactivestreams.client.unified;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.unified.UnifiedTest;
-import com.mongodb.lang.Nullable;
-import com.mongodb.reactivestreams.client.MongoClients;
-import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-public class UnifiedCrudTest extends UnifiedTest {
-    @SuppressWarnings("FieldCanBeLocal")
-    private final String fileDescription;
-    @SuppressWarnings("FieldCanBeLocal")
-    private final String testDescription;
+import static com.mongodb.client.unified.UnifiedCrudTest.doSkips;
 
-    public UnifiedCrudTest(final String fileDescription, final String testDescription, final String schemaVersion,
-                            @Nullable final BsonArray runOnRequirements, final BsonArray entities, final BsonArray initialData,
-                            final BsonDocument definition) {
-        super(schemaVersion, runOnRequirements, entities, initialData, definition);
-        this.fileDescription = fileDescription;
-        this.testDescription = testDescription;
-    }
-
+final class UnifiedCrudTest extends UnifiedReactiveStreamsTest {
     @Override
-    protected MongoClient createMongoClient(final MongoClientSettings settings) {
-        return new SyncMongoClient(MongoClients.create(settings));
+    protected void skips(final String fileDescription, final String testDescription) {
+        doSkips(fileDescription, testDescription);
     }
 
-    @Parameterized.Parameters(name = "{0}: {1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
+    private static Collection<Arguments> data() throws URISyntaxException, IOException {
         return getTestData("unified-test-format/crud");
     }
 }

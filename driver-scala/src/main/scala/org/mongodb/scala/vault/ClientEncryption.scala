@@ -16,12 +16,13 @@
 
 package org.mongodb.scala.vault
 
-import java.io.Closeable
+import com.mongodb.annotations.{ Beta, Reason }
+import com.mongodb.client.model.{ CreateCollectionOptions, CreateEncryptedCollectionParams }
 
-import com.mongodb.annotations.Beta
+import java.io.Closeable
 import com.mongodb.reactivestreams.client.vault.{ ClientEncryption => JClientEncryption }
-import org.bson.{ BsonBinary, BsonValue }
-import org.mongodb.scala.SingleObservable
+import org.bson.{ BsonBinary, BsonDocument, BsonValue }
+import org.mongodb.scala.{ Document, MongoDatabase, SingleObservable, ToSingleObservablePublisher }
 import org.mongodb.scala.model.vault.{ DataKeyOptions, EncryptOptions }
 
 /**
@@ -29,11 +30,8 @@ import org.mongodb.scala.model.vault.{ DataKeyOptions, EncryptOptions }
  *
  * Used to create data encryption keys, and to explicitly encrypt and decrypt values when auto-encryption is not an option.
  *
- * @note support for client-side encryption should be considered as beta.  Backwards-breaking changes may be made before the final
- * release.
  * @since 2.7
  */
-@Beta
 case class ClientEncryption(private val wrapped: JClientEncryption) extends Closeable {
 
   /**
@@ -70,12 +68,75 @@ case class ClientEncryption(private val wrapped: JClientEncryption) extends Clos
     wrapped.encrypt(value, options)
 
   /**
+   * Encrypts a Match Expression or Aggregate Expression to query a range index.
+   *
+   * The expression is expected to be in one of the following forms:
+   *
+   * - A Match Expression of this form:
+   *   {{{ {\$and: [{<field>: {\$gt: <value1>}}, {<field>: {\$lt: <value2> }}]}} }}}
+   * - An Aggregate Expression of this form:
+   *   {{{ {\$and: [{\$gt: [<fieldpath>, <value1>]}, {\$lt: [<fieldpath>, <value2>]}] }} }}}
+   *
+   * `\$gt` may also be `\$gte`. `\$lt` may also be `\$lte`.
+   *
+   * Only supported when queryType is "range" and algorithm is "Range".
+   *
+   * [[https://www.mongodb.com/docs/manual/core/queryable-encryption/ queryable encryption]]
+   *
+   * @note Requires MongoDB 8.0 or greater
+   * @param expression the Match Expression or Aggregate Expression
+   * @param options    the options
+   * @return a Publisher containing the queryable encrypted range expression
+   * @since 4.9
+   */
+  def encryptExpression(
+      expression: Document,
+      options: EncryptOptions
+  ): SingleObservable[Document] =
+    wrapped.encryptExpression(expression.toBsonDocument, options).map(d => Document(d))
+
+  /**
    * Decrypt the given value.
    *
    * @param value the value to decrypt, which must be of subtype 6
    * @return a Publisher containing the decrypted value
    */
   def decrypt(value: BsonBinary): SingleObservable[BsonValue] = wrapped.decrypt(value)
+
+  /**
+   * Create a new collection with encrypted fields,
+   * automatically creating
+   * new data encryption keys when needed based on the configured
+   * `encryptedFields`, which must be specified.
+   * This method does not modify the configured `encryptedFields` when creating new data keys,
+   * instead it creates a new configuration if needed.
+   *
+   * @param database The database to use for creating the collection.
+   * @param collectionName The name for the collection to create.
+   * @param createCollectionOptions Options for creating the collection.
+   * @param createEncryptedCollectionParams Auxiliary parameters for creating an encrypted collection.
+   * @return A publisher of the (potentially updated) `encryptedFields` configuration that was used to create the collection.
+   * A user may use this document to configure `com.mongodb.AutoEncryptionSettings.getEncryptedFieldsMap`.
+   *
+   * Produces MongoUpdatedEncryptedFieldsException` if an exception happens after creating at least one data key.
+   * This exception makes the updated `encryptedFields` available to the caller.
+   * @since 4.9
+   * @note Requires MongoDB 7.0 or greater.
+   * @see [[https://www.mongodb.com/docs/manual/reference/command/create/ Create Command]]
+   */
+  @Beta(Array(Reason.SERVER))
+  def createEncryptedCollection(
+      database: MongoDatabase,
+      collectionName: String,
+      createCollectionOptions: CreateCollectionOptions,
+      createEncryptedCollectionParams: CreateEncryptedCollectionParams
+  ): SingleObservable[BsonDocument] =
+    wrapped.createEncryptedCollection(
+      database.wrapped,
+      collectionName,
+      createCollectionOptions,
+      createEncryptedCollectionParams
+    )
 
   override def close(): Unit = wrapped.close()
 

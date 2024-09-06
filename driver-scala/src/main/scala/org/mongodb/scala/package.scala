@@ -16,6 +16,7 @@
 
 package org.mongodb
 
+import com.mongodb.annotations.{ Beta, Reason }
 import org.bson.BsonDocumentReader
 import org.bson.codecs.{ DecoderContext, DocumentCodec }
 import org.mongodb.scala.bson.BsonDocument
@@ -106,6 +107,16 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
    * An immutable set of tags, used to select members of a replica set to use for read operations.
    */
   type TagSet = com.mongodb.TagSet
+
+  /**
+   * The timeout mode for a cursor
+   *
+   * For operations that create cursors, `timeoutMS` can either cap the lifetime of the cursor or be applied separately to the
+   * original operation and all next calls.
+   *
+   * @since 5.2
+   */
+  type TimeoutMode = com.mongodb.client.cursor.TimeoutMode
 
   /**
    * Controls the acknowledgment of write operations with various options.
@@ -240,9 +251,14 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
   type MongoCommandException = com.mongodb.MongoCommandException
 
   /**
-   * Subclass of [[MongoException]] representsing a cursor-not-found exception.
+   * Subclass of [[MongoException]] representing a cursor-not-found exception.
    */
   type MongoCursorNotFoundException = com.mongodb.MongoCursorNotFoundException
+
+  /**
+   * Subclass of [[MongoClientException]] representing a server-unavailable exception.
+   */
+  type MongoServerUnavailableException = com.mongodb.MongoServerUnavailableException
 
   /**
    * Exception indicating that the execution of the current operation timed out as a result of the maximum operation time being exceeded.
@@ -318,6 +334,11 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
   type MongoSocketReadTimeoutException = com.mongodb.MongoSocketReadTimeoutException
 
   /**
+   * This exception is thrown when there is a timeout writing to a socket.
+   */
+  type MongoSocketWriteTimeoutException = com.mongodb.MongoSocketWriteTimeoutException
+
+  /**
    * This exception is thrown when there is an exception writing a response to a Socket.
    */
   type MongoSocketWriteException = com.mongodb.MongoSocketWriteException
@@ -326,6 +347,19 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
    * An exception indicating that the driver has timed out waiting for either a server or a connection to become available.
    */
   type MongoTimeoutException = com.mongodb.MongoTimeoutException
+
+  /**
+   * Exception thrown to indicate that a MongoDB operation has exceeded the specified timeout for
+   * the full execution of operation.
+   *
+   * <p> The [[MongoOperationTimeoutException]] might provide information about the underlying
+   * cause of the timeout, if available. For example, if retries are attempted due to transient failures,
+   * and a timeout occurs in any of the attempts, the exception from one of the retries may be appended
+   * as the cause to this [[MongoOperationTimeoutException]].
+   
+   @since 5.0
+   */
+  type MongoOperationTimeoutException = com.mongodb.MongoOperationTimeoutException
 
   /**
    * An exception indicating a failure to apply the write concern to the requested write operation
@@ -350,7 +384,22 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
   type DuplicateKeyException = com.mongodb.DuplicateKeyException
 
   /**
-   * The client-side automatic encryption settings. Client side encryption enables an application to specify what fields in a collection
+   * An exception that may happen usually as a result of another thread clearing a connection pool.
+   * Such clearing usually itself happens as a result of an exception.
+   */
+  type MongoConnectionPoolClearedException = com.mongodb.MongoConnectionPoolClearedException
+
+  /**
+   * An exception thrown by methods that may automatically create data encryption keys
+   * where needed based on the `encryptedFields` configuration.
+   *
+   * @since 4.9
+   */
+  @Beta(Array(Reason.SERVER))
+  type MongoUpdatedEncryptedFieldsException = com.mongodb.MongoUpdatedEncryptedFieldsException
+
+  /**
+   * The client-side automatic encryption settings. In-use encryption enables an application to specify what fields in a collection
    * must be encrypted, and the driver automatically encrypts commands sent to MongoDB and decrypts responses.
    *
    * Automatic encryption is an enterprise only feature that only applies to operations on a collection. Automatic encryption is not
@@ -369,6 +418,9 @@ package object scala extends ClientSessionImplicits with ObservableImplicits wit
    * maxMessageSizeBytes of 6MB) and may have a negative performance impact.
    *
    * Automatic encryption requires the authenticated user to have the listCollections privilege action.
+   *
+   * Supplying an `encryptedFieldsMap` provides more security than relying on an encryptedFields obtained from the server.
+   * It protects against a malicious server advertising false encryptedFields.
    *
    * @since 2.7
    */

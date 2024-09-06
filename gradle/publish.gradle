@@ -24,7 +24,7 @@ ext {
         { ->
                 name = project.hasProperty('pomName') ? project.getProperty('pomName') : project.name
                 description = project.description
-                url = project.hasProperty('pomURL') ? project.getProperty('pomURL') : 'http://www.mongodb.org'
+                url = project.hasProperty('pomURL') ? project.getProperty('pomURL') : 'https://www.mongodb.com/'
                 licenses {
                     license {
                         name = 'The Apache License, Version 2.0'
@@ -55,12 +55,15 @@ ext {
                     password project.hasProperty('nexusPassword') ? project.getProperty('nexusPassword') : ''
                 }
             }
+
+            maven {
+                url = "$rootDir/build/repo"
+            }
         }
     }
     configureJarManifestAttributes = { project ->
         { ->
             manifest.attributes['-exportcontents'] =  "*;-noimport:=true"
-            manifest.attributes['Automatic-Module-Name'] =  project.group + '.' + project.archivesBaseName
             manifest.attributes['Build-Version'] =  project.gitVersion
             manifest.attributes['Bundle-Version'] =  project.version
             manifest.attributes['Bundle-Name'] =  project.archivesBaseName
@@ -69,11 +72,13 @@ ext {
     }
 }
 
-def scalaProjects = subprojects.findAll { it.name.contains('scala') }
-def javaProjects = subprojects.findAll { !scalaProjects.contains(it) && !['util', 'driver-benchmarks', 'driver-workload-executor'].contains(it.name) }
+def projectsNotPublishedToMaven = project(":util").allprojects + project(":driver-benchmarks") + project("driver-workload-executor") + project("driver-lambda") + project(":graalvm-native-image-app")
+def publishedProjects = subprojects - projectsNotPublishedToMaven
+def scalaProjects = publishedProjects.findAll { it.name.contains('scala') }
+def javaProjects = publishedProjects - scalaProjects
+def projectsWithManifest = publishedProjects.findAll {it.name != 'driver-legacy' }
 
 configure(javaProjects) { project ->
-    apply plugin: 'biz.aQute.bnd.builder'
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
@@ -95,6 +100,8 @@ configure(javaProjects) { project ->
                 artifact sourcesJar
                 artifact javadocJar
 
+                suppressPomMetadataWarningsFor("dateTimeSupportApiElements")
+                suppressPomMetadataWarningsFor("dateTimeRuntimeElements")
             }
         }
 
@@ -102,7 +109,6 @@ configure(javaProjects) { project ->
     }
 
     afterEvaluate {
-        jar configureJarManifestAttributes(project)
         publishing.publications.mavenJava.artifactId = project.archivesBaseName
         publishing.publications.mavenJava.pom configurePom(project)
         signing {
@@ -113,7 +119,6 @@ configure(javaProjects) { project ->
 }
 
 configure(scalaProjects) { project ->
-    apply plugin: 'biz.aQute.bnd.builder'
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
@@ -141,11 +146,18 @@ configure(scalaProjects) { project ->
     }
 
     afterEvaluate {
-        jar configureJarManifestAttributes(project)
         publishing.publications.mavenJava.pom configurePom(project)
         signing {
             useInMemoryPgpKeys(findProperty("signingKey"), findProperty("signingPassword"))
             sign publishing.publications.mavenJava
         }
+    }
+}
+
+
+configure(projectsWithManifest) { project ->
+    apply plugin: 'biz.aQute.bnd.builder'
+    afterEvaluate {
+        jar configureJarManifestAttributes(project)
     }
 }

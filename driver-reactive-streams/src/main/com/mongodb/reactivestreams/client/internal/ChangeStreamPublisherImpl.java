@@ -19,26 +19,28 @@ package com.mongodb.reactivestreams.client.internal;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
+import com.mongodb.internal.TimeoutSettings;
 import com.mongodb.internal.async.AsyncBatchCursor;
 import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
+import com.mongodb.internal.operation.AsyncOperations;
 import com.mongodb.internal.operation.AsyncReadOperation;
-import com.mongodb.internal.operation.ChangeStreamOperation;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.BsonTimestamp;
+import org.bson.BsonValue;
 import org.bson.codecs.Codec;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 
 
 final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStreamDocument<T>>
@@ -49,11 +51,14 @@ final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStre
     private final ChangeStreamLevel changeStreamLevel;
 
     private FullDocument fullDocument = FullDocument.DEFAULT;
+    private FullDocumentBeforeChange fullDocumentBeforeChange = FullDocumentBeforeChange.DEFAULT;
     private BsonDocument resumeToken;
     private BsonDocument startAfter;
     private long maxAwaitTimeMS;
     private Collation collation;
+    private BsonValue comment;
     private BsonTimestamp startAtOperationTime;
+    private boolean showExpandedEvents;
 
     ChangeStreamPublisherImpl(
             @Nullable final ClientSession clientSession,
@@ -86,6 +91,12 @@ final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStre
     }
 
     @Override
+    public ChangeStreamPublisher<T> fullDocumentBeforeChange(final FullDocumentBeforeChange fullDocumentBeforeChange) {
+        this.fullDocumentBeforeChange = notNull("fullDocumentBeforeChange", fullDocumentBeforeChange);
+        return this;
+    }
+
+    @Override
     public ChangeStreamPublisher<T> resumeAfter(final BsonDocument resumeAfter) {
         this.resumeToken = notNull("resumeAfter", resumeAfter);
         return this;
@@ -98,9 +109,21 @@ final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStre
     }
 
     @Override
+    public ChangeStreamPublisher<T> comment(@Nullable final String comment) {
+        this.comment = comment == null ? null : new BsonString(comment);
+        return this;
+    }
+
+
+    @Override
+    public ChangeStreamPublisher<T> comment(@Nullable final BsonValue comment) {
+        this.comment = comment;
+        return this;
+    }
+
+    @Override
     public ChangeStreamPublisher<T> maxAwaitTime(final long maxAwaitTime, final TimeUnit timeUnit) {
-        notNull("timeUnit", timeUnit);
-        this.maxAwaitTimeMS = MILLISECONDS.convert(maxAwaitTime, timeUnit);
+        this.maxAwaitTimeMS = validateMaxAwaitTime(maxAwaitTime, timeUnit);
         return this;
     }
 
@@ -112,12 +135,24 @@ final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStre
 
     @Override
     public <TDocument> Publisher<TDocument> withDocumentClass(final Class<TDocument> clazz) {
-        return new BatchCursorPublisher<TDocument>(getClientSession(), getMongoOperationPublisher().withDocumentClass(clazz)) {
+        return new BatchCursorPublisher<TDocument>(getClientSession(), getMongoOperationPublisher().withDocumentClass(clazz),
+                getBatchSize()) {
             @Override
             AsyncReadOperation<AsyncBatchCursor<TDocument>> asAsyncReadOperation(final int initialBatchSize) {
                 return createChangeStreamOperation(getMongoOperationPublisher().getCodecRegistry().get(clazz), initialBatchSize);
             }
+
+            @Override
+            Function<AsyncOperations<?>, TimeoutSettings> getTimeoutSettings() {
+                return (asyncOperations -> asyncOperations.createTimeoutSettings(0, maxAwaitTimeMS));
+            }
         };
+    }
+
+    @Override
+    public ChangeStreamPublisher<T> showExpandedEvents(final boolean showExpandedEvents) {
+        this.showExpandedEvents = showExpandedEvents;
+        return this;
     }
 
     @Override
@@ -137,26 +172,14 @@ final class ChangeStreamPublisherImpl<T> extends BatchCursorPublisher<ChangeStre
         return createChangeStreamOperation(codec, initialBatchSize);
     }
 
-    private <S> AsyncReadOperation<AsyncBatchCursor<S>> createChangeStreamOperation(final Codec<S> codec, final int initialBatchSize) {
-        return new ChangeStreamOperation<>(getNamespace(), fullDocument,
-                                           createBsonDocumentList(pipeline), codec, changeStreamLevel)
-                .batchSize(initialBatchSize)
-                .collation(collation)
-                .maxAwaitTime(maxAwaitTimeMS, MILLISECONDS)
-                .resumeAfter(resumeToken)
-                .startAtOperationTime(startAtOperationTime)
-                .startAfter(startAfter)
-                .retryReads(getRetryReads());
+
+    @Override
+    Function<AsyncOperations<?>, TimeoutSettings> getTimeoutSettings() {
+        return (asyncOperations -> asyncOperations.createTimeoutSettings(0, maxAwaitTimeMS));
     }
 
-    private List<BsonDocument> createBsonDocumentList(final List<? extends Bson> pipeline) {
-        List<BsonDocument> aggregateList = new ArrayList<>(pipeline.size());
-        for (Bson obj : pipeline) {
-            if (obj == null) {
-                throw new IllegalArgumentException("pipeline can not contain a null value");
-            }
-            aggregateList.add(obj.toBsonDocument(BsonDocument.class, getCodecRegistry()));
-        }
-        return aggregateList;
+    private <S> AsyncReadOperation<AsyncBatchCursor<S>> createChangeStreamOperation(final Codec<S> codec, final int initialBatchSize) {
+        return getOperations().changeStream(fullDocument, fullDocumentBeforeChange, pipeline, codec, changeStreamLevel, initialBatchSize,
+                collation, comment, resumeToken, startAtOperationTime, startAfter, showExpandedEvents);
     }
 }

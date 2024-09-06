@@ -19,6 +19,7 @@ package com.mongodb.session;
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.ServerAddress;
 import com.mongodb.annotations.NotThreadSafe;
+import com.mongodb.internal.TimeoutContext;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
@@ -63,7 +64,7 @@ public interface ClientSession extends Closeable {
      * <p>Implementations may place additional restrictions on the type of the transaction context</p>
      *
      * @param address the server address
-     * @param transactionContext the transaction context, which may be null
+     * @param transactionContext the transaction context
      */
     void setTransactionContext(ServerAddress address, Object transactionContext);
 
@@ -139,12 +140,27 @@ public interface ClientSession extends Closeable {
      *
      * @param operationTime the operation time
      */
-    void advanceOperationTime(BsonTimestamp operationTime);
+    void advanceOperationTime(@Nullable BsonTimestamp operationTime);
 
     /**
      * @param clusterTime the cluster time to advance to
      */
-    void advanceClusterTime(BsonDocument clusterTime);
+    void advanceClusterTime(@Nullable BsonDocument clusterTime);
+
+    /**
+     * For internal use only.
+     *
+     * @param snapshotTimestamp the snapshot timestamp
+     */
+    void setSnapshotTimestamp(@Nullable BsonTimestamp snapshotTimestamp);
+
+    /**
+     * For internal use only.
+     *
+     * @return the snapshot timestamp
+     */
+    @Nullable
+    BsonTimestamp getSnapshotTimestamp();
 
     /**
      * @return the latest cluster time seen by this session
@@ -153,4 +169,18 @@ public interface ClientSession extends Closeable {
 
     @Override
     void close();
+
+    /**
+     * Gets the timeout context to use with this session:
+     *
+     * <ul>
+     *   <li>{@code MongoClientSettings#getTimeoutMS}</li>
+     *   <li>{@code ClientSessionOptions#getDefaultTimeout}</li>
+     * </ul>
+     * <p>For internal use only </p>
+     * @return the timeout to use
+     * @since 5.2
+     */
+    @Nullable
+    TimeoutContext getTimeoutContext();
 }

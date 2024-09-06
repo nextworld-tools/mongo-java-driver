@@ -16,16 +16,17 @@
 
 package com.mongodb.reactivestreams.client;
 
-import com.mongodb.AutoEncryptionSettings;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.client.AbstractClientSideEncryptionTest;
-import com.mongodb.client.Fixture;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.event.CommandListener;
 import com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.junit.After;
+
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.CONTEXT_PROVIDER;
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.assertContextPassedThrough;
 
 public class ClientSideEncryptionTest extends AbstractClientSideEncryptionTest {
 
@@ -37,13 +38,10 @@ public class ClientSideEncryptionTest extends AbstractClientSideEncryptionTest {
     }
 
     @Override
-    protected void createMongoClient(final AutoEncryptionSettings autoEncryptionSettings,
-                                     final CommandListener commandListener) {
-        mongoClient = new SyncMongoClient(
-                MongoClients.create(Fixture.getMongoClientSettingsBuilder()
-                        .autoEncryptionSettings(autoEncryptionSettings)
-                        .addCommandListener(commandListener)
-                        .build()));
+    protected void createMongoClient(final MongoClientSettings settings) {
+        mongoClient = new SyncMongoClient(MongoClients.create(
+                MongoClientSettings.builder(settings).contextProvider(CONTEXT_PROVIDER).build()
+        ));
     }
 
     @Override
@@ -51,8 +49,15 @@ public class ClientSideEncryptionTest extends AbstractClientSideEncryptionTest {
         return mongoClient.getDatabase(databaseName);
     }
 
+    @Override
+    public void shouldPassAllOutcomes() {
+        super.shouldPassAllOutcomes();
+        assertContextPassedThrough(getDefinition());
+    }
+
     @After
     public void cleanUp() {
+        super.cleanUp();
         if (mongoClient != null) {
             mongoClient.close();
         }

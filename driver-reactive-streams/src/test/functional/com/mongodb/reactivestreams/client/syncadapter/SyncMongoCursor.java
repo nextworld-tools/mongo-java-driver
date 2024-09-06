@@ -16,29 +16,42 @@
 
 package com.mongodb.reactivestreams.client.syncadapter;
 
-import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerCursor;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.lang.Nullable;
+import com.mongodb.reactivestreams.client.internal.BatchCursor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Operators;
+import reactor.util.context.Context;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.mongodb.ClusterFixture.TIMEOUT;
+import static com.mongodb.internal.thread.InterruptionUtil.interruptAndCreateMongoInterruptedException;
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.CONTEXT;
 import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.getSleepAfterCursorClose;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.getSleepAfterCursorError;
 import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.getSleepAfterCursorOpen;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.isWaitForBatchCursorCreationEnabled;
 
 class SyncMongoCursor<T> implements MongoCursor<T> {
     private static final Object COMPLETED = new Object();
     private final BlockingDeque<Object> results = new LinkedBlockingDeque<>();
+    private final CompletableFuture<Object> batchCursorCompletableFuture = new CompletableFuture<>();
     private final Integer batchSize;
     private int countToBatchSize;
     private Subscription subscription;
@@ -49,8 +62,17 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
     SyncMongoCursor(final Publisher<T> publisher, @Nullable final Integer batchSize) {
         this.batchSize = batchSize;
         CountDownLatch latch = new CountDownLatch(1);
+
+        if (isWaitForBatchCursorCreationEnabled()) {
+            // This hook allows us to intercept the `onNext` and `onError` signals for any operation to determine
+            // whether the {@link BatchCursor} was created successfully or if an error occurred during its creation process.
+            // The result is propagated to a {@link CompletableFuture}, which we use to block until it is completed.
+            Hooks.onEachOperator(Operators.lift((sc, sub) ->
+                    new BatchCursorInterceptSubscriber(sub, batchCursorCompletableFuture)));
+        }
+
         //noinspection ReactiveStreamsSubscriberImplementation
-        publisher.subscribe(new Subscriber<T>() {
+        Flux.from(publisher).contextWrite(CONTEXT).subscribe(new Subscriber<T>() {
             @Override
             public void onSubscribe(final Subscription s) {
                 subscription = s;
@@ -70,6 +92,7 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
             @Override
             public void onError(final Throwable t) {
                 results.addLast(t);
+                sleep(getSleepAfterCursorError());
             }
 
             @Override
@@ -81,9 +104,19 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
             if (!latch.await(TIMEOUT, TimeUnit.SECONDS)) {
                 throw new MongoTimeoutException("Timeout waiting for subscription");
             }
+            if (isWaitForBatchCursorCreationEnabled()) {
+                batchCursorCompletableFuture.get(TIMEOUT, TimeUnit.SECONDS);
+                Hooks.resetOnEachOperator();
+            }
             sleep(getSleepAfterCursorOpen());
         } catch (InterruptedException e) {
-            throw new MongoInterruptedException("Interrupted waiting for asynchronous cursor establishment", e);
+            throw interruptAndCreateMongoInterruptedException("Interrupted waiting for asynchronous cursor establishment", e);
+        } catch (ExecutionException | TimeoutException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException) {
+                throw (RuntimeException) cause;
+            }
+            throw new RuntimeException(e);
         }
     }
 
@@ -97,7 +130,7 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
-            throw new MongoInterruptedException("Interrupted from nap", e);
+            throw interruptAndCreateMongoInterruptedException("Interrupted from nap", e);
         }
     }
 
@@ -124,6 +157,7 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
                 throw new MongoTimeoutException("Time out waiting for result from cursor");
             } else if (next instanceof Throwable) {
                 error = translateError((Throwable) next);
+                sleep(getSleepAfterCursorError());
                 throw error;
             } else if (next == COMPLETED) {
                 completed = true;
@@ -134,7 +168,7 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
                 return true;
             }
         } catch (InterruptedException e) {
-            throw new MongoInterruptedException("Interrupted waiting for next result", e);
+            throw interruptAndCreateMongoInterruptedException("Interrupted waiting for next result", e);
         }
     }
 
@@ -146,6 +180,11 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
         T retVal = current;
         current = null;
         return retVal;
+    }
+
+    @Override
+    public int available() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -173,5 +212,50 @@ class SyncMongoCursor<T> implements MongoCursor<T> {
             return (RuntimeException) throwable;
         }
         return new RuntimeException(throwable);
+    }
+
+
+    private static final class BatchCursorInterceptSubscriber implements CoreSubscriber<Object> {
+
+        private final CoreSubscriber<Object> sub;
+        private final CompletableFuture<Object> batchCursorCompletableFuture;
+
+        BatchCursorInterceptSubscriber(final CoreSubscriber<Object> sub,
+                                       final CompletableFuture<Object> batchCursorCompletableFuture) {
+            this.sub = sub;
+            this.batchCursorCompletableFuture = batchCursorCompletableFuture;
+        }
+
+        @Override
+        public Context currentContext() {
+            return sub.currentContext();
+        }
+
+        @Override
+        public void onSubscribe(final Subscription s) {
+            sub.onSubscribe(s);
+        }
+
+        @Override
+        public void onNext(final Object o) {
+            if (o instanceof BatchCursor) {
+                // Interception of a cursor means that it has been created at this point.
+                batchCursorCompletableFuture.complete(o);
+            }
+            sub.onNext(o);
+        }
+
+        @Override
+        public void onError(final Throwable t) {
+            if (!batchCursorCompletableFuture.isDone()) { // Cursor has not been created yet but an error occurred.
+                batchCursorCompletableFuture.completeExceptionally(t);
+            }
+            sub.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            sub.onComplete();
+        }
     }
 }

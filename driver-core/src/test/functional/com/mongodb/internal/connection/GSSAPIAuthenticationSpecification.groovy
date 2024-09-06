@@ -26,8 +26,7 @@ import com.mongodb.async.FutureResultCallback
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ServerId
 import com.mongodb.connection.SocketSettings
-import com.mongodb.connection.SocketStreamFactory
-import com.mongodb.connection.netty.NettyStreamFactory
+import com.mongodb.internal.connection.netty.NettyStreamFactory
 import org.bson.BsonDocument
 import org.bson.BsonString
 import spock.lang.IgnoreIf
@@ -37,8 +36,11 @@ import javax.security.auth.Subject
 import javax.security.auth.login.LoginContext
 
 import static com.mongodb.AuthenticationMechanism.GSSAPI
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
+import static com.mongodb.ClusterFixture.getClusterConnectionMode
 import static com.mongodb.ClusterFixture.getConnectionString
 import static com.mongodb.ClusterFixture.getCredential
+import static com.mongodb.ClusterFixture.getLoginContextName
 import static com.mongodb.ClusterFixture.getSslSettings
 import static com.mongodb.MongoCredential.JAVA_SUBJECT_PROVIDER_KEY
 import static com.mongodb.MongoCredential.createGSSAPICredential
@@ -55,7 +57,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
 
         when:
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')),
+                getClusterConnectionMode(), null, connection, OPERATION_CONTEXT)
 
         then:
         thrown(MongoCommandException)
@@ -73,7 +76,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
 
         when:
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')),
+                getClusterConnectionMode(), null, connection, OPERATION_CONTEXT)
 
         then:
         true
@@ -94,7 +98,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
 
         when:
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')),
+                getClusterConnectionMode(), null, connection, OPERATION_CONTEXT)
 
         then:
         thrown(MongoSecurityException)
@@ -113,8 +118,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
 
     def 'should authorize when successfully authenticated with Subject property'() {
         when:
-        def loginContext = new LoginContext('com.sun.security.jgss.krb5.initiate')
-        loginContext.login();
+        def loginContext = new LoginContext(getLoginContextName())
+        loginContext.login()
         def subject = loginContext.getSubject()
 
         then:
@@ -125,7 +130,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
         when:
         def connection = createConnection(async, getMongoCredential(subject))
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')),
+                getClusterConnectionMode(), null, connection, OPERATION_CONTEXT)
 
         then:
         true
@@ -139,10 +145,10 @@ class GSSAPIAuthenticationSpecification extends Specification {
 
     def 'should throw MongoSecurityException when authentication fails with Subject property'() {
         when:
-        LoginContext context = new LoginContext('com.sun.security.jgss.krb5.initiate');
-        context.login();
+        LoginContext context = new LoginContext(getLoginContextName())
+        context.login()
 
-        Subject subject = context.getSubject();
+        Subject subject = context.getSubject()
 
         then:
         subject != null
@@ -168,7 +174,8 @@ class GSSAPIAuthenticationSpecification extends Specification {
         when:
         def connection = createConnection(async, getMongoCredential(saslClientProperties))
         openConnection(connection, async)
-        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')), null, connection)
+        executeCommand(getConnectionString().getDatabase(), new BsonDocument('count', new BsonString('test')),
+                getClusterConnectionMode(), null, connection, OPERATION_CONTEXT)
 
         then:
         true
@@ -181,11 +188,11 @@ class GSSAPIAuthenticationSpecification extends Specification {
     }
 
     private static MongoCredential getMongoCredential(final Map<String, Object> saslClientProperties) {
-        getMongoCredential().withMechanismProperty(MongoCredential.JAVA_SASL_CLIENT_PROPERTIES_KEY, saslClientProperties);
+        getMongoCredential().withMechanismProperty(MongoCredential.JAVA_SASL_CLIENT_PROPERTIES_KEY, saslClientProperties)
     }
 
     private static MongoCredential getMongoCredential(final Subject subject) {
-        getMongoCredential(getMongoCredential(), subject);
+        getMongoCredential(getMongoCredential(), subject)
     }
 
     private static MongoCredential getMongoCredential(final MongoCredential mongoCredential, final Subject subject) {
@@ -200,21 +207,22 @@ class GSSAPIAuthenticationSpecification extends Specification {
         new InternalStreamConnection(SINGLE, new ServerId(new ClusterId(), new ServerAddress(getConnectionString().getHosts().get(0))),
                 new TestConnectionGenerationSupplier(),
                 async ? new NettyStreamFactory(SocketSettings.builder().build(), getSslSettings())
-                        : new SocketStreamFactory(SocketSettings.builder().build(), getSslSettings()), [], null,
-                new InternalStreamConnectionInitializer(SINGLE, createAuthenticator(credential), null, [], null))
+                        : new SocketStreamFactory(new DefaultInetAddressResolver(), SocketSettings.builder().build(), getSslSettings()),
+                [], null, new InternalStreamConnectionInitializer(SINGLE, createAuthenticator(credential), null, [], null)
+        )
     }
 
     private static Authenticator createAuthenticator(final MongoCredential credential) {
-        credential == null ? null : new GSSAPIAuthenticator(new MongoCredentialWithCache(credential), null)
+        credential == null ? null : new GSSAPIAuthenticator(new MongoCredentialWithCache(credential), getClusterConnectionMode(), null)
     }
 
     private static void openConnection(final InternalConnection connection, final boolean async) {
         if (async) {
-            FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>();
-            connection.openAsync(futureResultCallback)
-            futureResultCallback.get(ClusterFixture.TIMEOUT, SECONDS);
+            FutureResultCallback<Void> futureResultCallback = new FutureResultCallback<Void>()
+            connection.openAsync(OPERATION_CONTEXT, futureResultCallback)
+            futureResultCallback.get(ClusterFixture.TIMEOUT, SECONDS)
         } else {
-            connection.open()
+            connection.open(OPERATION_CONTEXT)
         }
     }
 }

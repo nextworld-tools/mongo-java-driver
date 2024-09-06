@@ -17,59 +17,89 @@
 package com.mongodb.internal.connection;
 
 import com.mongodb.MongoClientException;
+import com.mongodb.MongoException;
 import com.mongodb.MongoIncompatibleDriverException;
 import com.mongodb.MongoInterruptedException;
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.MongoTimeoutException;
 import com.mongodb.ServerAddress;
+import com.mongodb.UnixServerAddress;
 import com.mongodb.connection.ClusterDescription;
 import com.mongodb.connection.ClusterId;
 import com.mongodb.connection.ClusterSettings;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerDescription;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.event.ClusterClosedEvent;
 import com.mongodb.event.ClusterDescriptionChangedEvent;
 import com.mongodb.event.ClusterListener;
 import com.mongodb.event.ClusterOpeningEvent;
+import com.mongodb.internal.TimeoutContext;
+import com.mongodb.internal.VisibleForTesting;
 import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.internal.connection.OperationContext.ServerDeprioritization;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
+import com.mongodb.internal.logging.LogMessage;
+import com.mongodb.internal.logging.LogMessage.Entry;
+import com.mongodb.internal.logging.StructuredLogger;
+import com.mongodb.internal.selector.AtMostTwoRandomServerSelector;
+import com.mongodb.internal.selector.LatencyMinimizingServerSelector;
+import com.mongodb.internal.selector.MinimumOperationCountServerSelector;
+import com.mongodb.internal.time.Timeout;
+import com.mongodb.lang.Nullable;
 import com.mongodb.selector.CompositeServerSelector;
 import com.mongodb.selector.ServerSelector;
-import org.bson.BsonTimestamp;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+import java.util.Objects;
+import java.util.stream.Stream;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
+import static com.mongodb.assertions.Assertions.assertNotNull;
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.assertions.Assertions.notNull;
 import static com.mongodb.connection.ServerDescription.MAX_DRIVER_WIRE_VERSION;
 import static com.mongodb.connection.ServerDescription.MIN_DRIVER_SERVER_VERSION;
 import static com.mongodb.connection.ServerDescription.MIN_DRIVER_WIRE_VERSION;
+import static com.mongodb.internal.Locks.withInterruptibleLock;
+import static com.mongodb.internal.VisibleForTesting.AccessModifier.PRIVATE;
 import static com.mongodb.internal.connection.EventHelper.wouldDescriptionsGenerateEquivalentEvents;
-import static com.mongodb.internal.event.EventListenerHelper.createServerListener;
-import static com.mongodb.internal.event.EventListenerHelper.getClusterListener;
+import static com.mongodb.internal.event.EventListenerHelper.singleClusterListener;
+import static com.mongodb.internal.logging.LogMessage.Component.SERVER_SELECTION;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.FAILURE;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.OPERATION;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.OPERATION_ID;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.REMAINING_TIME_MS;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.SELECTOR;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.SERVER_HOST;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.SERVER_PORT;
+import static com.mongodb.internal.logging.LogMessage.Entry.Name.TOPOLOGY_DESCRIPTION;
+import static com.mongodb.internal.logging.LogMessage.Level.DEBUG;
+import static com.mongodb.internal.logging.LogMessage.Level.INFO;
+import static com.mongodb.internal.time.Timeout.ZeroSemantics.ZERO_DURATION_MEANS_EXPIRED;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static java.util.stream.Collectors.toList;
 
 abstract class BaseCluster implements Cluster {
-
     private static final Logger LOGGER = Loggers.getLogger("cluster");
+    private static final StructuredLogger STRUCTURED_LOGGER = new StructuredLogger("cluster");
 
-    private final AtomicReference<CountDownLatch> phase = new AtomicReference<CountDownLatch>(new CountDownLatch(1));
+    private final ReentrantLock lock = new ReentrantLock();
+    private final AtomicReference<CountDownLatch> phase = new AtomicReference<>(new CountDownLatch(1));
     private final ClusterableServerFactory serverFactory;
-    private final ThreadLocal<Random> random = new ThreadLocal<Random>();
     private final ClusterId clusterId;
     private final ClusterSettings settings;
     private final ClusterListener clusterListener;
-    private final Deque<ServerSelectionRequest> waitQueue = new ConcurrentLinkedDeque<ServerSelectionRequest>();
+    private final Deque<ServerSelectionRequest> waitQueue = new ConcurrentLinkedDeque<>();
     private final ClusterClock clusterClock = new ClusterClock();
     private Thread waitQueueHandler;
 
@@ -80,130 +110,84 @@ abstract class BaseCluster implements Cluster {
         this.clusterId = notNull("clusterId", clusterId);
         this.settings = notNull("settings", settings);
         this.serverFactory = notNull("serverFactory", serverFactory);
-        this.clusterListener = getClusterListener(settings);
+        this.clusterListener = singleClusterListener(settings);
         clusterListener.clusterOpening(new ClusterOpeningEvent(clusterId));
-        description = new ClusterDescription(settings.getMode(), ClusterType.UNKNOWN, Collections.<ServerDescription>emptyList(),
+        description = new ClusterDescription(settings.getMode(), ClusterType.UNKNOWN, Collections.emptyList(),
                 settings, serverFactory.getSettings());
     }
 
     @Override
-    public BsonTimestamp getClusterTime() {
-        return clusterClock.getClusterTime();
+    public ClusterClock getClock() {
+        return clusterClock;
     }
 
     @Override
-    public ServerTuple selectServer(final ServerSelector serverSelector) {
+    public ServerTuple selectServer(final ServerSelector serverSelector, final OperationContext operationContext) {
         isTrue("open", !isClosed());
 
-        try {
-            CountDownLatch currentPhase = phase.get();
-            ClusterDescription curDescription = description;
-            ServerSelector compositeServerSelector = getCompositeServerSelector(serverSelector);
-            ServerTuple serverTuple = selectRandomServer(compositeServerSelector, curDescription);
+        ServerDeprioritization serverDeprioritization = operationContext.getServerDeprioritization();
+        boolean selectionWaitingLogged = false;
+        Timeout computedServerSelectionTimeout = operationContext.getTimeoutContext().computeServerSelectionTimeout();
+        logServerSelectionStarted(clusterId, operationContext.getId(), serverSelector, description);
+        while (true) {
+            CountDownLatch currentPhaseLatch = phase.get();
+            ClusterDescription currentDescription = description;
+            ServerTuple serverTuple = createCompleteSelectorAndSelectServer(
+                    serverSelector, currentDescription, serverDeprioritization,
+                    computedServerSelectionTimeout, operationContext.getTimeoutContext());
 
-            boolean selectionFailureLogged = false;
-
-            long startTimeNanos = System.nanoTime();
-            long curTimeNanos = startTimeNanos;
-            long maxWaitTimeNanos = getMaxWaitTimeNanos();
-
-            while (true) {
-                throwIfIncompatible(curDescription);
-
-                if (serverTuple != null) {
-                    return serverTuple;
-                }
-
-                if (curTimeNanos - startTimeNanos > maxWaitTimeNanos) {
-                    throw createTimeoutException(serverSelector, curDescription);
-                }
-
-                if (!selectionFailureLogged) {
-                    logServerSelectionFailure(serverSelector, curDescription);
-                    selectionFailureLogged = true;
-                }
-
-                connect();
-
-                currentPhase.await(Math.min(maxWaitTimeNanos - (curTimeNanos - startTimeNanos), getMinWaitTimeNanos()), NANOSECONDS);
-
-                curTimeNanos = System.nanoTime();
-
-                currentPhase = phase.get();
-                curDescription = description;
-                serverTuple = selectRandomServer(compositeServerSelector, curDescription);
+            if (!currentDescription.isCompatibleWithDriver()) {
+                logAndThrowIncompatibleException(operationContext.getId(), serverSelector, currentDescription);
             }
+            if (serverTuple != null) {
+                ServerAddress serverAddress = serverTuple.getServerDescription().getAddress();
+                logServerSelectionSucceeded(
+                        clusterId,
+                        operationContext.getId(),
+                        serverAddress,
+                        serverSelector,
+                        currentDescription);
+                serverDeprioritization.updateCandidate(serverAddress);
+                return serverTuple;
+            }
+            computedServerSelectionTimeout.onExpired(() ->
+                    logAndThrowTimeoutException(operationContext, serverSelector, currentDescription));
 
-        } catch (InterruptedException e) {
-            throw new MongoInterruptedException(format("Interrupted while waiting for a server that matches %s", serverSelector), e);
+            if (!selectionWaitingLogged) {
+                logServerSelectionWaiting(clusterId, operationContext.getId(), computedServerSelectionTimeout, serverSelector, currentDescription);
+                selectionWaitingLogged = true;
+            }
+            connect();
+
+            Timeout heartbeatLimitedTimeout = Timeout.earliest(
+                    computedServerSelectionTimeout,
+                    startMinWaitHeartbeatTimeout());
+
+            heartbeatLimitedTimeout.awaitOn(currentPhaseLatch,
+                    () -> format("waiting for a server that matches %s", serverSelector));
         }
     }
 
     @Override
-    public void selectServerAsync(final ServerSelector serverSelector, final SingleResultCallback<ServerTuple> callback) {
+    public void selectServerAsync(final ServerSelector serverSelector, final OperationContext operationContext,
+            final SingleResultCallback<ServerTuple> callback) {
         isTrue("open", !isClosed());
 
-        if (LOGGER.isTraceEnabled()) {
-            LOGGER.trace(format("Asynchronously selecting server with selector %s", serverSelector));
-        }
-        ServerSelectionRequest request = new ServerSelectionRequest(serverSelector, getCompositeServerSelector(serverSelector),
-                                                                    getMaxWaitTimeNanos(), callback);
+        Timeout computedServerSelectionTimeout = operationContext.getTimeoutContext().computeServerSelectionTimeout();
+        ServerSelectionRequest request = new ServerSelectionRequest(
+                serverSelector, operationContext, computedServerSelectionTimeout, callback);
 
         CountDownLatch currentPhase = phase.get();
         ClusterDescription currentDescription = description;
 
+        logServerSelectionStarted(
+                clusterId,
+                operationContext.getId(),
+                serverSelector,
+                currentDescription);
+
         if (!handleServerSelectionRequest(request, currentPhase, currentDescription)) {
             notifyWaitQueueHandler(request);
-        }
-    }
-
-    @Override
-    public ClusterDescription getDescription() {
-        isTrue("open", !isClosed());
-
-        try {
-            CountDownLatch currentPhase = phase.get();
-            ClusterDescription curDescription = description;
-
-            boolean selectionFailureLogged = false;
-
-            long startTimeNanos = System.nanoTime();
-            long curTimeNanos = startTimeNanos;
-            long maxWaitTimeNanos = getMaxWaitTimeNanos();
-
-            while (curDescription.getType() == ClusterType.UNKNOWN) {
-
-                if (curTimeNanos - startTimeNanos > maxWaitTimeNanos) {
-                    throw new MongoTimeoutException(format("Timed out after %d ms while waiting to connect. Client view of cluster state "
-                                                           + "is %s",
-                                                           settings.getServerSelectionTimeout(MILLISECONDS),
-                                                           curDescription.getShortDescription()));
-                }
-
-                if (!selectionFailureLogged) {
-                    if (LOGGER.isInfoEnabled()) {
-                        if (settings.getServerSelectionTimeout(MILLISECONDS) < 0) {
-                            LOGGER.info("Cluster description not yet available. Waiting indefinitely.");
-                        } else {
-                            LOGGER.info(format("Cluster description not yet available. Waiting for %d ms before timing out",
-                                               settings.getServerSelectionTimeout(MILLISECONDS)));
-                        }
-                    }
-                    selectionFailureLogged = true;
-                }
-
-                connect();
-
-                currentPhase.await(Math.min(maxWaitTimeNanos - (curTimeNanos - startTimeNanos), getMinWaitTimeNanos()), NANOSECONDS);
-
-                curTimeNanos = System.nanoTime();
-
-                currentPhase = phase.get();
-                curDescription = description;
-            }
-            return curDescription;
-        } catch (InterruptedException e) {
-            throw new MongoInterruptedException("Interrupted while waiting to connect", e);
         }
     }
 
@@ -236,15 +220,21 @@ abstract class BaseCluster implements Cluster {
         return isClosed;
     }
 
-    protected synchronized void updateDescription(final ClusterDescription newDescription) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug(format("Updating cluster description to  %s", newDescription.getShortDescription()));
-        }
+    protected void updateDescription(final ClusterDescription newDescription) {
+        withLock(() -> {
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug(format("Updating cluster description to  %s", newDescription.getShortDescription()));
+            }
 
-        description = newDescription;
-        updatePhase();
+            description = newDescription;
+            updatePhase();
+        });
     }
 
+    /**
+     * Subclasses must ensure that this method is called in a way that events are delivered in a predictable order.
+     * Typically, this means calling it while holding a lock that includes both updates to the cluster state and firing the event.
+     */
     protected void fireChangeEvent(final ClusterDescription newDescription, final ClusterDescription previousDescription) {
         if (!wouldDescriptionsGenerateEquivalentEvents(newDescription, previousDescription)) {
              clusterListener.clusterDescriptionChanged(
@@ -257,56 +247,69 @@ abstract class BaseCluster implements Cluster {
         return description;
     }
 
-    private synchronized void updatePhase() {
-        phase.getAndSet(new CountDownLatch(1)).countDown();
+    @Override
+    public void withLock(final Runnable action) {
+        withInterruptibleLock(lock, action);
     }
 
-    private long getMaxWaitTimeNanos() {
-        if (settings.getServerSelectionTimeout(NANOSECONDS) < 0) {
-            return Long.MAX_VALUE;
-        }
-        return settings.getServerSelectionTimeout(NANOSECONDS);
+    private void updatePhase() {
+        withLock(() -> phase.getAndSet(new CountDownLatch(1)).countDown());
     }
 
-    private long getMinWaitTimeNanos() {
-        return serverFactory.getSettings().getMinHeartbeatFrequency(NANOSECONDS);
+    private Timeout startMinWaitHeartbeatTimeout() {
+        long minHeartbeatFrequency = serverFactory.getSettings().getMinHeartbeatFrequency(NANOSECONDS);
+        minHeartbeatFrequency = Math.max(0, minHeartbeatFrequency);
+        return Timeout.expiresIn(minHeartbeatFrequency, NANOSECONDS, ZERO_DURATION_MEANS_EXPIRED);
     }
 
-    private boolean handleServerSelectionRequest(final ServerSelectionRequest request, final CountDownLatch currentPhase,
-                                                 final ClusterDescription description) {
+    private boolean handleServerSelectionRequest(
+            final ServerSelectionRequest request, final CountDownLatch currentPhase,
+            final ClusterDescription description) {
+
         try {
+            OperationContext operationContext = request.getOperationContext();
+            long operationId = operationContext.getId();
             if (currentPhase != request.phase) {
                 CountDownLatch prevPhase = request.phase;
                 request.phase = currentPhase;
                 if (!description.isCompatibleWithDriver()) {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace("Asynchronously failed server selection due to driver incompatibility with server");
-                    }
-                    request.onResult(null, createIncompatibleException(description));
-                    return true;
+                    logAndThrowIncompatibleException(operationId, request.originalSelector, description);
                 }
 
-                ServerTuple serverTuple = selectRandomServer(request.compositeSelector, description);
+
+                ServerDeprioritization serverDeprioritization = request.operationContext.getServerDeprioritization();
+                ServerTuple serverTuple = createCompleteSelectorAndSelectServer(
+                        request.originalSelector,
+                        description,
+                        serverDeprioritization,
+                        request.getTimeout(),
+                        operationContext.getTimeoutContext());
+
                 if (serverTuple != null) {
-                    if (LOGGER.isTraceEnabled()) {
-                        LOGGER.trace(format("Asynchronously selected server %s", serverTuple.getServerDescription().getAddress()));
-                    }
+                    ServerAddress serverAddress = serverTuple.getServerDescription().getAddress();
+                    logServerSelectionSucceeded(
+                            clusterId,
+                            operationId,
+                            serverAddress,
+                            request.originalSelector,
+                            description);
+                    serverDeprioritization.updateCandidate(serverAddress);
                     request.onResult(serverTuple, null);
                     return true;
                 }
                 if (prevPhase == null) {
-                    logServerSelectionFailure(request.originalSelector, description);
+                    logServerSelectionWaiting(
+                            clusterId,
+                            operationId,
+                            request.getTimeout(),
+                            request.originalSelector,
+                            description);
                 }
             }
 
-            if (request.timedOut()) {
-                if (LOGGER.isTraceEnabled()) {
-                    LOGGER.trace("Asynchronously failed server selection after timeout");
-                }
-                request.onResult(null, createTimeoutException(request.originalSelector, description));
-                return true;
-            }
-
+            Timeout.onExistsAndExpired(request.getTimeout(), () -> {
+                logAndThrowTimeoutException(operationContext, request.originalSelector, description);
+            });
             return false;
         } catch (Exception e) {
             request.onResult(null, e);
@@ -314,72 +317,83 @@ abstract class BaseCluster implements Cluster {
         }
     }
 
-    private void logServerSelectionFailure(final ServerSelector serverSelector, final ClusterDescription curDescription) {
-        if (LOGGER.isInfoEnabled()) {
-            if (settings.getServerSelectionTimeout(MILLISECONDS) < 0) {
-                LOGGER.info(format("No server chosen by %s from cluster description %s. Waiting indefinitely.",
-                                   serverSelector, curDescription));
-            } else {
-                LOGGER.info(format("No server chosen by %s from cluster description %s. Waiting for %d ms before timing out",
-                                   serverSelector, curDescription, settings.getServerSelectionTimeout(MILLISECONDS)));
-            }
-        }
+    @Nullable
+    private ServerTuple createCompleteSelectorAndSelectServer(
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription,
+            final ServerDeprioritization serverDeprioritization,
+            final Timeout serverSelectionTimeout,
+            final TimeoutContext timeoutContext) {
+        return createCompleteSelectorAndSelectServer(
+                serverSelector,
+                clusterDescription,
+                getServersSnapshot(serverSelectionTimeout, timeoutContext),
+                serverDeprioritization,
+                settings);
     }
 
-
-    private ServerTuple selectRandomServer(final ServerSelector serverSelector, final ClusterDescription clusterDescription) {
-        List<ServerDescription> serverDescriptions = serverSelector.select(clusterDescription);
-        if (!serverDescriptions.isEmpty()) {
-            return getRandomServer(new ArrayList<ServerDescription>(serverDescriptions));
-        } else {
-            return null;
-        }
+    @Nullable
+    @VisibleForTesting(otherwise = PRIVATE)
+    static ServerTuple createCompleteSelectorAndSelectServer(
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription,
+            final ServersSnapshot serversSnapshot,
+            final ServerDeprioritization serverDeprioritization,
+            final ClusterSettings settings) {
+        ServerSelector completeServerSelector = getCompleteServerSelector(serverSelector, serverDeprioritization, serversSnapshot, settings);
+        return completeServerSelector.select(clusterDescription)
+                .stream()
+                .map(serverDescription -> new ServerTuple(
+                        assertNotNull(serversSnapshot.getServer(serverDescription.getAddress())),
+                        serverDescription))
+                .findAny()
+                .orElse(null);
     }
 
-    private ServerSelector getCompositeServerSelector(final ServerSelector serverSelector) {
-        if (settings.getServerSelector() == null) {
-            return serverSelector;
-        } else {
-            return new CompositeServerSelector(asList(serverSelector, settings.getServerSelector()));
-        }
+    private static ServerSelector getCompleteServerSelector(
+            final ServerSelector serverSelector,
+            final ServerDeprioritization serverDeprioritization,
+            final ServersSnapshot serversSnapshot,
+            final ClusterSettings settings) {
+        List<ServerSelector> selectors = Stream.of(
+                getRaceConditionPreFilteringSelector(serversSnapshot),
+                serverSelector,
+                serverDeprioritization.getServerSelector(),
+                settings.getServerSelector(), // may be null
+                new LatencyMinimizingServerSelector(settings.getLocalThreshold(MILLISECONDS), MILLISECONDS),
+                AtMostTwoRandomServerSelector.instance(),
+                new MinimumOperationCountServerSelector(serversSnapshot)
+        ).filter(Objects::nonNull).collect(toList());
+        return new CompositeServerSelector(selectors);
     }
 
-    // gets a random server that still exists in the cluster.  Returns null if there are none.
-    private ServerTuple getRandomServer(final List<ServerDescription> serverDescriptions) {
-        while (!serverDescriptions.isEmpty()) {
-            int serverPos = getRandom().nextInt(serverDescriptions.size());
-            ServerDescription serverDescription = serverDescriptions.get(serverPos);
-            Server server = getServer(serverDescription.getAddress());
-            if (server != null) {
-                return new ServerTuple(server, serverDescription);
-            } else {
-                serverDescriptions.remove(serverPos);
-            }
-        }
-        return null;
+    private static ServerSelector getRaceConditionPreFilteringSelector(final ServersSnapshot serversSnapshot) {
+        // The set of `Server`s maintained by the `Cluster` is updated concurrently with `clusterDescription` being read.
+        // Additionally, that set of servers continues to be concurrently updated while `serverSelector` selects.
+        // This race condition means that we are not guaranteed to observe all the servers from `clusterDescription`
+        // among the `Server`s maintained by the `Cluster`.
+        // To deal with this race condition, we take `serversSnapshot` of that set of `Server`s
+        // (the snapshot itself does not have to be atomic) non-atomically with reading `clusterDescription`
+        // (this means, `serversSnapshot` and `clusterDescription` are not guaranteed to be consistent with each other),
+        // and do pre-filtering to make sure that the only `ServerDescription`s we may select,
+        // are of those `Server`s that are known to both `clusterDescription` and `serversSnapshot`.
+        return clusterDescription -> clusterDescription.getServerDescriptions()
+                .stream()
+                .filter(serverDescription -> serversSnapshot.containsServer(serverDescription.getAddress()))
+                .collect(toList());
     }
 
-    // it's important that Random instances are created in this way instead of via subclassing ThreadLocal and overriding the
-    // initialValue() method.
-    private Random getRandom() {
-        Random result = random.get();
-        if (result == null) {
-            result = new Random();
-            random.set(result);
-        }
-        return result;
+    protected ClusterableServer createServer(final ServerAddress serverAddress) {
+        return serverFactory.create(this, serverAddress);
     }
 
-    protected ClusterableServer createServer(final ServerAddress serverAddress,
-                                             final ServerDescriptionChangedListener serverDescriptionChangedListener) {
-        return serverFactory.create(serverAddress, serverDescriptionChangedListener, createServerListener(serverFactory.getSettings()),
-                clusterClock);
-    }
-
-    private void throwIfIncompatible(final ClusterDescription curDescription) {
-        if (!curDescription.isCompatibleWithDriver()) {
-            throw createIncompatibleException(curDescription);
-        }
+    private void logAndThrowIncompatibleException(
+            final long operationId,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        MongoIncompatibleDriverException exception = createIncompatibleException(clusterDescription);
+        logServerSelectionFailed(clusterId, operationId, exception, serverSelector, clusterDescription);
+        throw exception;
     }
 
     private MongoIncompatibleDriverException createIncompatibleException(final ClusterDescription curDescription) {
@@ -401,31 +415,40 @@ abstract class BaseCluster implements Cluster {
         return new MongoIncompatibleDriverException(message, curDescription);
     }
 
-    private MongoTimeoutException createTimeoutException(final ServerSelector serverSelector, final ClusterDescription curDescription) {
-        return new MongoTimeoutException(format("Timed out after %d ms while waiting for a server that matches %s. "
-                                                + "Client view of cluster state is %s",
-                                                settings.getServerSelectionTimeout(MILLISECONDS), serverSelector,
-                                                curDescription.getShortDescription()));
+    private void logAndThrowTimeoutException(
+            final OperationContext operationContext,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        String message = format(
+                "Timed out while waiting for a server that matches %s. Client view of cluster state is %s",
+                serverSelector, clusterDescription.getShortDescription());
+
+        MongoTimeoutException exception = operationContext.getTimeoutContext().hasTimeoutMS()
+                ? new MongoOperationTimeoutException(message) : new MongoTimeoutException(message);
+
+        logServerSelectionFailed(clusterId, operationContext.getId(), exception, serverSelector, clusterDescription);
+        throw exception;
     }
 
     private static final class ServerSelectionRequest {
         private final ServerSelector originalSelector;
-        private final ServerSelector compositeSelector;
-        private final long maxWaitTimeNanos;
         private final SingleResultCallback<ServerTuple> callback;
-        private final long startTimeNanos = System.nanoTime();
+        private final OperationContext operationContext;
+        private final Timeout timeout;
         private CountDownLatch phase;
 
-        ServerSelectionRequest(final ServerSelector serverSelector, final ServerSelector compositeSelector,
-                               final long maxWaitTimeNanos,
-                               final SingleResultCallback<ServerTuple> callback) {
+        ServerSelectionRequest(
+                final ServerSelector serverSelector,
+                final OperationContext operationContext,
+                final Timeout timeout,
+                final SingleResultCallback<ServerTuple> callback) {
             this.originalSelector = serverSelector;
-            this.compositeSelector = compositeSelector;
-            this.maxWaitTimeNanos = maxWaitTimeNanos;
+            this.operationContext = operationContext;
+            this.timeout = timeout;
             this.callback = callback;
         }
 
-        void onResult(final ServerTuple serverTuple, final Throwable t) {
+        void onResult(@Nullable final ServerTuple serverTuple, @Nullable final Throwable t) {
             try {
                 callback.onResult(serverTuple, t);
             } catch (Throwable tr) {
@@ -433,61 +456,73 @@ abstract class BaseCluster implements Cluster {
             }
         }
 
-        boolean timedOut() {
-            return System.nanoTime() - startTimeNanos > maxWaitTimeNanos;
+        Timeout getTimeout() {
+            return timeout;
         }
 
-        long getRemainingTime() {
-            return startTimeNanos + maxWaitTimeNanos - System.nanoTime();
-        }
-    }
-
-    private synchronized void notifyWaitQueueHandler(final ServerSelectionRequest request) {
-        if (isClosed) {
-            return;
-        }
-
-        waitQueue.add(request);
-
-        if (waitQueueHandler == null) {
-            waitQueueHandler = new Thread(new WaitQueueHandler(), "cluster-" + clusterId.getValue());
-            waitQueueHandler.setDaemon(true);
-            waitQueueHandler.start();
-        } else {
-            updatePhase();
+        public OperationContext getOperationContext() {
+            return operationContext;
         }
     }
 
-    private synchronized void stopWaitQueueHandler() {
-        if (waitQueueHandler != null) {
-            waitQueueHandler.interrupt();
-        }
+    private void notifyWaitQueueHandler(final ServerSelectionRequest request) {
+        withLock(() -> {
+            if (isClosed) {
+                return;
+            }
+
+            waitQueue.add(request);
+
+            if (waitQueueHandler == null) {
+                waitQueueHandler = new Thread(new WaitQueueHandler(), "cluster-" + clusterId.getValue());
+                waitQueueHandler.setDaemon(true);
+                waitQueueHandler.start();
+            } else {
+                updatePhase();
+            }
+        });
+    }
+
+    private void stopWaitQueueHandler() {
+        withLock(() -> {
+            if (waitQueueHandler != null) {
+                waitQueueHandler.interrupt();
+            }
+        });
     }
 
     private final class WaitQueueHandler implements Runnable {
+
+        WaitQueueHandler() {
+        }
+
         public void run() {
             while (!isClosed) {
                 CountDownLatch currentPhase = phase.get();
                 ClusterDescription curDescription = description;
-                long waitTimeNanos = Long.MAX_VALUE;
 
+                Timeout timeout = Timeout.infinite();
+                boolean someWaitersNotSatisfied = false;
                 for (Iterator<ServerSelectionRequest> iter = waitQueue.iterator(); iter.hasNext();) {
-                    ServerSelectionRequest nextRequest = iter.next();
-                    if (handleServerSelectionRequest(nextRequest, currentPhase, curDescription)) {
+                    ServerSelectionRequest currentRequest = iter.next();
+                    if (handleServerSelectionRequest(currentRequest, currentPhase, curDescription)) {
                         iter.remove();
                     } else {
-                        waitTimeNanos = Math.min(nextRequest.getRemainingTime(), Math.min(getMinWaitTimeNanos(), waitTimeNanos));
+                        someWaitersNotSatisfied = true;
+                        timeout = Timeout.earliest(
+                                timeout,
+                                currentRequest.getTimeout(),
+                                startMinWaitHeartbeatTimeout());
                     }
                 }
 
-                // if there are any waiters that were not satisfied, connect
-                if (waitTimeNanos < Long.MAX_VALUE) {
+                if (someWaitersNotSatisfied) {
                     connect();
                 }
 
                 try {
-                    currentPhase.await(waitTimeNanos, NANOSECONDS);
-                } catch (InterruptedException e) {
+                    timeout.awaitOn(currentPhase, () -> "ignored");
+                } catch (MongoInterruptedException closed) {
                     // The cluster has been closed and the while loop will exit.
                 }
             }
@@ -496,6 +531,92 @@ abstract class BaseCluster implements Cluster {
                 iter.next().onResult(null, new MongoClientException("Shutdown in progress"));
                 iter.remove();
             }
+        }
+    }
+
+    static void logServerSelectionStarted(
+            final ClusterId clusterId,
+            final long operationId,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        if (STRUCTURED_LOGGER.isRequired(DEBUG, clusterId)) {
+            STRUCTURED_LOGGER.log(new LogMessage(
+                    SERVER_SELECTION, DEBUG, "Server selection started", clusterId,
+                    asList(
+                            new Entry(OPERATION, null),
+                            new Entry(OPERATION_ID, operationId),
+                            new Entry(SELECTOR, serverSelector.toString()),
+                            new Entry(TOPOLOGY_DESCRIPTION, clusterDescription.getShortDescription())),
+                    "Server selection started for operation[ {}] with ID {}. Selector: {}, topology description: {}"));
+        }
+    }
+
+    private static void logServerSelectionWaiting(
+            final ClusterId clusterId,
+            final long operationId,
+            final Timeout timeout,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        if (STRUCTURED_LOGGER.isRequired(INFO, clusterId)) {
+            STRUCTURED_LOGGER.log(new LogMessage(
+                    SERVER_SELECTION, INFO, "Waiting for suitable server to become available", clusterId,
+                    asList(
+                            new Entry(OPERATION, null),
+                            new Entry(OPERATION_ID, operationId),
+                            timeout.call(MILLISECONDS,
+                                    () -> new Entry(REMAINING_TIME_MS, "infinite"),
+                                    (ms) -> new Entry(REMAINING_TIME_MS, ms),
+                                    () -> new Entry(REMAINING_TIME_MS, 0L)),
+                            new Entry(SELECTOR, serverSelector.toString()),
+                            new Entry(TOPOLOGY_DESCRIPTION, clusterDescription.getShortDescription())),
+                    "Waiting for server to become available for operation[ {}] with ID {}.[ Remaining time: {} ms.]"
+                            + " Selector: {}, topology description: {}."));
+        }
+    }
+
+    private static void logServerSelectionFailed(
+            final ClusterId clusterId,
+            final long operationId,
+            final MongoException failure,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        if (STRUCTURED_LOGGER.isRequired(DEBUG, clusterId)) {
+            String failureDescription = failure instanceof MongoTimeoutException
+                    // This hardcoded message guarantees that the `FAILURE` entry for `MongoTimeoutException` does not include
+                    // any information that is specified via other entries, e.g., `SELECTOR` and `TOPOLOGY_DESCRIPTION`.
+                    // The logging spec requires us to avoid such duplication of information.
+                    ? MongoTimeoutException.class.getName() + ": Timed out while waiting for a suitable server"
+                    : failure.toString();
+            STRUCTURED_LOGGER.log(new LogMessage(
+                    SERVER_SELECTION, DEBUG, "Server selection failed", clusterId,
+                    asList(
+                            new Entry(OPERATION, null),
+                            new Entry(OPERATION_ID, operationId),
+                            new Entry(FAILURE, failureDescription),
+                            new Entry(SELECTOR, serverSelector.toString()),
+                            new Entry(TOPOLOGY_DESCRIPTION, clusterDescription.getShortDescription())),
+                    "Server selection failed for operation[ {}] with ID {}. Failure: {}. Selector: {}, topology description: {}"));
+        }
+    }
+
+    static void logServerSelectionSucceeded(
+            final ClusterId clusterId,
+            final long operationId,
+            final ServerAddress serverAddress,
+            final ServerSelector serverSelector,
+            final ClusterDescription clusterDescription) {
+        if (STRUCTURED_LOGGER.isRequired(DEBUG, clusterId)) {
+            STRUCTURED_LOGGER.log(new LogMessage(
+                    SERVER_SELECTION, DEBUG, "Server selection succeeded", clusterId,
+                    asList(
+                            new Entry(OPERATION, null),
+                            new Entry(OPERATION_ID, operationId),
+                            new Entry(SERVER_HOST, serverAddress.getHost()),
+                            new Entry(SERVER_PORT, serverAddress instanceof UnixServerAddress ? null : serverAddress.getPort()),
+                            new Entry(SELECTOR, serverSelector.toString()),
+                            new Entry(TOPOLOGY_DESCRIPTION, clusterDescription.getShortDescription())),
+                    "Server selection succeeded for operation[ {}] with ID {}. Selected server: {}[:{}]."
+                            + " Selector: {}, topology description: {}"));
         }
     }
 }

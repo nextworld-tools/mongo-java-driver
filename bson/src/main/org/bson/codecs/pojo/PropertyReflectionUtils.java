@@ -32,7 +32,7 @@ final class PropertyReflectionUtils {
     private static final String SET_PREFIX = "set";
 
     static boolean isGetter(final Method method) {
-        if (method.getParameterTypes().length > 0) {
+        if (method.getParameterCount() > 0) {
             return false;
         } else if (method.getName().startsWith(GET_PREFIX) && method.getName().length() > GET_PREFIX.length()) {
             return Character.isUpperCase(method.getName().charAt(GET_PREFIX.length()));
@@ -44,7 +44,7 @@ final class PropertyReflectionUtils {
 
     static boolean isSetter(final Method method) {
         if (method.getName().startsWith(SET_PREFIX) && method.getName().length() > SET_PREFIX.length()
-                && method.getParameterTypes().length == 1) {
+                && method.getParameterCount() == 1) {
             return Character.isUpperCase(method.getName().charAt(SET_PREFIX.length()));
         }
         return false;
@@ -52,15 +52,15 @@ final class PropertyReflectionUtils {
 
     static String toPropertyName(final Method method) {
         String name = method.getName();
-        String propertyName = name.substring(name.startsWith(IS_PREFIX) ? 2 : 3, name.length());
+        String propertyName = name.substring(name.startsWith(IS_PREFIX) ? 2 : 3);
         char[] chars = propertyName.toCharArray();
         chars[0] = Character.toLowerCase(chars[0]);
         return new String(chars);
     }
 
     static PropertyMethods getPropertyMethods(final Class<?> clazz) {
-        List<Method> setters = new ArrayList<Method>();
-        List<Method> getters = new ArrayList<Method>();
+        List<Method> setters = new ArrayList<>();
+        List<Method> getters = new ArrayList<>();
 
         // get all the default method from interface
         for (Class<?> i : clazz.getInterfaces()) {

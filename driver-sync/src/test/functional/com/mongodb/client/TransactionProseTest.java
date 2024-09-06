@@ -16,10 +16,8 @@
 
 package com.mongodb.client;
 
-import com.mongodb.Block;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-import com.mongodb.connection.SocketSettings;
 import org.bson.Document;
 import org.junit.After;
 import org.junit.Before;
@@ -31,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.ClusterFixture.getDefaultDatabaseName;
 import static com.mongodb.ClusterFixture.getMultiMongosConnectionString;
+import static com.mongodb.ClusterFixture.isServerlessTest;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static org.junit.Assert.assertTrue;
@@ -48,12 +47,7 @@ public class TransactionProseTest {
                 .applyConnectionString(getMultiMongosConnectionString());
 
         client = MongoClients.create(MongoClientSettings.builder(builder.build())
-                .applyToSocketSettings(new Block<SocketSettings.Builder>() {
-                    @Override
-                    public void apply(final SocketSettings.Builder builder) {
-                        builder.readTimeout(5, TimeUnit.SECONDS);
-                    }
-                })
+                .applyToSocketSettings(builder1 -> builder1.readTimeout(5, TimeUnit.SECONDS))
                 .build());
 
         collection = client.getDatabase(getDefaultDatabaseName()).getCollection(getClass().getName());
@@ -127,8 +121,8 @@ public class TransactionProseTest {
     }
 
     private boolean canRunTests() {
-        if (isSharded()) {
-            return serverVersionAtLeast(4, 1);
+        if (isSharded() && !isServerlessTest()) {
+            return serverVersionAtLeast(4, 2);
         } else {
             return false;
         }

@@ -18,12 +18,16 @@ package com.mongodb.reactivestreams.client.internal;
 
 import com.mongodb.CreateIndexCommitQuorum;
 import com.mongodb.MongoNamespace;
+import com.mongodb.ReadConcern;
+import com.mongodb.ReadPreference;
+import com.mongodb.WriteConcern;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.CountOptions;
 import com.mongodb.client.model.CreateIndexOptions;
 import com.mongodb.client.model.DeleteOptions;
+import com.mongodb.client.model.DropCollectionOptions;
 import com.mongodb.client.model.DropIndexOptions;
 import com.mongodb.client.model.EstimatedDocumentCountOptions;
 import com.mongodb.client.model.FindOneAndDeleteOptions;
@@ -51,9 +55,11 @@ import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.DistinctPublisher;
 import com.mongodb.reactivestreams.client.FindPublisher;
 import com.mongodb.reactivestreams.client.ListIndexesPublisher;
-import com.mongodb.reactivestreams.client.MapReducePublisher;
+import com.mongodb.reactivestreams.client.MongoCollection;
 import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistries;
+import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -65,7 +71,9 @@ import java.util.concurrent.TimeUnit;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class MongoCollectionImplTest extends TestHelper {
@@ -79,6 +87,40 @@ public class MongoCollectionImplTest extends TestHelper {
     private final Bson filter = BsonDocument.parse("{$match: {open: true}}");
     private final List<Bson> pipeline = singletonList(filter);
     private final Collation collation = Collation.builder().locale("de").build();
+
+    @Test
+    public void withDocumentClass() {
+        assertEquals(BsonDocument.class, collection.withDocumentClass(BsonDocument.class).getDocumentClass());
+    }
+
+    @Test
+    public void withCodecRegistry() {
+        // Cannot do equality test as registries are wrapped
+        CodecRegistry codecRegistry = CodecRegistries.fromCodecs(new MyLongCodec());
+        MongoCollection<Document> newCollection = collection.withCodecRegistry(codecRegistry);
+        assertTrue(newCollection.getCodecRegistry().get(Long.class) instanceof TestHelper.MyLongCodec);
+    }
+
+    @Test
+    public void withReadConcern() {
+        assertEquals(ReadConcern.AVAILABLE, collection.withReadConcern(ReadConcern.AVAILABLE).getReadConcern());
+    }
+
+    @Test
+    public void withReadPreference() {
+        assertEquals(ReadPreference.secondaryPreferred(), collection.withReadPreference(ReadPreference.secondaryPreferred())
+                .getReadPreference());
+    }
+
+    @Test
+    public void withTimeout() {
+        assertEquals(1000, collection.withTimeout(1000, TimeUnit.MILLISECONDS).getTimeout(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    public void withWriteConcern() {
+        assertEquals(WriteConcern.MAJORITY, collection.withWriteConcern(WriteConcern.MAJORITY).getWriteConcern());
+    }
 
     @Test
     void testAggregate() {
@@ -412,18 +454,27 @@ public class MongoCollectionImplTest extends TestHelper {
 
     @Test
     public void testDrop() {
+        DropCollectionOptions dropCollectionOptions = new DropCollectionOptions();
         assertAll("drop",
                   () -> assertAll("check validation",
-                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.drop(null))
+                                  () -> assertThrows(IllegalArgumentException.class, () -> collection.drop(null, null))
                   ),
                   () -> {
-                      Publisher<Void> expected = mongoOperationPublisher.dropCollection(null);
+                      Publisher<Void> expected = mongoOperationPublisher.dropCollection(null, dropCollectionOptions);
                       assertPublisherIsTheSameAs(expected, collection.drop(), "Default");
                   },
                   () -> {
-                      Publisher<Void> expected = mongoOperationPublisher.dropCollection(clientSession);
+                      Publisher<Void> expected = mongoOperationPublisher.dropCollection(clientSession, dropCollectionOptions);
                       assertPublisherIsTheSameAs(expected, collection.drop(clientSession), "With client session");
-                  }
+                  },
+                () -> {
+                    Publisher<Void> expected = mongoOperationPublisher.dropCollection(null, dropCollectionOptions);
+                    assertPublisherIsTheSameAs(expected, collection.drop(dropCollectionOptions), "Default");
+                },
+                () -> {
+                    Publisher<Void> expected = mongoOperationPublisher.dropCollection(clientSession, dropCollectionOptions);
+                    assertPublisherIsTheSameAs(expected, collection.drop(clientSession, dropCollectionOptions), "With client session");
+                }
         );
     }
 
@@ -807,6 +858,7 @@ public class MongoCollectionImplTest extends TestHelper {
         );
     }
 
+    @SuppressWarnings("deprecation")
     @Test
     public void testMapReduce() {
         String map = "map";
@@ -828,24 +880,24 @@ public class MongoCollectionImplTest extends TestHelper {
                                                      () -> collection.mapReduce(null, map, reduce, Document.class))
                   ),
                   () -> {
-                      MapReducePublisher<Document> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<Document> expected =
                               new MapReducePublisherImpl<>(null, mongoOperationPublisher, map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(map, reduce), "Default");
                   },
                   () -> {
-                      MapReducePublisher<BsonDocument> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<BsonDocument> expected =
                               new MapReducePublisherImpl<>(null, mongoOperationPublisher.withDocumentClass(BsonDocument.class),
                                                            map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(map, reduce, BsonDocument.class),
                                                  "With result class");
                   },
                   () -> {
-                      MapReducePublisher<Document> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<Document> expected =
                               new MapReducePublisherImpl<>(clientSession, mongoOperationPublisher, map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(clientSession, map, reduce), "With client session");
                   },
                   () -> {
-                      MapReducePublisher<BsonDocument> expected =
+                      com.mongodb.reactivestreams.client.MapReducePublisher<BsonDocument> expected =
                               new MapReducePublisherImpl<>(clientSession, mongoOperationPublisher.withDocumentClass(BsonDocument.class),
                                                            map, reduce);
                       assertPublisherIsTheSameAs(expected, collection.mapReduce(clientSession, map, reduce, BsonDocument.class),

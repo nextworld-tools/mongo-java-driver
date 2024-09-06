@@ -20,7 +20,6 @@ import com.mongodb.CreateIndexCommitQuorum
 import com.mongodb.DuplicateKeyException
 import com.mongodb.MongoClientException
 import com.mongodb.MongoCommandException
-import com.mongodb.MongoExecutionTimeoutException
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.WriteConcern
@@ -35,13 +34,10 @@ import org.bson.Document
 import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 
-import static com.mongodb.ClusterFixture.disableMaxTimeFailPoint
-import static com.mongodb.ClusterFixture.enableMaxTimeFailPoint
 import static com.mongodb.ClusterFixture.getBinding
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
-import static com.mongodb.ClusterFixture.isSharded
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
-import static com.mongodb.ClusterFixture.serverVersionGreaterThan
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static java.util.concurrent.TimeUnit.SECONDS
 
 class CreateIndexesOperationSpecification extends OperationFunctionalSpecification {
@@ -53,14 +49,13 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should get index names'() {
         when:
-        def createIndexOperation = new CreateIndexesOperation(getNamespace(),
-                                                              [new IndexRequest(new BsonDocument('field1', new BsonInt32(1))),
-                                                               new IndexRequest(new BsonDocument('field2', new BsonInt32(-1))),
-                                                               new IndexRequest(new BsonDocument('field3', new BsonInt32(1))
-                                                                                        .append('field4', new BsonInt32(-1))),
-                                                               new IndexRequest(new BsonDocument('field5', new BsonInt32(-1)))
-                                                                       .name('customName')
-                                                              ])
+        def createIndexOperation = createOperation([new IndexRequest(new BsonDocument('field1', new BsonInt32(1))),
+                                                    new IndexRequest(new BsonDocument('field2', new BsonInt32(-1))),
+                                                    new IndexRequest(new BsonDocument('field3', new BsonInt32(1))
+                                                            .append('field4', new BsonInt32(-1))),
+                                                    new IndexRequest(new BsonDocument('field5', new BsonInt32(-1)))
+                                                            .name('customName')
+        ])
         then:
         createIndexOperation.indexNames == ['field1_1', 'field2_-1', 'field3_1_field4_-1', 'customName']
     }
@@ -68,7 +63,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     def 'should be able to create a single index'() {
         given:
         def keys = new BsonDocument('field', new BsonInt32(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+        def operation = createOperation([new IndexRequest(keys)])
 
         when:
         execute(operation, async)
@@ -80,32 +75,11 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ isSharded() })
-    def 'should throw execution timeout exception from execute'() {
+    @IgnoreIf({ serverVersionAtLeast(4, 4) })
+    def 'should throw exception if commit quorum is set where server < 4.4'() {
         given:
         def keys = new BsonDocument('field', new BsonInt32(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)]).maxTime(30, SECONDS)
-
-        enableMaxTimeFailPoint()
-
-        when:
-        execute(operation, async)
-
-        then:
-        thrown(MongoExecutionTimeoutException)
-
-        cleanup:
-        disableMaxTimeFailPoint()
-
-        where:
-        async << [true, false]
-    }
-
-    @IgnoreIf({ serverVersionAtLeast(4, 3) })
-    def 'should throw exception if commit quorum is set where server < 4.3'() {
-        given:
-        def keys = new BsonDocument('field', new BsonInt32(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+        def operation = createOperation([new IndexRequest(keys)])
                 .commitQuorum(CreateIndexCommitQuorum.MAJORITY)
 
         when:
@@ -118,13 +92,13 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !isDiscoverableReplicaSet() || !serverVersionAtLeast(4, 3) })
+    @IgnoreIf({ !isDiscoverableReplicaSet() || serverVersionLessThan(4, 4) })
     def 'should create index with commit quorum'() {
         given:
         def keys = new BsonDocument('field', new BsonInt32(1))
 
         when:
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+        def operation = createOperation([new IndexRequest(keys)])
                 .commitQuorum(quorum)
 
         then:
@@ -144,7 +118,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     def 'should be able to create a single index with a BsonInt64'() {
         given:
         def keys = new BsonDocument('field', new BsonInt64(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+        def operation = createOperation([new IndexRequest(keys)])
 
         when:
         execute(operation, async)
@@ -160,8 +134,8 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         given:
         def keysForFirstIndex = new BsonDocument('field', new BsonInt32(1))
         def keysForSecondIndex = new BsonDocument('field2', new BsonInt32(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keysForFirstIndex),
-                                                                    new IndexRequest(keysForSecondIndex)])
+        def operation = createOperation([new IndexRequest(keysForFirstIndex),
+                                         new IndexRequest(keysForSecondIndex)])
 
         when:
         execute(operation, async)
@@ -176,7 +150,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     def 'should be able to create a single index on a nested field'() {
         given:
         def keys = new BsonDocument('x.y', new BsonInt32(1))
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(keys)])
+        def operation = createOperation([new IndexRequest(keys)])
 
         when:
         execute(operation, async)
@@ -191,8 +165,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     def 'should be able to handle duplicate key errors when indexing'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(), x1, x1)
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('x', new BsonInt32(1))).unique(true)])
+        def operation = createOperation([new IndexRequest(new BsonDocument('x', new BsonInt32(1))).unique(true)])
 
         when:
         execute(operation, async)
@@ -208,8 +181,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
     def 'should drop duplicates'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(), x1, x1)
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('x', new BsonInt32(1))).unique(true).dropDups(true)])
+        def operation = createOperation([new IndexRequest(new BsonDocument('x', new BsonInt32(1))).unique(true).dropDups(true)])
 
         when:
         execute(operation, async)
@@ -223,7 +195,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should throw when trying to build an invalid index'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(new BsonDocument())])
+        def operation = createOperation([new IndexRequest(new BsonDocument())])
 
         when:
         execute(operation, async)
@@ -237,8 +209,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a unique index'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
 
         when:
         execute(operation, async)
@@ -248,8 +219,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         getCollectionHelper().drop(getNamespace())
-        operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1))).unique(true)])
+        operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1))).unique(true)])
         execute(operation, async)
 
         then:
@@ -261,7 +231,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a sparse index'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
 
         when:
         execute(operation, async)
@@ -271,8 +241,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         getCollectionHelper().drop(getNamespace())
-        operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1))).sparse(true)])
+        operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1))).sparse(true)])
         execute(operation, async)
 
         then:
@@ -284,8 +253,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a TTL indexes'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
 
         when:
         execute(operation, async)
@@ -295,8 +263,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         getCollectionHelper().drop(getNamespace())
-        operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1))).expireAfter(100, SECONDS)])
+        operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1))).expireAfter(100, SECONDS)])
         execute(operation, async)
 
         then:
@@ -309,8 +276,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a 2d indexes'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('2d')))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('2d')))])
 
         when:
         execute(operation, async)
@@ -320,8 +286,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         getCollectionHelper().drop(getNamespace())
-        operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('2d'))).bits(2).min(1.0).max(2.0)])
+        operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('2d'))).bits(2).min(1.0).max(2.0)])
         execute(operation, async)
 
         then:
@@ -334,28 +299,9 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ serverVersionGreaterThan('4.4') })
-    def 'should be able to create a geoHaystack indexes'() {
-        given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('geoHaystack')).append('field1', new BsonInt32(1)))
-                         .bucketSize(10.0)])
-
-        when:
-        execute(operation, async)
-
-        then:
-        getUserCreatedIndexes('key') == [[field: 'geoHaystack', field1: 1]]
-        getUserCreatedIndexes('bucketSize') == [10.0]
-
-        where:
-        async << [true, false]
-    }
-
     def 'should be able to create a 2dSphereIndex'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('2dsphere')))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('2dsphere')))])
 
         when:
         execute(operation, async)
@@ -369,8 +315,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a 2dSphereIndex with version 1'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('2dsphere'))).sphereVersion(1)])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('2dsphere'))).sphereVersion(1)])
 
         when:
         execute(operation, async)
@@ -385,11 +330,10 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a textIndex'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('text')))
-                         .defaultLanguage('es')
-                         .languageOverride('language')
-                         .weights(new BsonDocument('field', new BsonInt32(100)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('text')))
+                                                 .defaultLanguage('es')
+                                                 .languageOverride('language')
+                                                 .weights(new BsonDocument('field', new BsonInt32(100)))])
 
         when:
         execute(operation, async)
@@ -406,8 +350,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a textIndexVersion'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('text')))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('text')))])
 
         when:
         execute(operation, async)
@@ -421,8 +364,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
     def 'should be able to create a textIndexVersion with version 1'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonString('text'))).textVersion(1)])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonString('text'))).textVersion(1)])
 
         when:
         execute(operation, async)
@@ -434,13 +376,12 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 0) })
+    @IgnoreIf({ serverVersionLessThan(3, 0) })
     def 'should pass through storage engine options'() {
         given:
         def storageEngineOptions = new Document('wiredTiger', new Document('configString', 'block_compressor=zlib'))
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('a', new BsonInt32(1)))
-                         .storageEngine(new BsonDocumentWrapper(storageEngineOptions, new DocumentCodec()))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('a', new BsonInt32(1)))
+                                                 .storageEngine(new BsonDocumentWrapper(storageEngineOptions, new DocumentCodec()))])
 
         when:
         execute(operation, async)
@@ -452,13 +393,13 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 2) })
+    @IgnoreIf({ serverVersionLessThan(3, 2) })
     def 'should be able to create a partially filtered index'() {
         given:
         def partialFilterExpression = new Document('a', new Document('$gte', 10))
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1)))
-                         .partialFilterExpression(new BsonDocumentWrapper(partialFilterExpression, new DocumentCodec()))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))
+                                                 .partialFilterExpression(new BsonDocumentWrapper(partialFilterExpression,
+                                                         new DocumentCodec()))])
 
         when:
         execute(operation, async)
@@ -470,7 +411,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
         def keys = new BsonDocument('field', new BsonInt32(1))
@@ -488,31 +429,10 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    def 'should throw an exception when using an unsupported Collation'() {
-        given:
-        def operation = new CreateIndexesOperation(getNamespace(), requests)
-
-        when:
-        testOperationThrows(operation, [3, 2, 0], async)
-
-        then:
-        def exception = thrown(IllegalArgumentException)
-        exception.getMessage().startsWith('Collation not supported by wire version:')
-
-        where:
-        [async, requests] << [
-                [true, false],
-                [[new IndexRequest(BsonDocument.parse('{field: 1}}')).collation(defaultCollation)],
-                 [new IndexRequest(BsonDocument.parse('{field: 1}}')),
-                  new IndexRequest(BsonDocument.parse('{field: 2}}')).collation(defaultCollation)]]
-        ].combinations()
-    }
-
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should be able to create an index with collation'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('a', new BsonInt32(1))).collation(defaultCollation)])
+        def operation = createOperation([new IndexRequest(new BsonDocument('a', new BsonInt32(1))).collation(defaultCollation)])
 
         when:
         execute(operation, async)
@@ -526,12 +446,11 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 1) })
+    @IgnoreIf({ serverVersionLessThan(4, 2) })
     def 'should be able to create wildcard indexes'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('$**', new BsonInt32(1))),
-                 new IndexRequest(new BsonDocument('tags.$**', new BsonInt32(1)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('$**', new BsonInt32(1))),
+                                         new IndexRequest(new BsonDocument('tags.$**', new BsonInt32(1)))])
 
         when:
         execute(operation, async)
@@ -544,12 +463,12 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 1) })
+    @IgnoreIf({ serverVersionLessThan(4, 2) })
     def 'should be able to create wildcard index with projection'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('$**', new BsonInt32(1)))
-                        .wildcardProjection(new BsonDocument('a', BsonBoolean.TRUE).append('_id', BsonBoolean.FALSE))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('$**', new BsonInt32(1)))
+                                                 .wildcardProjection(new BsonDocument('a', BsonBoolean.TRUE).append('_id',
+                                                         BsonBoolean.FALSE))])
 
         when:
         execute(operation, async)
@@ -562,10 +481,10 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(4, 4) })
+    @IgnoreIf({ serverVersionLessThan(4, 4) })
     def 'should be able to set hidden index'() {
         given:
-        def operation = new CreateIndexesOperation(getNamespace(), [new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
+        def operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1)))])
 
         when:
         execute(operation, async)
@@ -575,8 +494,7 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
 
         when:
         getCollectionHelper().drop(getNamespace())
-        operation = new CreateIndexesOperation(getNamespace(),
-                [new IndexRequest(new BsonDocument('field', new BsonInt32(1))).hidden(true)])
+        operation = createOperation([new IndexRequest(new BsonDocument('field', new BsonInt32(1))).hidden(true)])
         execute(operation, async)
 
         then:
@@ -601,12 +519,16 @@ class CreateIndexesOperationSpecification extends OperationFunctionalSpecificati
         indexes
     }
 
-    def List<Document> getUserCreatedIndexes() {
+    List<Document> getUserCreatedIndexes() {
         getIndexes().findAll { it.key != [_id: 1] }
     }
 
-    def List<Document> getUserCreatedIndexes(String keyname) {
+    List<Document> getUserCreatedIndexes(String keyname) {
         getUserCreatedIndexes()*.get(keyname).findAll { it != null }
+    }
+
+    def createOperation(final List<IndexRequest> requests) {
+        new CreateIndexesOperation(getNamespace(), requests, null)
     }
 
 }

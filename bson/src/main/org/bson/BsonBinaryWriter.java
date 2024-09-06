@@ -36,7 +36,7 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
     private final BsonBinaryWriterSettings binaryWriterSettings;
 
     private final BsonOutput bsonOutput;
-    private final Stack<Integer> maxDocumentSizeStack = new Stack<Integer>();
+    private final Stack<Integer> maxDocumentSizeStack = new Stack<>();
     private Mark mark;
 
     /**
@@ -67,7 +67,7 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
      */
     public BsonBinaryWriter(final BsonWriterSettings settings, final BsonBinaryWriterSettings binaryWriterSettings,
                             final BsonOutput bsonOutput) {
-        this(settings, binaryWriterSettings, bsonOutput, new NoOpFieldNameValidator());
+        this(settings, binaryWriterSettings, bsonOutput, NoOpFieldNameValidator.INSTANCE);
     }
 
     /**
@@ -420,6 +420,9 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
         }
     }
 
+    /**
+     * An implementation of {@code AbstractBsonWriter.Context}.
+     */
     protected class Context extends AbstractBsonWriter.Context {
         private final int startPosition;
         private int index; // used when contextType is an array
@@ -458,6 +461,9 @@ public class BsonBinaryWriter extends AbstractBsonWriter {
         }
     }
 
+    /**
+     * An implementation of {@code AbstractBsonWriter.Mark}.
+     */
     protected class Mark extends AbstractBsonWriter.Mark {
         private final int position;
 

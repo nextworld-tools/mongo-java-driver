@@ -16,15 +16,21 @@
 
 package org.mongodb.scala.model.vault
 
-import java.lang.reflect.Modifier.{ isPublic, isStatic }
+import com.mongodb.client.model.CreateEncryptedCollectionParams
 
 import com.mongodb.reactivestreams.client.vault.{ ClientEncryption => JClientEncryption }
-import org.mongodb.scala.BaseSpec
+import org.mockito.ArgumentMatchers.{ any, same }
+import org.mockito.Mockito.verify
+import org.mongodb.scala.{ BaseSpec, MongoDatabase }
+import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.bson.{ BsonBinary, BsonString }
+import org.mongodb.scala.model.CreateCollectionOptions
 import org.mongodb.scala.vault.ClientEncryption
-import org.scalamock.scalatest.proxy.MockFactory
+import org.scalatestplus.mockito.MockitoSugar
 
-class ClientEncryptionSpec extends BaseSpec with MockFactory {
+import java.lang.reflect.Modifier.{ isPublic, isStatic }
+
+class ClientEncryptionSpec extends BaseSpec with MockitoSugar {
 
   val wrapped = mock[JClientEncryption]
   val clientEncryption = ClientEncryption(wrapped)
@@ -47,26 +53,52 @@ class ClientEncryptionSpec extends BaseSpec with MockFactory {
     val kmsProvider = "kmsProvider"
     val options = DataKeyOptions()
 
-    wrapped.expects(Symbol("createDataKey"))(kmsProvider, *).once()
     clientEncryption.createDataKey(kmsProvider)
+    verify(wrapped).createDataKey(same(kmsProvider), any())
 
-    wrapped.expects(Symbol("createDataKey"))(kmsProvider, options).once()
     clientEncryption.createDataKey(kmsProvider, options)
+    verify(wrapped).createDataKey(kmsProvider, options)
   }
 
   it should "call encrypt" in {
     val bsonValue = BsonString("")
     val options = EncryptOptions("algorithm")
-    wrapped.expects(Symbol("encrypt"))(bsonValue, options).once()
-
     clientEncryption.encrypt(bsonValue, options)
+
+    verify(wrapped).encrypt(bsonValue, options)
+  }
+
+  it should "call encrypt Expression" in {
+    val bsonDocument = Document()
+    val options = EncryptOptions("algorithm").rangeOptions(RangeOptions())
+    clientEncryption.encryptExpression(bsonDocument, options)
+
+    verify(wrapped).encryptExpression(bsonDocument.toBsonDocument, options)
   }
 
   it should "call decrypt" in {
     val bsonBinary = BsonBinary(Array[Byte](1, 2, 3))
-    wrapped.expects(Symbol("decrypt"))(bsonBinary).once()
-
     clientEncryption.decrypt(bsonBinary)
+
+    verify(wrapped).decrypt(bsonBinary)
   }
 
+  it should "call createEncryptedCollection" in {
+    val database = mock[MongoDatabase]
+    val collectionName = "collectionName"
+    val createCollectionOptions = new CreateCollectionOptions()
+    val createEncryptedCollectionParams = new CreateEncryptedCollectionParams("kmsProvider")
+    clientEncryption.createEncryptedCollection(
+      database,
+      collectionName,
+      createCollectionOptions,
+      createEncryptedCollectionParams
+    )
+    verify(wrapped).createEncryptedCollection(
+      same(database.wrapped),
+      same(collectionName),
+      same(createCollectionOptions),
+      same(createEncryptedCollectionParams)
+    )
+  }
 }

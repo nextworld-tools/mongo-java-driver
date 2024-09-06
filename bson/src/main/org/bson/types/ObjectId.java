@@ -57,15 +57,27 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     private static final int RANDOM_VALUE1;
     private static final short RANDOM_VALUE2;
 
-    private static final AtomicInteger NEXT_COUNTER = new AtomicInteger(new SecureRandom().nextInt());
+    private static final AtomicInteger NEXT_COUNTER;
 
-    private static final char[] HEX_CHARS = new char[]{
+    private static final char[] HEX_CHARS = {
             '0', '1', '2', '3', '4', '5', '6', '7',
             '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
+    /**
+     * The timestamp
+     */
     private final int timestamp;
+    /**
+     * The counter.
+     */
     private final int counter;
+    /**
+     * the first four bits of randomness.
+     */
     private final int randomValue1;
+    /**
+     * The last two bits of randomness.
+     */
     private final short randomValue2;
 
     /**
@@ -155,7 +167,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     }
 
     /**
-     * Creates an ObjectId using the given time, machine identifier, process identifier, and counter.
+     * Creates an ObjectId using the given time and counter.
      *
      * @param timestamp the time in seconds
      * @param counter   the counter
@@ -172,7 +184,7 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
     private ObjectId(final int timestamp, final int randomValue1, final short randomValue2, final int counter,
                      final boolean checkCounter) {
         if ((randomValue1 & 0xff000000) != 0) {
-            throw new IllegalArgumentException("The machine identifier must be between 0 and 16777215 (it must fit in three bytes).");
+            throw new IllegalArgumentException("The random value must be between 0 and 16777215 (it must fit in three bytes).");
         }
         if (checkCounter && ((counter & 0xff000000) != 0)) {
             throw new IllegalArgumentException("The counter must be between 0 and 16777215 (it must fit in three bytes).");
@@ -351,12 +363,29 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
         return toHexString();
     }
 
-    // see https://docs.oracle.com/javase/6/docs/platform/serialization/spec/output.html
+    /**
+     * Write the replacement object.
+     *
+     * <p>
+     * See https://docs.oracle.com/javase/6/docs/platform/serialization/spec/output.html
+     * </p>
+     *
+     * @return a proxy for the document
+     */
     private Object writeReplace() {
         return new SerializationProxy(this);
     }
 
-    // see https://docs.oracle.com/javase/6/docs/platform/serialization/spec/input.html
+    /**
+     * Prevent normal deserialization.
+     *
+     * <p>
+     * See https://docs.oracle.com/javase/6/docs/platform/serialization/spec/input.html
+     * </p>
+     *
+     * @param stream the stream
+     * @throws InvalidObjectException in all cases
+     */
     private void readObject(final ObjectInputStream stream) throws InvalidObjectException {
         throw new InvalidObjectException("Proxy required");
     }
@@ -380,21 +409,35 @@ public final class ObjectId implements Comparable<ObjectId>, Serializable {
             SecureRandom secureRandom = new SecureRandom();
             RANDOM_VALUE1 = secureRandom.nextInt(0x01000000);
             RANDOM_VALUE2 = (short) secureRandom.nextInt(0x00008000);
+            NEXT_COUNTER = new AtomicInteger(secureRandom.nextInt());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     private static byte[] parseHexString(final String s) {
-        if (!isValid(s)) {
-            throw new IllegalArgumentException("invalid hexadecimal representation of an ObjectId: [" + s + "]");
-        }
+        notNull("hexString", s);
+        isTrueArgument("hexString has 24 characters", s.length() == 24);
 
         byte[] b = new byte[OBJECT_ID_LENGTH];
         for (int i = 0; i < b.length; i++) {
-            b[i] = (byte) Integer.parseInt(s.substring(i * 2, i * 2 + 2), 16);
+            int pos = i << 1;
+            char c1 = s.charAt(pos);
+            char c2 = s.charAt(pos + 1);
+            b[i] = (byte) ((hexCharToInt(c1) << 4) + hexCharToInt(c2));
         }
         return b;
+    }
+
+    private static int hexCharToInt(final char c) {
+        if (c >= '0' && c <= '9') {
+            return c - 48;
+        } else if (c >= 'a' && c <= 'f') {
+            return c - 87;
+        } else if (c >= 'A' && c <= 'F') {
+            return c - 55;
+        }
+        throw new IllegalArgumentException("invalid hexadecimal character: [" + c + "]");
     }
 
     private static int dateToTimestampSeconds(final Date time) {

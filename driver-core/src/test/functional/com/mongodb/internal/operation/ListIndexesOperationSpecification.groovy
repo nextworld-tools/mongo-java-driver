@@ -17,7 +17,6 @@
 package com.mongodb.internal.operation
 
 
-import com.mongodb.MongoExecutionTimeoutException
 import com.mongodb.MongoNamespace
 import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.ReadPreference
@@ -34,7 +33,6 @@ import com.mongodb.internal.binding.ReadBinding
 import com.mongodb.internal.bulk.IndexRequest
 import com.mongodb.internal.connection.AsyncConnection
 import com.mongodb.internal.connection.Connection
-import com.mongodb.internal.connection.QueryResult
 import org.bson.BsonDocument
 import org.bson.BsonDouble
 import org.bson.BsonInt32
@@ -43,14 +41,10 @@ import org.bson.BsonString
 import org.bson.Document
 import org.bson.codecs.Decoder
 import org.bson.codecs.DocumentCodec
-import spock.lang.IgnoreIf
 
-import static com.mongodb.ClusterFixture.disableMaxTimeFailPoint
-import static com.mongodb.ClusterFixture.enableMaxTimeFailPoint
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
 import static com.mongodb.ClusterFixture.executeAsync
 import static com.mongodb.ClusterFixture.getBinding
-import static com.mongodb.ClusterFixture.isSharded
-import static java.util.concurrent.TimeUnit.MILLISECONDS
 
 class ListIndexesOperationSpecification extends OperationFunctionalSpecification {
 
@@ -76,7 +70,7 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         cursor.next(callback)
 
         then:
-        callback.get() == null
+        callback.get() == []
     }
 
 
@@ -117,8 +111,8 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec())
         collectionHelper.createIndex(new BsonDocument('theField', new BsonInt32(1)))
         collectionHelper.createIndex(new BsonDocument('compound', new BsonInt32(1)).append('index', new BsonInt32(-1)))
-        new CreateIndexesOperation(namespace, [new IndexRequest(new BsonDocument('unique', new BsonInt32(1))).unique(true)])
-                .execute(getBinding())
+        new CreateIndexesOperation(namespace,
+                [new IndexRequest(new BsonDocument('unique', new BsonInt32(1))).unique(true)], null).execute(getBinding())
 
         when:
         BatchCursor cursor = operation.execute(getBinding())
@@ -137,8 +131,8 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec())
         collectionHelper.createIndex(new BsonDocument('theField', new BsonInt32(1)))
         collectionHelper.createIndex(new BsonDocument('compound', new BsonInt32(1)).append('index', new BsonInt32(-1)))
-        new CreateIndexesOperation(namespace, [new IndexRequest(new BsonDocument('unique', new BsonInt32(1))).unique(true)])
-                .execute(getBinding())
+        new CreateIndexesOperation(namespace,
+                [new IndexRequest(new BsonDocument('unique', new BsonInt32(1))).unique(true)], null).execute(getBinding())
 
         when:
         def cursor = executeAsync(operation)
@@ -210,108 +204,55 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         cursor.getBatchSize() == 2
 
         cleanup:
-        consumeAsyncResults(cursor)
+        cursor?.close()
     }
 
-    @IgnoreIf({ isSharded() })
-    def 'should throw execution timeout exception from execute'() {
-        given:
-        def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec()).maxTime(1000, MILLISECONDS)
-        collectionHelper.createIndex(new BsonDocument('collection1', new BsonInt32(1)))
-
-        enableMaxTimeFailPoint()
-
-        when:
-        operation.execute(getBinding())
-
-        then:
-        thrown(MongoExecutionTimeoutException)
-
-        cleanup:
-        disableMaxTimeFailPoint()
-    }
-
-
-    @IgnoreIf({ isSharded() })
-    def 'should throw execution timeout exception from executeAsync'() {
-        given:
-        def operation = new ListIndexesOperation(getNamespace(), new DocumentCodec()).maxTime(1000, MILLISECONDS)
-        collectionHelper.createIndex(new BsonDocument('collection1', new BsonInt32(1)))
-
-        enableMaxTimeFailPoint()
-
-        when:
-        executeAsync(operation);
-
-        then:
-        thrown(MongoExecutionTimeoutException)
-
-        cleanup:
-        disableMaxTimeFailPoint()
-    }
-
-
-    def 'should use the ReadBindings readPreference to set slaveOK'() {
+    def 'should use the readPreference to set secondaryOk'() {
         given:
         def connection = Mock(Connection)
         def connectionSource = Stub(ConnectionSource) {
-            getServerApi() >> null
             getConnection() >> connection
+            getReadPreference() >> readPreference
+            getOperationContext() >> OPERATION_CONTEXT
         }
         def readBinding = Stub(ReadBinding) {
-            getServerApi() >> null
             getReadConnectionSource() >> connectionSource
             getReadPreference() >> readPreference
+            getOperationContext() >> OPERATION_CONTEXT
         }
         def operation = new ListIndexesOperation(helper.namespace, helper.decoder)
 
-        when:
+        when: '3.6.0'
         operation.execute(readBinding)
 
         then:
-        _ * connection.getDescription() >> helper.twoSixConnectionDescription
-        1 * connection.query(_, _, _, _, _, _, readPreference.isSlaveOk(), _, _, _, _, _, _) >> helper.queryResult
-        1 * connection.release()
-
-        when: '3.0.0'
-        operation.execute(readBinding)
-
-        then:
-        _ * connection.getDescription() >> helper.threeZeroConnectionDescription
-        1 * connection.command(_, _, _, readPreference, _, _, null) >> helper.commandResult
+        _ * connection.getDescription() >> helper.threeSixConnectionDescription
+        1 * connection.command(_, _, _, readPreference, _, OPERATION_CONTEXT) >> helper.commandResult
         1 * connection.release()
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]
     }
 
-    def 'should use the AsyncReadBindings readPreference to set slaveOK'() {
+    def 'should use the readPreference to set secondaryOk async'() {
         given:
         def connection = Mock(AsyncConnection)
         def connectionSource = Stub(AsyncConnectionSource) {
+            getReadPreference() >> readPreference
             getConnection(_) >> { it[0].onResult(connection, null) }
         }
         def readBinding = Stub(AsyncReadBinding) {
-            getServerApi() >> null
             getReadPreference() >> readPreference
             getReadConnectionSource(_) >> { it[0].onResult(connectionSource, null) }
         }
         def operation = new ListIndexesOperation(helper.namespace, helper.decoder)
 
-        when:
+        when: '3.6.0'
         operation.executeAsync(readBinding, Stub(SingleResultCallback))
 
         then:
-        _ * connection.getDescription() >> helper.twoSixConnectionDescription
-        1 * connection.queryAsync(_, _, _, _, _, _, readPreference.isSlaveOk(), _, _, _, _, _, _, _) >> {
-            it[13].onResult(helper.queryResult, null) }
-
-        when: '3.0.0'
-        operation.executeAsync(readBinding, Stub(SingleResultCallback))
-
-        then:
-        _ * connection.getDescription() >> helper.threeZeroConnectionDescription
-        1 * connection.commandAsync(helper.dbName, _, _, readPreference, _, _, _, _) >> { it.last().onResult(helper.commandResult, null) }
+        _ * connection.getDescription() >> helper.threeSixConnectionDescription
+        1 * connection.commandAsync(helper.dbName, _, _, readPreference, *_) >> { it.last().onResult(helper.commandResult, null) }
 
         where:
         readPreference << [ReadPreference.primary(), ReadPreference.secondary()]
@@ -321,13 +262,10 @@ class ListIndexesOperationSpecification extends OperationFunctionalSpecification
         dbName: 'db',
         namespace: new MongoNamespace('db', 'coll'),
         decoder: Stub(Decoder),
-        twoSixConnectionDescription : Stub(ConnectionDescription) {
-            getMaxWireVersion() >> 2
-        },
-        threeZeroConnectionDescription : Stub(ConnectionDescription) {
+        threeSixConnectionDescription : Stub(ConnectionDescription) {
             getMaxWireVersion() >> 3
         },
-        queryResult: Stub(QueryResult) {
+        queryResult: Stub(CommandCursorResult) {
             getNamespace() >> new MongoNamespace('db', 'coll')
             getResults() >> []
             getCursor() >> new ServerCursor(1, Stub(ServerAddress))

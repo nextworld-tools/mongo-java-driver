@@ -16,13 +16,11 @@
 
 package com.mongodb.workload;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.mongodb.client.unified.Entities;
+import com.mongodb.client.unified.UnifiedSyncTest;
 import com.mongodb.client.unified.UnifiedTest;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
@@ -87,17 +85,7 @@ public class WorkloadExecutor {
         }
         BsonDocument testDocument = testArray.get(0).asDocument();
 
-        UnifiedTest unifiedTest = new UnifiedTest(fileDocument.getString("schemaVersion").getValue(),
-                fileDocument.getArray("runOnRequirements", null),
-                fileDocument.getArray("createEntities", new BsonArray()),
-                fileDocument.getArray("initialData", new BsonArray()),
-                testDocument) {
-
-            @Override
-            protected MongoClient createMongoClient(final MongoClientSettings settings) {
-                return MongoClients.create(settings);
-            }
-
+        UnifiedTest unifiedTest = new UnifiedSyncTest() {
             @Override
             protected boolean terminateLoop() {
                 return terminateLoop;
@@ -105,8 +93,25 @@ public class WorkloadExecutor {
         };
 
         try {
-            unifiedTest.setUp();
-            unifiedTest.shouldPassAllOutcomes();
+            String schemaVersion = fileDocument.getString("schemaVersion").getValue();
+            BsonArray runOnRequirements = fileDocument.getArray("runOnRequirements", null);
+            BsonArray createEntities = fileDocument.getArray("createEntities", new BsonArray());
+            BsonArray initialData = fileDocument.getArray("initialData", new BsonArray());
+            unifiedTest.setUp(null,
+                    null,
+                    schemaVersion,
+                    runOnRequirements,
+                    createEntities,
+                    initialData,
+                    testDocument);
+            unifiedTest.shouldPassAllOutcomes(
+                    null,
+                    null,
+                    schemaVersion,
+                    runOnRequirements,
+                    createEntities,
+                    initialData,
+                    testDocument);
             Entities entities = unifiedTest.getEntities();
 
             long iterationCount = -1;
@@ -139,9 +144,9 @@ public class WorkloadExecutor {
             }
 
             BsonDocument eventsDocument = new BsonDocument()
-                    .append("events", eventDocuments)
                     .append("errors", errorDocuments == null ? new BsonArray() : errorDocuments)
-                    .append("failures", failureDocuments == null ? new BsonArray() : failureDocuments);
+                    .append("failures", failureDocuments == null ? new BsonArray() : failureDocuments)
+                    .append("events", eventDocuments);
 
             BsonDocument resultsDocument = new BsonDocument()
                     .append("numErrors", new BsonInt64(errorCount))

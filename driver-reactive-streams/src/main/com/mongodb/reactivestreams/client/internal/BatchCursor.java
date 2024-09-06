@@ -20,9 +20,12 @@ import org.reactivestreams.Publisher;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
+import java.util.function.Supplier;
 
-import static com.mongodb.reactivestreams.client.internal.MongoOperationPublisher.sinkToCallback;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 public class BatchCursor<T> implements AutoCloseable {
 
     private final AsyncBatchCursor<T> wrapped;
@@ -32,11 +35,20 @@ public class BatchCursor<T> implements AutoCloseable {
     }
 
     public Publisher<List<T>> next() {
-        return Mono.create(sink -> wrapped.next(sinkToCallback(sink)));
+        return next(() -> false);
     }
 
-    public Publisher<List<T>> tryNext() {
-        return Mono.create(sink -> wrapped.tryNext(sinkToCallback(sink)));
+    public Publisher<List<T>> next(final Supplier<Boolean> hasBeenCancelled) {
+        return Mono.create(sink -> wrapped.next(
+                (result, t) -> {
+                    if (!hasBeenCancelled.get()) {
+                        if (t != null) {
+                            sink.error(t);
+                        } else {
+                            sink.success(result);
+                        }
+                    }
+                }));
     }
 
     public void setBatchSize(final int batchSize) {

@@ -22,6 +22,7 @@ import com.mongodb.MongoNamespace;
 import com.mongodb.MongoNotPrimaryException;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.test.CollectionHelper;
+import com.mongodb.event.ConnectionCreatedEvent;
 import com.mongodb.event.ConnectionPoolClearedEvent;
 import com.mongodb.internal.connection.TestConnectionPoolListener;
 import com.mongodb.reactivestreams.client.MongoClient;
@@ -93,13 +94,13 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
 
     @Test
     public void testGetMoreIteration() {
-        assumeTrue(serverVersionAtLeast(asList(4, 1, 10)));
+        assumeTrue(serverVersionAtLeast(4, 2));
 
         List<Document> documents = asList(Document.parse("{_id: 1}"), Document.parse("{_id: 2}"), Document.parse("{_id: 3}"),
                                           Document.parse("{_id: 4}"), Document.parse("{_id: 5}"));
         Mono.from(collection.withWriteConcern(WriteConcern.MAJORITY).insertMany(documents)).block(TIMEOUT_DURATION);
 
-        int connectionCount = connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class);
+        int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         BatchCursor<Document> cursor = ((FindPublisherImpl<Document>) collection.find().batchSize(2)).batchCursor(2)
                 .block(TIMEOUT_DURATION);
@@ -110,16 +111,16 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
 
         assertEquals(asList(documents.get(2), documents.get(3)), Mono.from(cursor.next()).block(TIMEOUT_DURATION));
         assertEquals(singletonList(documents.get(4)), Mono.from(cursor.next()).block(TIMEOUT_DURATION));
-        assertEquals(connectionCount, connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class));
+        assertEquals(connectionCount, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
     @Test
-    public void testNotMasterKeepConnectionPool() {
-        assumeTrue(serverVersionAtLeast(asList(4, 1, 10)));
+    public void testNotPrimaryKeepConnectionPool() {
+        assumeTrue(serverVersionAtLeast(4, 2));
 
         collectionHelper.runAdminCommand("{configureFailPoint: 'failCommand',  mode: {times: 1}, "
                                                  + "data: {failCommands: ['insert'], errorCode: 10107}}");
-        int connectionCount = connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class);
+        int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
             Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
@@ -129,16 +130,16 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         }
 
         Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
-        assertEquals(connectionCount, connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class));
+        assertEquals(connectionCount, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
     @Test
-    public void testNotMasterClearConnectionPool() {
-        assumeFalse(serverVersionAtLeast(asList(4, 1, 0)));
+    public void testNotPrimaryClearConnectionPool() {
+        assumeFalse(serverVersionAtLeast(4, 2));
 
         collectionHelper.runAdminCommand("{configureFailPoint: 'failCommand',  mode: {times: 1}, "
                                                  + "data: {failCommands: ['insert'], errorCode: 10107}}");
-        int connectionCount = connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class);
+        int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
             Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
@@ -149,14 +150,14 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
 
         Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
-        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class));
+        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
     @Test
     public void testInterruptedAtShutdownResetsConnectionPool() {
         collectionHelper.runAdminCommand("{configureFailPoint: 'failCommand',  mode: {times: 1}, "
                                                  + "data: {failCommands: ['insert'], errorCode: 11600}}");
-        int connectionCount = connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class);
+        int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
             Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
@@ -165,14 +166,14 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         }
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
         Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
-        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class));
+        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
     @Test
     public void testShutdownInProgressResetsConnectionPool() {
         collectionHelper.runAdminCommand("{configureFailPoint: 'failCommand',  mode: {times: 1}, "
                                                  + "data: {failCommands: ['insert'], errorCode: 91}}");
-        int connectionCount = connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class);
+        int connectionCount = connectionPoolListener.countEvents(ConnectionCreatedEvent.class);
 
         try {
             Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
@@ -182,7 +183,7 @@ public class ConnectionsSurvivePrimaryStepDownProseTest {
         assertEquals(1, connectionPoolListener.countEvents(ConnectionPoolClearedEvent.class));
 
         Mono.from(collection.insertOne(new Document())).block(TIMEOUT_DURATION);
-        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(com.mongodb.event.ConnectionAddedEvent.class));
+        assertEquals(connectionCount + 1, connectionPoolListener.countEvents(ConnectionCreatedEvent.class));
     }
 
 }

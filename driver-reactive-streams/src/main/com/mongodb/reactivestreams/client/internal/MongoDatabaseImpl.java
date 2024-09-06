@@ -27,6 +27,7 @@ import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
+import com.mongodb.reactivestreams.client.ListCollectionNamesPublisher;
 import com.mongodb.reactivestreams.client.ListCollectionsPublisher;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
@@ -34,19 +35,21 @@ import org.bson.Document;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.MongoNamespace.checkDatabaseNameValidity;
+import static com.mongodb.assertions.Assertions.assertNotNull;
 import static com.mongodb.assertions.Assertions.notNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 
 /**
  * The internal MongoDatabase implementation.
  *
- * <p>This should not be considered a part of the public API.</p>
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 public final class MongoDatabaseImpl implements MongoDatabase {
     private final MongoOperationPublisher<Document> mongoOperationPublisher;
@@ -58,7 +61,7 @@ public final class MongoDatabaseImpl implements MongoDatabase {
 
     @Override
     public String getName() {
-        return mongoOperationPublisher.getNamespace().getDatabaseName();
+        return assertNotNull(mongoOperationPublisher.getNamespace()).getDatabaseName();
     }
 
     @Override
@@ -79,6 +82,12 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     @Override
     public ReadConcern getReadConcern() {
         return mongoOperationPublisher.getReadConcern();
+    }
+
+    @Override
+    public Long getTimeout(final TimeUnit timeUnit) {
+        Long timeoutMS = mongoOperationPublisher.getTimeoutSettings().getTimeoutMS();
+        return timeoutMS == null ? null : notNull("timeUnit", timeUnit).convert(timeoutMS, MILLISECONDS);
     }
 
     MongoOperationPublisher<Document> getMongoOperationPublisher() {
@@ -103,6 +112,11 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     @Override
     public MongoDatabase withReadConcern(final ReadConcern readConcern) {
         return new MongoDatabaseImpl(mongoOperationPublisher.withReadConcern(readConcern));
+    }
+
+    @Override
+    public MongoDatabase withTimeout(final long timeout, final TimeUnit timeUnit) {
+        return new MongoDatabaseImpl(mongoOperationPublisher.withTimeout(timeout, timeUnit));
     }
 
     @Override
@@ -168,15 +182,14 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     }
 
     @Override
-    public Publisher<String> listCollectionNames() {
-        return Flux.from(new ListCollectionsPublisherImpl<>(null, mongoOperationPublisher, true))
-                .map(d -> d.getString("name"));
+    public ListCollectionNamesPublisher listCollectionNames() {
+        return new ListCollectionNamesPublisherImpl(new ListCollectionsPublisherImpl<>(null, mongoOperationPublisher, true));
     }
 
     @Override
-    public Publisher<String> listCollectionNames(final ClientSession clientSession) {
-        return Flux.from(new ListCollectionsPublisherImpl<>(notNull("clientSession", clientSession), mongoOperationPublisher, true))
-                .map(d -> d.getString("name"));
+    public ListCollectionNamesPublisher listCollectionNames(final ClientSession clientSession) {
+        return new ListCollectionNamesPublisherImpl(
+                new ListCollectionsPublisherImpl<>(notNull("clientSession", clientSession), mongoOperationPublisher, true));
     }
 
     @Override
@@ -208,8 +221,7 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     @Override
     public Publisher<Void> createCollection(final String collectionName, final CreateCollectionOptions options) {
         return mongoOperationPublisher.createCollection(null,
-                                                        new MongoNamespace(getName(), notNull("collectionName", collectionName)),
-                                                        notNull("options", options));
+                notNull("collectionName", collectionName), notNull("options", options));
     }
 
     @Override
@@ -221,8 +233,7 @@ public final class MongoDatabaseImpl implements MongoDatabase {
     public Publisher<Void> createCollection(final ClientSession clientSession, final String collectionName,
                                             final CreateCollectionOptions options) {
         return mongoOperationPublisher.createCollection(notNull("clientSession", clientSession),
-                                                        new MongoNamespace(getName(), notNull("collectionName", collectionName)),
-                                                        notNull("options", options));
+                notNull("collectionName", collectionName), notNull("options", options));
     }
 
     @Override

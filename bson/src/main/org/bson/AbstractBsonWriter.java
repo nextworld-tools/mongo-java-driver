@@ -35,7 +35,7 @@ import static org.bson.assertions.Assertions.notNull;
  */
 public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
     private final BsonWriterSettings settings;
-    private final Stack<FieldNameValidator> fieldNameValidatorStack = new Stack<FieldNameValidator>();
+    private final Stack<FieldNameValidator> fieldNameValidatorStack = new Stack<>();
     private State state;
     private Context context;
     private int serializationDepth;
@@ -47,7 +47,7 @@ public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
      * @param settings The writer settings.
      */
     protected AbstractBsonWriter(final BsonWriterSettings settings) {
-        this(settings, new NoOpFieldNameValidator());
+        this(settings, NoOpFieldNameValidator.INSTANCE);
     }
 
     /**
@@ -530,8 +530,9 @@ public abstract class AbstractBsonWriter implements BsonWriter, Closeable {
         if (state != State.NAME) {
             throwInvalidState("WriteName", State.NAME);
         }
-        if (!fieldNameValidatorStack.peek().validate(name)) {
-            throw new IllegalArgumentException(format("Invalid BSON field name %s", name));
+        FieldNameValidator fieldNameValidator = fieldNameValidatorStack.peek();
+        if (!fieldNameValidator.validate(name)) {
+            throw new IllegalArgumentException(fieldNameValidator.getValidationErrorMessage(name));
         }
         doWriteName(name);
         context.name = name;

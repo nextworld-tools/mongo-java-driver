@@ -21,7 +21,10 @@ import com.mongodb.event.CommandEvent;
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
+import com.mongodb.internal.logging.LogMessage;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
+import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
 import org.bson.BsonValue;
@@ -43,7 +46,8 @@ abstract class ContextElement {
         return new CompletedOperationContextElement(operation, result, index);
     }
 
-    static ContextElement ofValueMatcher(final BsonValue expected, final BsonValue actual, final String key, final int arrayPosition) {
+    static ContextElement ofValueMatcher(final BsonValue expected, @Nullable final BsonValue actual, final String key,
+            final int arrayPosition) {
         return new ValueMatchingContextElement(expected, actual, key, arrayPosition);
     }
 
@@ -71,6 +75,129 @@ abstract class ContextElement {
 
     public static ContextElement ofConnectionPoolEvent(final BsonDocument expected, final Object actual, final int eventPosition) {
         return new ConnectionPoolEventMatchingContextElement(expected, actual, eventPosition);
+    }
+
+    public static ContextElement ofWaitForPrimaryChange() {
+        return new ContextElement() {
+            @Override
+            public String toString() {
+                return "Wait For Primary Change Context\n";
+            }
+        };
+    }
+
+    public static ContextElement ofWaitForThread(final String threadId) {
+        return new ContextElement() {
+            @Override
+            public String toString() {
+                return "Wait For Thread Context:\n"
+                        + "   Thread id: " + threadId + "\n";
+            }
+        };
+    }
+
+    public static ContextElement ofTopologyType(final String topologyType) {
+        return new ContextElement() {
+            @Override
+            public String toString() {
+                return "Topology Type Context:\n"
+                        + "   Topology Type: " + topologyType + "\n";
+            }
+        };
+    }
+
+    public static ContextElement ofWaitForConnectionPoolEvents(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Wait For Connection Pool Events", client, event, count);
+    }
+
+    public static ContextElement ofConnectionPoolEventCount(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Connection Pool Event Count", client, event, count);
+    }
+
+    public static ContextElement ofWaitForServerDescriptionChangedEvents(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Wait For Server Description Changed Events", client, event, count);
+    }
+
+    public static ContextElement ofServerDescriptionChangedEventCount(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Server Description Changed Event Count", client, event, count);
+    }
+
+    public static ContextElement ofWaitForClusterDescriptionChangedEvents(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Wait For Cluster Description Changed Events", client, event, count);
+    }
+
+    public static ContextElement ofClusterDescriptionChangedEventCount(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Cluster Description Changed Event Count", client, event, count);
+    }
+
+    public static ContextElement ofWaitForServerMonitorEvents(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Wait For Server Monitor Events", client, event, count);
+    }
+
+    public static ContextElement ofServerMonitorEventCount(final String client, final BsonDocument event, final int count) {
+        return new EventCountContext("Server Monitor Event Count", client, event, count);
+    }
+
+    public static ContextElement ofServerMonitorEvents(final String client, final BsonArray expectedEvents, final List<?> actualEvents) {
+        return new ContextElement() {
+            @Override
+            public String toString() {
+                return "Events MatchingContext: \n"
+                        + "   client: '" + client + "'\n"
+                        + "   Expected events:\n"
+                        + new BsonDocument("events", expectedEvents).toJson(JsonWriterSettings.builder().indent(true).build()) + "\n"
+                        + "   Actual events:\n"
+                        + new BsonDocument("events",
+                                new BsonArray(actualEvents.stream().map(ContextElement::serverMonitorEventToDocument).collect(Collectors.toList())))
+                                        .toJson(JsonWriterSettings.builder().indent(true).build())
+                        + "\n";
+            }
+
+            private BsonDocument toDocument(final Object event) {
+                return new BsonDocument(EventMatcher.getEventType(event.getClass()),
+                        new BsonDocument("awaited", BsonBoolean.valueOf(EventMatcher.getAwaitedFromServerMonitorEvent(event))));
+            }
+        };
+    }
+
+    public static ContextElement ofServerMonitorEvent(final BsonDocument expected, final Object actual, final int eventPosition) {
+        return new ContextElement() {
+            @Override
+            public String toString() {
+                return "Event Matching Context\n"
+                        + "   event position: " + eventPosition + "\n"
+                        + "   expected event: " + expected + "\n"
+                        + "   actual event:   " + serverMonitorEventToDocument(actual) + "\n";
+            }
+        };
+    }
+
+    private static class EventCountContext extends ContextElement {
+
+        private final String name;
+        private final String client;
+        private final BsonDocument event;
+        private final int count;
+
+        EventCountContext(final String name, final String client, final BsonDocument event, final int count) {
+            this.name = name;
+            this.client = client;
+            this.event = event;
+            this.count = count;
+        }
+
+        @Override
+        public String toString() {
+            return name + " Context: " + "\n"
+                    + "   Client: " + client + "\n"
+                    + "   Event:\n"
+                    + event.toJson(JsonWriterSettings.builder().indent(true).build()) + "\n"
+                    + "   Count: " + count + "\n";
+        }
+    }
+    public static ContextElement ofLogMessages(final String client, final BsonArray expectedMessages,
+            final List<LogMessage> actualMessages) {
+        return new LogMessageMatchingContextElement(client, expectedMessages, actualMessages);
     }
 
 
@@ -131,7 +258,7 @@ abstract class ContextElement {
         private final String key;
         private final int arrayPosition;
 
-        ValueMatchingContextElement(final BsonValue expected, final BsonValue actual, final String key, final int arrayPosition) {
+        ValueMatchingContextElement(final BsonValue expected, @Nullable final BsonValue actual, final String key, final int arrayPosition) {
             this.expected = expected;
             this.actual = actual;
             this.key = key;
@@ -148,9 +275,9 @@ abstract class ContextElement {
                 builder.append("   Array position: ").append(arrayPosition).append("\n");
             }
             builder.append("   Expected value:\n      ");
-            builder.append(expected.toString()).append("\n");
+            builder.append(expected).append("\n");
             builder.append("   Actual value:\n      ");
-            builder.append(actual.toString()).append("\n");
+            builder.append(actual).append("\n");
             return builder.toString();
         }
     }
@@ -305,7 +432,39 @@ abstract class ContextElement {
         }
     }
 
+
+    private static class LogMessageMatchingContextElement extends ContextElement {
+        private final String client;
+        private final BsonArray expectedMessages;
+        private final List<LogMessage> actualMessages;
+
+        LogMessageMatchingContextElement(final String client, final BsonArray expectedMessages,
+                final List<LogMessage> actualMessages) {
+            super();
+            this.client = client;
+            this.expectedMessages = expectedMessages;
+            this.actualMessages = actualMessages;
+        }
+
+        @Override
+        public String toString() {
+            return "Log Message Matching Context\n"
+                    + "   client='" + client + '\'' + "\n"
+                    + "   expectedMessages="
+                    + new BsonDocument("messages", expectedMessages).toJson(JsonWriterSettings.builder().indent(true).build()) + "\n"
+                    + "   actualMessages="
+                    + new BsonDocument("messages", new BsonArray(actualMessages.stream()
+                    .map(LogMatcher::asDocument).collect(Collectors.toList())))
+                    .toJson(JsonWriterSettings.builder().indent(true).build()) + "\n";
+        }
+    }
+
     private static BsonDocument connectionPoolEventToDocument(final Object event) {
         return new BsonDocument(event.getClass().getSimpleName(), new BsonDocument());
+    }
+
+    private static BsonDocument serverMonitorEventToDocument(final Object event) {
+        return new BsonDocument(EventMatcher.getEventType(event.getClass()),
+                new BsonDocument("awaited", BsonBoolean.valueOf(EventMatcher.getAwaitedFromServerMonitorEvent(event))));
     }
 }

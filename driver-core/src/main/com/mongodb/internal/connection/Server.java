@@ -22,7 +22,7 @@ import com.mongodb.internal.async.SingleResultCallback;
 /**
  * A logical connection to a MongoDB server.
  *
- * @since 3.0
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 @ThreadSafe
 public interface Server {
@@ -35,9 +35,10 @@ public interface Server {
      * <p> Implementations of this method will likely pool the underlying connection, so the effect of closing the returned connection will
      * be to return the connection to the pool. </p>
      *
+     * @param operationContext operation context
      * @return a connection this server
      */
-    Connection getConnection();
+    Connection getConnection(OperationContext operationContext);
 
     /**
      * <p>Gets a connection to this server asynchronously.  The connection should be released after the caller is done with it.</p>
@@ -45,7 +46,17 @@ public interface Server {
      * <p> Implementations of this method will likely pool the underlying connection, so the effect of closing the returned connection will
      * be to return the connection to the pool. </p>
      *
-     * @param callback the callback to execute when the connection is available or an error occurs
+     * @param operationContext operation context
+     * @param callback         the callback to execute when the connection is available or an error occurs
      */
-    void getConnectionAsync(SingleResultCallback<AsyncConnection> callback);
+    void getConnectionAsync(OperationContext operationContext, SingleResultCallback<AsyncConnection> callback);
+
+    /**
+     * An approximation of the
+     * <a href="https://github.com/mongodb/specifications/blob/master/source/server-selection/server-selection.rst#operationcount">
+     * number of operations that this server is currently executing</a>.
+     *
+     * @return A negative value iff the server does not track its operation count.
+     */
+    int operationCount();
 }

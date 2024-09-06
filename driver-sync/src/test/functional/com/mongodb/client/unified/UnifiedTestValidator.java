@@ -16,43 +16,24 @@
 
 package com.mongodb.client.unified;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.lang.Nullable;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.junit.Before;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-public class UnifiedTestValidator extends UnifiedTest {
-    private final String fileDescription;
-    private final String testDescription;
+import static com.mongodb.ClusterFixture.serverVersionLessThan;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-    public UnifiedTestValidator(final String fileDescription, final String testDescription, final String schemaVersion,
-                                @Nullable final BsonArray runOnRequirements, final BsonArray entities, final BsonArray initialData,
-                                final BsonDocument definition) {
-        super(schemaVersion, runOnRequirements, entities, initialData, definition);
-        this.fileDescription = fileDescription;
-        this.testDescription = testDescription;
-    }
-
-    @Before
-    public void setUp() {
-        super.setUp();
-    }
-
+final class UnifiedTestValidator extends UnifiedSyncTest {
     @Override
-    protected MongoClient createMongoClient(final MongoClientSettings settings) {
-        return MongoClients.create(settings);
+    protected void skips(final String fileDescription, final String testDescription) {
+        assumeFalse(testDescription.equals("InsertOne fails after multiple retryable writeConcernErrors") && serverVersionLessThan(4, 4),
+                "MongoDB releases prior to 4.4 incorrectly add errorLabels as a field within the writeConcernError document "
+                        + "instead of as a top-level field.  Rather than handle that in code, we skip the test on older server versions.");
     }
 
-    @Parameterized.Parameters(name = "{0}: {1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
+    private static Collection<Arguments> data() throws URISyntaxException, IOException {
         return getTestData("unified-test-format/valid-pass");
     }
 }

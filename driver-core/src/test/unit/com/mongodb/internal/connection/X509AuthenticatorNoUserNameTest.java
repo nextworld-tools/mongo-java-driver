@@ -17,7 +17,6 @@
 package com.mongodb.internal.connection;
 
 import com.mongodb.MongoCredential;
-import com.mongodb.MongoSecurityException;
 import com.mongodb.ServerAddress;
 import com.mongodb.async.FutureResultCallback;
 import com.mongodb.connection.ClusterId;
@@ -33,74 +32,48 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT;
 import static com.mongodb.ClusterFixture.getServerApi;
+import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE;
 import static com.mongodb.internal.connection.MessageHelper.buildSuccessfulReply;
 import static com.mongodb.internal.connection.MessageHelper.getApiVersionField;
 import static com.mongodb.internal.connection.MessageHelper.getDbField;
+import static com.mongodb.internal.operation.ServerVersionHelper.LATEST_WIRE_VERSION;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 public class X509AuthenticatorNoUserNameTest {
     private TestInternalConnection connection;
-    private ConnectionDescription connectionDescriptionThreeTwo;
-    private ConnectionDescription connectionDescriptionThreeFour;
+    private ConnectionDescription connectionDescriptionThreeSix;
 
     @Before
     public void before() {
         connection = new TestInternalConnection(new ServerId(new ClusterId(), new ServerAddress("localhost", 27017)));
-        connectionDescriptionThreeTwo = new ConnectionDescription(new ConnectionId(new ServerId(new ClusterId(), new ServerAddress())),
-                4, ServerType.STANDALONE, 1000, 16000,
-                48000, Collections.<String>emptyList());
-        connectionDescriptionThreeFour = new ConnectionDescription(new ConnectionId(new ServerId(new ClusterId(), new ServerAddress())),
-                5, ServerType.STANDALONE, 1000, 16000,
-                48000, Collections.<String>emptyList());
+        connectionDescriptionThreeSix = new ConnectionDescription(new ConnectionId(new ServerId(new ClusterId(), new ServerAddress())),
+                LATEST_WIRE_VERSION, ServerType.STANDALONE, 1000, 16000,
+                48000, Collections.emptyList());
     }
 
     @Test
     public void testSuccessfulAuthentication() {
         enqueueSuccessfulAuthenticationReply();
 
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticate(connection, connectionDescriptionThreeFour);
+        new X509Authenticator(getCredentialWithCache(), MULTIPLE, getServerApi())
+                .authenticate(connection, connectionDescriptionThreeSix, OPERATION_CONTEXT);
 
         validateMessages();
-    }
-
-    @Test
-    public void testUnsuccessfulAuthenticationWhenServerVersionLessThanThreeFour() {
-        try {
-            new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticate(connection, connectionDescriptionThreeTwo);
-            fail();
-        } catch (MongoSecurityException e) {
-            assertEquals("User name is required for the MONGODB-X509 authentication mechanism on server versions less than 3.4",
-                    e.getMessage());
-        }
     }
 
     @Test
     public void testSuccessfulAuthenticationAsync() throws ExecutionException, InterruptedException {
         enqueueSuccessfulAuthenticationReply();
 
-        FutureResultCallback<Void> futureCallback = new FutureResultCallback<Void>();
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticateAsync(connection, connectionDescriptionThreeFour,
-                futureCallback);
+        FutureResultCallback<Void> futureCallback = new FutureResultCallback<>();
+        new X509Authenticator(getCredentialWithCache(), MULTIPLE, getServerApi()).authenticateAsync(connection,
+                connectionDescriptionThreeSix, OPERATION_CONTEXT, futureCallback);
 
         futureCallback.get();
 
         validateMessages();
-    }
-
-    @Test
-    public void testUnsuccessfulAuthenticationWhenServerVersionLessThanThreeFourAsync() throws ExecutionException, InterruptedException {
-        FutureResultCallback<Void> futureCallback = new FutureResultCallback<Void>();
-        new X509Authenticator(getCredentialWithCache(), getServerApi()).authenticateAsync(connection, connectionDescriptionThreeTwo,
-                futureCallback);
-
-        try {
-            futureCallback.get();
-        } catch (MongoSecurityException e) {
-            assertEquals("User name is required for the MONGODB-X509 authentication mechanism on server versions less than 3.4",
-                    e.getMessage());
-        }
     }
 
     private void enqueueSuccessfulAuthenticationReply() {

@@ -16,39 +16,41 @@
 
 package com.mongodb.client.unified;
 
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.lang.Nullable;
-import org.bson.BsonArray;
-import org.bson.BsonDocument;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.provider.Arguments;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Collection;
 
-public class UnifiedCrudTest extends UnifiedTest {
+import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
+import static com.mongodb.ClusterFixture.serverVersionAtLeast;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
-    @SuppressWarnings("FieldCanBeLocal")
-    private final String fileDescription;
-    @SuppressWarnings("FieldCanBeLocal")
-    private final String testDescription;
-
-    public UnifiedCrudTest(final String fileDescription, final String testDescription, final String schemaVersion,
-                            @Nullable final BsonArray runOnRequirements, final BsonArray entities, final BsonArray initialData,
-                            final BsonDocument definition) {
-        super(schemaVersion, runOnRequirements, entities, initialData, definition);
-        this.fileDescription = fileDescription;
-        this.testDescription = testDescription;
+public final class UnifiedCrudTest extends UnifiedSyncTest {
+    public static void doSkips(final String fileDescription, final String testDescription) {
+        assumeFalse(testDescription.equals("Deprecated count with empty collection"));
+        assumeFalse(testDescription.equals("Deprecated count with collation"));
+        assumeFalse(testDescription.equals("Deprecated count without a filter"));
+        assumeFalse(testDescription.equals("Deprecated count with a filter"));
+        assumeFalse(testDescription.equals("Deprecated count with skip and limit"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndReplace with hint string on 4.4+ server"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndReplace with hint document on 4.4+ server"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndUpdate with hint string on 4.4+ server"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndUpdate with hint document on 4.4+ server"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndDelete with hint string on 4.4+ server"));
+        assumeFalse(testDescription.equals("Unacknowledged findOneAndDelete with hint document on 4.4+ server"));
+        if (isDiscoverableReplicaSet() && serverVersionAtLeast(8, 0)) {
+            assumeFalse(testDescription.equals("Aggregate with $out includes read preference for 5.0+ server"));
+            assumeFalse(testDescription.equals("Database-level aggregate with $out includes read preference for 5.0+ server"));
+        }
     }
 
     @Override
-    protected MongoClient createMongoClient(final MongoClientSettings settings) {
-        return MongoClients.create(settings);
+    protected void skips(final String fileDescription, final String testDescription) {
+        doSkips(fileDescription, testDescription);
     }
 
-    @Parameterized.Parameters(name = "{0}: {1}")
-    public static Collection<Object[]> data() throws URISyntaxException, IOException {
+    private static Collection<Arguments> data() throws URISyntaxException, IOException {
         return getTestData("unified-test-format/crud");
-    }}
+    }
+}

@@ -18,12 +18,10 @@ package com.mongodb.reactivestreams.client.internal;
 
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoDriverInformation;
 import com.mongodb.ReadConcern;
 import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
-import com.mongodb.connection.ClusterConnectionMode;
-import com.mongodb.connection.ClusterDescription;
-import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerConnectionState;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
@@ -46,7 +44,6 @@ import static java.util.Collections.singletonList;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 
 public class MongoClientImplTest extends TestHelper {
@@ -188,10 +185,6 @@ public class MongoClientImplTest extends TestHelper {
                 .build();
 
         MongoClientImpl mongoClient = createMongoClient();
-        Cluster cluster = mongoClient.getCluster();
-        when(cluster.getCurrentDescription())
-                .thenReturn(new ClusterDescription(ClusterConnectionMode.SINGLE, ClusterType.STANDALONE, singletonList(serverDescription)));
-
         ServerSessionPool serverSessionPool = mock(ServerSessionPool.class);
         ClientSessionHelper clientSessionHelper = new ClientSessionHelper(mongoClient, serverSessionPool);
 
@@ -216,6 +209,7 @@ public class MongoClientImplTest extends TestHelper {
     }
 
     private MongoClientImpl createMongoClient() {
-        return new MongoClientImpl(MongoClientSettings.builder().build(), mock(Cluster.class), OPERATION_EXECUTOR);
+        return new MongoClientImpl(MongoClientSettings.builder().build(),
+                MongoDriverInformation.builder().driverName("reactive-streams").build(), mock(Cluster.class), OPERATION_EXECUTOR);
     }
 }

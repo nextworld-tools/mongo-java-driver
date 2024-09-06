@@ -24,6 +24,7 @@ import spock.lang.IgnoreIf
 import spock.lang.Subject
 
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 
 class DBCursorFunctionalSpecification extends FunctionalSpecification {
 
@@ -51,7 +52,7 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
         1 * decoder.decode(_ as byte[], collection)
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 0) })
+    @IgnoreIf({ serverVersionLessThan(3, 0) })
     def 'should use provided hints for queries mongod > 3.0'() {
         given:
         collection.createIndex(new BasicDBObject('a', 1))
@@ -73,8 +74,26 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
 
     def 'should use provided hint for count'() {
         expect:
-        collection.createIndex(new BasicDBObject('a', 1));
+        collection.createIndex(new BasicDBObject('a', 1))
+        collection.find().hint('a_1').count() == 1
         collection.find().hint(new BasicDBObject('a', 1)).count() == 1
+    }
+
+    def 'should use provided hints for find'() {
+        given:
+        collection.createIndex(new BasicDBObject('a', 1))
+
+        when:
+        dbCursor = collection.find().hint(new BasicDBObject('a', 1))
+
+        then:
+        dbCursor.one()
+
+        when:
+        dbCursor = collection.find().hint('a_1')
+
+        then:
+        dbCursor.one()
     }
 
     def 'should use provided hints for count'() {
@@ -85,10 +104,38 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
         collection.find().count() == 2
 
         when:
-        collection.createIndex(new BasicDBObject('x', 1), new BasicDBObject('sparse', true));
+        collection.createIndex(new BasicDBObject('a', 1))
 
         then:
-        collection.find(new BasicDBObject('a', 1)).hint(new BasicDBObject('x', 1)).count() == 0
+        collection.find(new BasicDBObject('a', 1)).hint('_id_').count() == 1
+        collection.find().hint('_id_').count() == 2
+
+        when:
+        collection.createIndex(new BasicDBObject('x', 1), new BasicDBObject('sparse', true))
+
+        then:
+        collection.find(new BasicDBObject('a', 1)).hint('x_1').count() == 0
+        collection.find().hint('a_1').count() == 2
+    }
+
+    def 'should throw with bad hint'() {
+        when:
+        collection.find(new BasicDBObject('a', 1)).hint('BAD HINT').count()
+
+        then:
+        thrown(MongoException)
+
+        when:
+        collection.find(new BasicDBObject('a', 1)).hint('BAD HINT').one()
+
+        then:
+        thrown(MongoException)
+
+        when:
+        collection.find(new BasicDBObject('a', 1)).hint(new BasicDBObject('BAD HINT', 1)).one()
+
+        then:
+        thrown(MongoException)
     }
 
     def 'should return results in the order they are on disk when natural sort applied'() {
@@ -185,6 +232,11 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
                     List<DBObject> next() { null }
 
                     @Override
+                    int available() {
+                        0
+                    }
+
+                    @Override
                     void setBatchSize(final int batchSize) { }
 
                     @Override
@@ -249,7 +301,7 @@ class DBCursorFunctionalSpecification extends FunctionalSpecification {
         exception.getMessage().startsWith('Collation not supported by wire version:')
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should support collation'() {
         when:
         def document = BasicDBObject.parse('{_id: 1, str: "foo"}')

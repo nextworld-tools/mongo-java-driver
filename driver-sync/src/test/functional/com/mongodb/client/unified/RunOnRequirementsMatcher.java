@@ -26,8 +26,11 @@ import java.util.Map;
 import java.util.Objects;
 
 import static com.mongodb.ClusterFixture.getServerParameters;
+import static com.mongodb.ClusterFixture.hasEncryptionTestsEnabled;
+import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.JsonTestServerVersionChecker.getMaxServerVersionForField;
 import static com.mongodb.JsonTestServerVersionChecker.getMinServerVersion;
+import static com.mongodb.JsonTestServerVersionChecker.serverlessMatches;
 import static com.mongodb.JsonTestServerVersionChecker.topologyMatches;
 
 final class RunOnRequirementsMatcher {
@@ -59,8 +62,26 @@ final class RunOnRequirementsMatcher {
                             break requirementLoop;
                         }
                         break;
+                    case "serverless":
+                        if (!serverlessMatches(curRequirement.getValue().asString().getValue())) {
+                             requirementMet = false;
+                             break requirementLoop;
+                        }
+                        break;
                     case "auth":
-                        if (curRequirement.getValue().asBoolean().getValue() == (clientSettings.getCredential() == null)) {
+                        boolean authRequired = curRequirement.getValue().asBoolean().getValue();
+                        boolean credentialPresent = clientSettings.getCredential() != null;
+
+                        if (authRequired != credentialPresent) {
+                            requirementMet = false;
+                            break requirementLoop;
+                        }
+                        break;
+                    case "authMechanism":
+                        boolean containsMechanism = getServerParameters()
+                                .getArray("authenticationMechanisms")
+                                .contains(curRequirement.getValue());
+                        if (!containsMechanism) {
                             requirementMet = false;
                             break requirementLoop;
                         }
@@ -72,6 +93,12 @@ final class RunOnRequirementsMatcher {
                                 requirementMet = false;
                                 break requirementLoop;
                             }
+                        }
+                        break;
+                    case "csfle":
+                        if (!hasEncryptionTestsEnabled() || !serverVersionAtLeast(4, 2)) {
+                            requirementMet = false;
+                            break requirementLoop;
                         }
                         break;
                     default:

@@ -24,6 +24,9 @@ import java.util.function.BiConsumer;
 
 import static com.mongodb.connection.ClusterType.LOAD_BALANCED;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 public final class TransactionContext<C extends ReferenceCounted> extends AbstractReferenceCounted {
     private final ClusterType clusterType;
     private C pinnedConnection;
@@ -48,16 +51,18 @@ public final class TransactionContext<C extends ReferenceCounted> extends Abstra
     }
 
     @Override
-    public void release() {
-        super.release();
-        if (getCount() == 0) {
+    public int release() {
+        int count = super.release();
+        if (count == 0) {
             if (pinnedConnection != null) {
                 pinnedConnection.release();
             }
         }
+        return count;
     }
 
     @SuppressWarnings("unchecked")
+    @Nullable
     public static <C extends TransactionContext<? extends ReferenceCounted>> C get(final ClientSession session) {
         return (C) session.getTransactionContext();
     }

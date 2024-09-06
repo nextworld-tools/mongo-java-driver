@@ -18,6 +18,7 @@ package com.mongodb.internal.connection
 
 import com.mongodb.MongoSocketReadTimeoutException
 import com.mongodb.ServerAddress
+import com.mongodb.connection.ClusterConnectionMode
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ConnectionDescription
 import com.mongodb.connection.ServerConnectionState
@@ -29,6 +30,7 @@ import com.mongodb.event.ServerHeartbeatFailedEvent
 import com.mongodb.event.ServerHeartbeatStartedEvent
 import com.mongodb.event.ServerHeartbeatSucceededEvent
 import com.mongodb.event.ServerMonitorListener
+import com.mongodb.internal.inject.SameObjectProvider
 import org.bson.BsonDocument
 import org.bson.ByteBufNIO
 import spock.lang.Specification
@@ -36,6 +38,9 @@ import spock.lang.Specification
 import java.nio.ByteBuffer
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT_FACTORY
+import static com.mongodb.internal.connection.MessageHelper.LEGACY_HELLO_LOWER
 
 @SuppressWarnings('BusyWait')
 class DefaultServerMonitorSpecification extends Specification {
@@ -45,26 +50,49 @@ class DefaultServerMonitorSpecification extends Specification {
     def 'close should not send a sendStateChangedEvent'() {
         given:
         def stateChanged = false
-        def changeListener = new ChangeListener<ServerDescription>() {
+        def sdam = new SdamServerDescriptionManager() {
             @Override
-            void stateChanged(final ChangeEvent<ServerDescription> event) {
+            void update(final ServerDescription candidateDescription) {
+                assert candidateDescription != null
                 stateChanged = true
+            }
+
+            @Override
+            void handleExceptionBeforeHandshake(final SdamServerDescriptionManager.SdamIssue sdamIssue) {
+                throw new UnsupportedOperationException()
+            }
+
+            @Override
+            void handleExceptionAfterHandshake(final SdamServerDescriptionManager.SdamIssue sdamIssue) {
+                throw new UnsupportedOperationException()
+            }
+
+            @Override
+            SdamServerDescriptionManager.SdamIssue.Context context() {
+                throw new UnsupportedOperationException()
+            }
+
+            @Override
+            SdamServerDescriptionManager.SdamIssue.Context context(final InternalConnection connection) {
+                throw new UnsupportedOperationException()
             }
         }
         def internalConnectionFactory = Mock(InternalConnectionFactory) {
             create(_) >> {
                 Mock(InternalConnection) {
-                    open() >> { sleep(100) }
+                    open(_) >> { sleep(100) }
                 }
             }
         }
         monitor = new DefaultServerMonitor(new ServerId(new ClusterId(), new ServerAddress()), ServerSettings.builder().build(),
-                new ClusterClock(), changeListener, internalConnectionFactory, new TestConnectionPool(), null)
+                internalConnectionFactory, ClusterConnectionMode.SINGLE, null, false, SameObjectProvider.initialized(sdam),
+                OPERATION_CONTEXT_FACTORY)
+
         monitor.start()
 
         when:
         monitor.close()
-        monitor.monitorThread.join()
+        monitor.monitor.join()
 
         then:
         !stateChanged
@@ -72,12 +100,6 @@ class DefaultServerMonitorSpecification extends Specification {
 
     def 'should send started and succeeded heartbeat events'() {
         given:
-        def changeListener = new ChangeListener<ServerDescription>() {
-            @Override
-            void stateChanged(final ChangeEvent<ServerDescription> event) {
-            }
-        }
-
         def latch = new CountDownLatch(1)
         def startedEvent
         def succeededEvent
@@ -110,8 +132,8 @@ class DefaultServerMonitorSpecification extends Specification {
                 .state(ServerConnectionState.CONNECTED)
                 .build()
 
-        def isMasterResponse = '{' +
-                'ismaster : true, ' +
+        def helloResponse = '{' +
+                "$LEGACY_HELLO_LOWER: true," +
                 'maxBsonObjectSize : 16777216, ' +
                 'maxMessageSizeBytes : 48000000, ' +
                 'maxWriteBatchSize : 1000, ' +
@@ -124,7 +146,7 @@ class DefaultServerMonitorSpecification extends Specification {
         def internalConnectionFactory = Mock(InternalConnectionFactory) {
             create(_) >> {
                 Mock(InternalConnection) {
-                    open() >> { }
+                    open(_) >> { }
 
                     getBuffer(_) >> { int size ->
                         new ByteBufNIO(ByteBuffer.allocate(size))
@@ -138,19 +160,17 @@ class DefaultServerMonitorSpecification extends Specification {
                         initialServerDescription
                     }
 
-                    supportsAdditionalTimeout() >> true
-
                     send(_, _, _) >> { }
 
                     receive(_, _) >> {
-                        BsonDocument.parse(isMasterResponse)
+                        BsonDocument.parse(helloResponse)
                     }
                 }
             }
         }
         monitor = new DefaultServerMonitor(new ServerId(new ClusterId(), new ServerAddress()),
                 ServerSettings.builder().heartbeatFrequency(1, TimeUnit.SECONDS).addServerMonitorListener(serverMonitorListener).build(),
-                new ClusterClock(), changeListener, internalConnectionFactory, new TestConnectionPool(), null)
+                internalConnectionFactory, ClusterConnectionMode.SINGLE, null, false, mockSdamProvider(), OPERATION_CONTEXT_FACTORY)
 
         when:
         monitor.start()
@@ -160,7 +180,7 @@ class DefaultServerMonitorSpecification extends Specification {
         failedEvent == null
         startedEvent.connectionId == connectionDescription.connectionId
         succeededEvent.connectionId == connectionDescription.connectionId
-        succeededEvent.reply == BsonDocument.parse(isMasterResponse)
+        succeededEvent.reply == BsonDocument.parse(helloResponse)
         succeededEvent.getElapsedTime(TimeUnit.NANOSECONDS) > 0
 
         cleanup:
@@ -169,12 +189,6 @@ class DefaultServerMonitorSpecification extends Specification {
 
     def 'should send started and failed heartbeat events'() {
         given:
-        def changeListener = new ChangeListener<ServerDescription>() {
-            @Override
-            void stateChanged(final ChangeEvent<ServerDescription> event) {
-            }
-        }
-
         def latch = new CountDownLatch(1)
         def startedEvent
         def succeededEvent
@@ -211,7 +225,7 @@ class DefaultServerMonitorSpecification extends Specification {
         def internalConnectionFactory = Mock(InternalConnectionFactory) {
             create(_) >> {
                 Mock(InternalConnection) {
-                    open() >> { }
+                    open(_) >> { }
 
                     getBuffer(_) >> { int size ->
                         new ByteBufNIO(ByteBuffer.allocate(size))
@@ -225,8 +239,6 @@ class DefaultServerMonitorSpecification extends Specification {
                         initialServerDescription
                     }
 
-                    supportsAdditionalTimeout() >> true
-
                     send(_, _, _) >> { }
 
                     receive(_, _) >> {
@@ -237,7 +249,7 @@ class DefaultServerMonitorSpecification extends Specification {
         }
         monitor = new DefaultServerMonitor(new ServerId(new ClusterId(), new ServerAddress()),
                 ServerSettings.builder().heartbeatFrequency(1, TimeUnit.SECONDS).addServerMonitorListener(serverMonitorListener).build(),
-                new ClusterClock(), changeListener, internalConnectionFactory, new TestConnectionPool(), null)
+                internalConnectionFactory, ClusterConnectionMode.SINGLE, null, false, mockSdamProvider(), OPERATION_CONTEXT_FACTORY)
 
         when:
         monitor.start()
@@ -252,5 +264,9 @@ class DefaultServerMonitorSpecification extends Specification {
 
         cleanup:
         monitor?.close()
+    }
+
+    private mockSdamProvider() {
+        SameObjectProvider.initialized(Mock(SdamServerDescriptionManager))
     }
 }

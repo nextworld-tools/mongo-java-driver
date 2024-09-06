@@ -23,6 +23,7 @@ import com.mongodb.OperationFunctionalSpecification
 import com.mongodb.WriteConcern
 import com.mongodb.client.model.CreateCollectionOptions
 import com.mongodb.client.model.changestream.FullDocument
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange
 import com.mongodb.client.test.CollectionHelper
 import org.bson.BsonArray
 import org.bson.BsonDocument
@@ -37,6 +38,7 @@ import static com.mongodb.ClusterFixture.getCluster
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
 import static com.mongodb.ClusterFixture.isStandalone
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static com.mongodb.internal.connection.ServerHelper.waitForLastRelease
 import static java.util.Arrays.asList
 
@@ -51,7 +53,8 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
         given:
         def helper = getHelper()
         def pipeline = [BsonDocument.parse('{$project: {"_id": 0}}')]
-        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT, pipeline, CODEC)
+        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT,
+                FullDocumentBeforeChange.DEFAULT, pipeline, CODEC)
 
         when:
         def cursor = execute(operation, async)
@@ -62,7 +65,7 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
         def exception = thrown(MongoException)
 
         then:
-        if (serverVersionAtLeast(4, 1)) {
+        if (serverVersionAtLeast(4, 2)) {
             exception instanceof MongoQueryException
         } else {
             exception instanceof MongoChangeStreamException
@@ -80,14 +83,15 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
     // Test that the ChangeStream will automatically resume one time on a resumable error (including not master)
     // with the initial pipeline and options, except for the addition/update of a resumeToken.
     //
-    @IgnoreIf({ !serverVersionAtLeast([4, 0, 0]) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(4, 0) || !isDiscoverableReplicaSet() })
     def 'should resume after single getMore Error'() {
         given:
         def helper = getHelper()
 
         def pipeline = [BsonDocument.parse('{$match: {operationType: "insert"}}')]
         def failPointDocument = createFailPointDocument('getMore', 10107)
-        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT, pipeline, CODEC)
+        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT,
+                FullDocumentBeforeChange.DEFAULT, pipeline, CODEC)
 
         def cursor = execute(operation, async)
 
@@ -119,7 +123,8 @@ class ChangeStreamOperationProseTestSpecification extends OperationFunctionalSpe
     def 'should not resume for aggregation errors'() {
         given:
         def pipeline = [BsonDocument.parse('{$unsupportedStage: {_id: 0}}')]
-        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT, pipeline, CODEC)
+        def operation = new ChangeStreamOperation<BsonDocument>(helper.getNamespace(), FullDocument.DEFAULT,
+                FullDocumentBeforeChange.DEFAULT, pipeline, CODEC)
 
         when:
         def cursor = execute(operation, async)

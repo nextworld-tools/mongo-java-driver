@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
+import static com.mongodb.ClusterFixture.getEnv;
 import static com.mongodb.ClusterFixture.hasEncryptionTestsEnabled;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.reactivestreams.client.Fixture.getMongoClientBuilderFromConnectionString;
@@ -73,7 +74,7 @@ public class ClientSideEncryptionCorpusTest {
 
     @Before
     public void setUp() throws IOException, URISyntaxException {
-        assumeTrue(serverVersionAtLeast(4, 1));
+        assumeTrue(serverVersionAtLeast(4, 2));
         assumeTrue("Corpus tests disabled", hasEncryptionTestsEnabled());
 
         MongoClientSettings clientSettings = getMongoClientBuilderFromConnectionString()
@@ -103,22 +104,26 @@ public class ClientSideEncryptionCorpusTest {
         Mono.from(dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-aws.json"))).block(TIMEOUT_DURATION);
         Mono.from(dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-azure.json"))).block(TIMEOUT_DURATION);
         Mono.from(dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-gcp.json"))).block(TIMEOUT_DURATION);
+        Mono.from(dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-kmip.json"))).block(TIMEOUT_DURATION);
         Mono.from(dataKeysCollection.insertOne(bsonDocumentFromPath("corpus-key-local.json"))).block(TIMEOUT_DURATION);
 
         // Step 4: Configure our objects
         Map<String, Map<String, Object>> kmsProviders = new HashMap<String, Map<String, Object>>() {{
             put("aws",  new HashMap<String, Object>() {{
-                put("accessKeyId", System.getProperty("org.mongodb.test.awsAccessKeyId"));
-                put("secretAccessKey", System.getProperty("org.mongodb.test.awsSecretAccessKey"));
+                put("accessKeyId", getEnv("AWS_ACCESS_KEY_ID"));
+                put("secretAccessKey", getEnv("AWS_SECRET_ACCESS_KEY"));
             }});
             put("azure",  new HashMap<String, Object>() {{
-                put("tenantId", System.getProperty("org.mongodb.test.azureTenantId"));
-                put("clientId", System.getProperty("org.mongodb.test.azureClientId"));
-                put("clientSecret", System.getProperty("org.mongodb.test.azureClientSecret"));
+                put("tenantId", getEnv("AZURE_TENANT_ID"));
+                put("clientId", getEnv("AZURE_CLIENT_ID"));
+                put("clientSecret", getEnv("AZURE_CLIENT_SECRET"));
             }});
             put("gcp",  new HashMap<String, Object>() {{
-                put("email", System.getProperty("org.mongodb.test.gcpEmail"));
-                put("privateKey", System.getProperty("org.mongodb.test.gcpPrivateKey"));
+                put("email", getEnv("GCP_EMAIL"));
+                put("privateKey", getEnv("GCP_PRIVATE_KEY"));
+            }});
+            put("kmip",  new HashMap<String, Object>() {{
+                put("endpoint", getEnv("org.mongodb.test.kmipEndpoint", "localhost:5698"));
             }});
             put("local", new HashMap<String, Object>() {{
                 put("key", "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBM"
@@ -174,6 +179,7 @@ public class ClientSideEncryptionCorpusTest {
             byte[] awsKeyId = Base64.getDecoder().decode("AWSAAAAAAAAAAAAAAAAAAA==");
             byte[] azureKeyId = Base64.getDecoder().decode("AZUREAAAAAAAAAAAAAAAAA==");
             byte[] gcpKeyId = Base64.getDecoder().decode("GCPAAAAAAAAAAAAAAAAAAA==");
+            byte[] kmipKeyId = Base64.getDecoder().decode("KMIPAAAAAAAAAAAAAAAAAA==");
             byte[] localKeyId = Base64.getDecoder().decode("LOCALAAAAAAAAAAAAAAAAA==");
 
             if (method.equals("auto")) {
@@ -205,6 +211,9 @@ public class ClientSideEncryptionCorpusTest {
                         break;
                     case "gcp":
                         opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, gcpKeyId));
+                        break;
+                    case "kmip":
+                        opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, kmipKeyId));
                         break;
                     case "local":
                         opts.keyId(new BsonBinary(BsonBinarySubType.UUID_STANDARD, localKeyId));

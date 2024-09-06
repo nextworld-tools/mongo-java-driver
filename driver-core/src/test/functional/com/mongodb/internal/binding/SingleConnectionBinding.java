@@ -17,16 +17,13 @@
 package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
-import com.mongodb.internal.connection.NoOpSessionContext;
+import com.mongodb.internal.connection.OperationContext;
 import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ReadPreferenceServerSelector;
 import com.mongodb.internal.selector.WritableServerSelector;
-import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static com.mongodb.ReadPreference.primary;
 import static com.mongodb.assertions.Assertions.isTrue;
@@ -44,25 +41,25 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     private final ServerDescription readServerDescription;
     private final ServerDescription writeServerDescription;
     private int count = 1;
-    @Nullable
-    private final ServerApi serverApi;
+    private final OperationContext operationContext;
 
     /**
      * Create a new binding with the given cluster.
      *
      * @param cluster     a non-null Cluster which will be used to select a server to bind to
      * @param readPreference the readPreference for reads, if not primary a separate connection will be used for reads
+     *
      */
-    public SingleConnectionBinding(final Cluster cluster, final ReadPreference readPreference, @Nullable final ServerApi serverApi) {
-        this.serverApi = serverApi;
+    public SingleConnectionBinding(final Cluster cluster, final ReadPreference readPreference, final OperationContext operationContext) {
         notNull("cluster", cluster);
         this.readPreference = notNull("readPreference", readPreference);
-        ServerTuple writeServerTuple = cluster.selectServer(new WritableServerSelector());
+        this.operationContext = operationContext;
+        ServerTuple writeServerTuple = cluster.selectServer(new WritableServerSelector(), operationContext);
         writeServerDescription = writeServerTuple.getServerDescription();
-        writeConnection = writeServerTuple.getServer().getConnection();
-        ServerTuple readServerTuple = cluster.selectServer(new ReadPreferenceServerSelector(readPreference));
+        writeConnection = writeServerTuple.getServer().getConnection(operationContext);
+        ServerTuple readServerTuple = cluster.selectServer(new ReadPreferenceServerSelector(readPreference), operationContext);
         readServerDescription = readServerTuple.getServerDescription();
-        readConnection = readServerTuple.getServer().getConnection();
+        readConnection = readServerTuple.getServer().getConnection(operationContext);
     }
 
     @Override
@@ -77,12 +74,13 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     }
 
     @Override
-    public void release() {
+    public int release() {
         count--;
         if (count == 0) {
             writeConnection.release();
             readConnection.release();
         }
+        return count;
     }
 
     @Override
@@ -102,14 +100,13 @@ public class SingleConnectionBinding implements ReadWriteBinding {
     }
 
     @Override
-    public SessionContext getSessionContext() {
-        return NoOpSessionContext.INSTANCE;
+    public ConnectionSource getReadConnectionSource(final int minWireVersion, final ReadPreference fallbackReadPreference) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return serverApi;
+    public OperationContext getOperationContext() {
+        return operationContext;
     }
 
     @Override
@@ -135,13 +132,13 @@ public class SingleConnectionBinding implements ReadWriteBinding {
         }
 
         @Override
-        public SessionContext getSessionContext() {
-            return NoOpSessionContext.INSTANCE;
+        public OperationContext getOperationContext() {
+            return operationContext;
         }
 
         @Override
-        public ServerApi getServerApi() {
-            return serverApi;
+        public ReadPreference getReadPreference() {
+            return readPreference;
         }
 
         @Override
@@ -162,11 +159,12 @@ public class SingleConnectionBinding implements ReadWriteBinding {
         }
 
         @Override
-        public void release() {
+        public int release() {
             count--;
-            if (getCount() == 0) {
+            if (count == 0) {
                 SingleConnectionBinding.this.release();
             }
+            return count;
         }
     }
 }

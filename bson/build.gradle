@@ -22,7 +22,7 @@ ext {
     pomURL = 'https://bsonspec.org'
 }
 
-jar.manifest.attributes['Import-Package'] = 'org.slf4j.*;resolution:=optional'
-dependencies {
-    implementation 'com.google.guava:guava-primitives:r03'
+afterEvaluate {
+    jar.manifest.attributes['Automatic-Module-Name'] = 'org.mongodb.bson'
+    jar.manifest.attributes['Import-Package'] = 'org.slf4j.*;resolution:=optional'
 }

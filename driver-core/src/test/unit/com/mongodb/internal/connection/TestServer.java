@@ -27,17 +27,16 @@ import com.mongodb.internal.async.SingleResultCallback;
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
 
 public class TestServer implements ClusterableServer {
-    private final ServerDescriptionChangedListener serverDescriptionChangedListener;
+    private final Cluster cluster;
     private final ServerListener serverListener;
     private ServerDescription description;
     private boolean isClosed;
     private final ServerId serverId;
     private int connectCount;
 
-    public TestServer(final ServerAddress serverAddress, final ServerDescriptionChangedListener serverDescriptionChangedListener,
-                      final ServerListener serverListener) {
+    public TestServer(final ServerAddress serverAddress, final Cluster cluster, final ServerListener serverListener) {
         this.serverId = new ServerId(new ClusterId(), serverAddress);
-        this.serverDescriptionChangedListener = serverDescriptionChangedListener;
+        this.cluster = cluster;
         this.serverListener = serverListener;
         this.description = ServerDescription.builder().state(CONNECTING).address(serverId.getAddress()).build();
         invalidate();
@@ -47,8 +46,8 @@ public class TestServer implements ClusterableServer {
         ServerDescription currentDescription = description;
         description = newDescription;
         ServerDescriptionChangedEvent event = new ServerDescriptionChangedEvent(serverId, newDescription, currentDescription);
-        if (serverDescriptionChangedListener != null) {
-            serverDescriptionChangedListener.serverDescriptionChanged(event);
+        if (cluster != null) {
+            cluster.onChange(event);
         }
         if (serverListener != null) {
             serverListener.serverDescriptionChanged(event);
@@ -63,12 +62,6 @@ public class TestServer implements ClusterableServer {
     @Override
     public void invalidate() {
         sendNotification(ServerDescription.builder().state(CONNECTING).address(serverId.getAddress()).build());
-    }
-
-    @Override
-    public void invalidate(final ConnectionState connectionState, final Throwable reason, final int connectionGeneration,
-                           final int maxWireVersion) {
-        invalidate();
     }
 
     @Override
@@ -95,13 +88,17 @@ public class TestServer implements ClusterableServer {
     }
 
     @Override
-    public Connection getConnection() {
+    public Connection getConnection(final OperationContext operationContext) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void getConnectionAsync(final SingleResultCallback<AsyncConnection> callback) {
+    public void getConnectionAsync(final OperationContext operationContext, final SingleResultCallback<AsyncConnection> callback) {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public int operationCount() {
+        return -1;
+    }
 }
