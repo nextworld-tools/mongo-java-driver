@@ -28,22 +28,28 @@ import com.mongodb.connection.ServerConnectionState;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.connection.ServerId;
 import com.mongodb.connection.ServerType;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
 import com.mongodb.event.ServerClosedEvent;
 import com.mongodb.event.ServerDescriptionChangedEvent;
 import com.mongodb.event.ServerListener;
 import com.mongodb.event.ServerOpeningEvent;
+import com.mongodb.internal.VisibleForTesting;
 import com.mongodb.internal.async.SingleResultCallback;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.SessionContext;
+import com.mongodb.lang.Nullable;
 import org.bson.types.ObjectId;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.mongodb.assertions.Assertions.isTrue;
 import static com.mongodb.connection.ServerConnectionState.CONNECTING;
+import static com.mongodb.internal.VisibleForTesting.AccessModifier.PRIVATE;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 @ThreadSafe
 public class LoadBalancedServer implements ClusterableServer {
     private static final Logger LOGGER = Loggers.getLogger("connection");
@@ -83,14 +89,8 @@ public class LoadBalancedServer implements ClusterableServer {
         // no op
     }
 
-    @Override
-    public void invalidate(final ConnectionState connectionState, final Throwable reason, final int connectionGeneration,
-                           final int maxWireVersion) {
-        // no op
-    }
 
-
-    private void invalidate(final Throwable t, final ObjectId serviceId, final int generation) {
+    private void invalidate(final Throwable t, @Nullable final ObjectId serviceId, final int generation) {
         if (!isClosed()) {
             if (t instanceof MongoSocketException && !(t instanceof MongoSocketReadTimeoutException)) {
                 if (serviceId != null) {
@@ -125,16 +125,16 @@ public class LoadBalancedServer implements ClusterableServer {
     }
 
     @Override
-    public Connection getConnection() {
+    public Connection getConnection(final OperationContext operationContext) {
         isTrue("open", !isClosed());
-        return connectionFactory.create(connectionPool.get(), new LoadBalancedServerProtocolExecutor(),
+        return connectionFactory.create(connectionPool.get(operationContext), new LoadBalancedServerProtocolExecutor(),
                 ClusterConnectionMode.LOAD_BALANCED);
     }
 
     @Override
-    public void getConnectionAsync(final SingleResultCallback<AsyncConnection> callback) {
+    public void getConnectionAsync(final OperationContext operationContext, final SingleResultCallback<AsyncConnection> callback) {
         isTrue("open", !isClosed());
-        connectionPool.getAsync((result, t) -> {
+        connectionPool.getAsync(operationContext, (result, t) -> {
             if (t != null) {
                 callback.onResult(null, t);
             } else {
@@ -144,13 +144,23 @@ public class LoadBalancedServer implements ClusterableServer {
         });
     }
 
-    private class LoadBalancedServerProtocolExecutor implements ProtocolExecutor {
+    @Override
+    public int operationCount() {
+        return -1;
+    }
+
+    @VisibleForTesting(otherwise = PRIVATE)
+    ConnectionPool getConnectionPool() {
+        return connectionPool;
+    }
+
+    private class LoadBalancedServerProtocolExecutor extends AbstractProtocolExecutor {
         @SuppressWarnings("unchecked")
         @Override
         public <T> T execute(final CommandProtocol<T> protocol, final InternalConnection connection, final SessionContext sessionContext) {
             try {
-                protocol.sessionContext(new ClusterClockAdvancingSessionContext(sessionContext, clusterClock));
-                return protocol.execute(connection);
+                return protocol.withSessionContext(new ClusterClockAdvancingSessionContext(sessionContext, clusterClock))
+                        .execute(connection);
             } catch (MongoWriteConcernWithResponseException e) {
                 return (T) e.getResponse();
             } catch (MongoException e) {
@@ -163,8 +173,8 @@ public class LoadBalancedServer implements ClusterableServer {
         @Override
         public <T> void executeAsync(final CommandProtocol<T> protocol, final InternalConnection connection,
                                      final SessionContext sessionContext, final SingleResultCallback<T> callback) {
-            protocol.sessionContext(new ClusterClockAdvancingSessionContext(sessionContext, clusterClock));
-            protocol.executeAsync(connection, errorHandlingCallback((result, t) -> {
+            protocol.withSessionContext(new ClusterClockAdvancingSessionContext(sessionContext, clusterClock))
+                    .executeAsync(connection, errorHandlingCallback((result, t) -> {
                 if (t != null) {
                     if (t instanceof MongoWriteConcernWithResponseException) {
                         callback.onResult((T) ((MongoWriteConcernWithResponseException) t).getResponse(), null);
@@ -181,7 +191,7 @@ public class LoadBalancedServer implements ClusterableServer {
         private void handleExecutionException(final InternalConnection connection, final SessionContext sessionContext,
                                               final Throwable t) {
             invalidate(t, connection.getDescription().getServiceId(), connection.getGeneration());
-            if (t instanceof MongoSocketException && sessionContext.hasSession()) {
+            if (shouldMarkSessionDirty(t, sessionContext)) {
                 sessionContext.markSessionDirty();
             }
         }

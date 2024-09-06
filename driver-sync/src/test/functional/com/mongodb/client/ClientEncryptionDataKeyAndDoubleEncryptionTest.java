@@ -23,6 +23,7 @@ import com.mongodb.client.model.vault.DataKeyOptions;
 import com.mongodb.client.model.vault.EncryptOptions;
 import com.mongodb.client.vault.ClientEncryption;
 import com.mongodb.client.vault.ClientEncryptions;
+import com.mongodb.fixture.EncryptionFixture.KmsProviderType;
 import com.mongodb.internal.connection.TestCommandListener;
 import org.bson.BsonBinary;
 import org.bson.BsonDocument;
@@ -43,6 +44,7 @@ import static com.mongodb.ClusterFixture.hasEncryptionTestsEnabled;
 import static com.mongodb.ClusterFixture.serverVersionAtLeast;
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder;
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.fixture.EncryptionFixture.getKmsProviders;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -68,7 +70,7 @@ public class ClientEncryptionDataKeyAndDoubleEncryptionTest {
 
     @Before
     public void setUp() {
-        assumeTrue(serverVersionAtLeast(4, 1));
+        assumeTrue(serverVersionAtLeast(4, 2));
         assumeTrue("Has encryption tests", hasEncryptionTestsEnabled());
 
         // Step 1: create unencrypted client
@@ -79,25 +81,12 @@ public class ClientEncryptionDataKeyAndDoubleEncryptionTest {
 
 
         // Step 2: Create encrypted client and client encryption
-        Map<String, Map<String, Object>> kmsProviders = new HashMap<String, Map<String, Object>>() {{
-            put("aws",  new HashMap<String, Object>() {{
-                put("accessKeyId", System.getProperty("org.mongodb.test.awsAccessKeyId"));
-                put("secretAccessKey", System.getProperty("org.mongodb.test.awsSecretAccessKey"));
-            }});
-            put("azure",  new HashMap<String, Object>() {{
-                put("tenantId", System.getProperty("org.mongodb.test.azureTenantId"));
-                put("clientId", System.getProperty("org.mongodb.test.azureClientId"));
-                put("clientSecret", System.getProperty("org.mongodb.test.azureClientSecret"));
-            }});
-            put("gcp",  new HashMap<String, Object>() {{
-                put("email", System.getProperty("org.mongodb.test.gcpEmail"));
-                put("privateKey", System.getProperty("org.mongodb.test.gcpPrivateKey"));
-            }});
-            put("local", new HashMap<String, Object>() {{
-                put("key", "Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBM"
-                        + "UN3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk");
-            }});
-        }};
+        Map<String, Map<String, Object>> kmsProviders = getKmsProviders(
+                KmsProviderType.AWS,
+                KmsProviderType.AZURE,
+                KmsProviderType.GCP,
+                KmsProviderType.LOCAL
+        );
 
         HashMap<String, BsonDocument> schemaMap = new HashMap<String, BsonDocument>() {{
             put("db.coll", BsonDocument.parse("{"

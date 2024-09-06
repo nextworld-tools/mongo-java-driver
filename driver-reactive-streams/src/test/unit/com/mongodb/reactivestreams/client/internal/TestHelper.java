@@ -28,13 +28,17 @@ import com.mongodb.internal.bulk.WriteRequest;
 import com.mongodb.internal.client.model.FindOptions;
 import com.mongodb.internal.operation.AsyncReadOperation;
 import com.mongodb.internal.operation.AsyncWriteOperation;
-import com.mongodb.internal.operation.Operations;
+import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
+import org.bson.BsonReader;
+import org.bson.BsonWriter;
 import org.bson.Document;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.Codec;
+import org.bson.codecs.DecoderContext;
+import org.bson.codecs.EncoderContext;
 import org.bson.codecs.configuration.CodecRegistry;
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -53,7 +57,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
+import static com.mongodb.ClusterFixture.TIMEOUT_SETTINGS;
 import static com.mongodb.reactivestreams.client.MongoClients.getDefaultCodecRegistry;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
@@ -81,6 +88,9 @@ public class TestHelper {
 
     static {
         OperationExecutor executor = mock(OperationExecutor.class);
+        Mockito.lenient().doAnswer(invocation -> executor)
+                .when(executor).withTimeoutSettings(any());
+
         Mockito.lenient().doAnswer(invocation -> Mono.empty())
                 .when(executor)
                 .execute(any(), any(), any());
@@ -97,7 +107,7 @@ public class TestHelper {
         return new MongoOperationPublisher<>(NAMESPACE, Document.class,
                                              getDefaultCodecRegistry(), ReadPreference.primary(), ReadConcern.DEFAULT,
                                              WriteConcern.ACKNOWLEDGED, true, true,
-                                             UuidRepresentation.STANDARD, executor);
+                                             UuidRepresentation.STANDARD, null, TIMEOUT_SETTINGS, executor);
     }
 
 
@@ -112,10 +122,6 @@ public class TestHelper {
         Map<String, Object> expectedMap = getClassGetterValues(unwrapOperation(expectedOperation));
         Map<String, Object> actualMap = getClassGetterValues(unwrapOperation(actualOperation));
         assertEquals(expectedMap, actualMap);
-    }
-
-    public static void assertPublisherIsTheSameAs(final Publisher<?> expectedPublisher, final Publisher<?> actualPublisher) {
-        assertPublisherIsTheSameAs(expectedPublisher, actualPublisher, null);
     }
 
     public static void assertPublisherIsTheSameAs(final Publisher<?> expectedPublisher, final Publisher<?> actualPublisher,
@@ -136,7 +142,7 @@ public class TestHelper {
         return operation;
     }
 
-    @NotNull
+    @NonNull
     private static Map<String, Object> getClassGetterValues(final Object instance) {
         return Arrays.stream(instance.getClass().getMethods())
                 .filter(n -> n.getParameterCount() == 0 && (n.getName().startsWith("get") || n.getName().startsWith("is")))
@@ -152,7 +158,10 @@ public class TestHelper {
     }
 
 
-    private static Map<String, Optional<Object>> getClassPrivateFieldValues(final Object instance) {
+    private static Map<String, Optional<Object>> getClassPrivateFieldValues(@Nullable final Object instance) {
+        if (instance == null) {
+            return emptyMap();
+        }
         return Arrays.stream(instance.getClass().getDeclaredFields())
                 .filter(field -> Modifier.isPrivate(field.getModifiers()))
                 .collect(toMap(Field::getName, field -> {
@@ -171,8 +180,6 @@ public class TestHelper {
         Object actual = instance instanceof Optional ? ((Optional<Object>) instance).orElse(instance) : instance;
         if (actual instanceof AsyncReadOperation || actual instanceof AsyncWriteOperation) {
             return getClassPrivateFieldValues(actual);
-        } else if (actual instanceof Operations) {
-            return getClassPrivateFieldValues(actual);
         } else if (actual.getClass().getSimpleName().equals("ChangeStreamDocumentCodec")) {
             return getClassGetterValues(actual);
         } else if (actual instanceof FindOptions) {
@@ -190,21 +197,22 @@ public class TestHelper {
     }
 
     private static Publisher<?> getRootSource(final Publisher<?> publisher) {
-        Optional<Publisher<?>> sourcePublisher = Optional.of(publisher);
+        Publisher<?> sourcePublisher = publisher;
         // Uses reflection to find the root / source publisher
         if (publisher instanceof Scannable) {
             Scannable scannable = (Scannable) publisher;
             List<? extends Scannable> parents = scannable.parents().collect(toList());
             if (parents.isEmpty()) {
-                sourcePublisher = getSource(scannable);
+                sourcePublisher = getSource(scannable).orElse(publisher);
             } else {
                 sourcePublisher = parents.stream().map(TestHelper::getSource)
                         .filter(Optional::isPresent)
                         .reduce((first, second) -> second)
-                        .orElse(Optional.empty());
+                        .flatMap(Function.identity())
+                        .orElse(publisher);
             }
         }
-        return sourcePublisher.orElse(publisher);
+        return unwrap(sourcePublisher);
     }
 
     private static Optional<Publisher<?>> getSource(final Scannable scannable) {
@@ -213,6 +221,14 @@ public class TestHelper {
             return optionalSource;
         } else {
             return getScannableArray(scannable);
+        }
+    }
+
+    private static Publisher<?> unwrap(final Publisher<?> maybeWrappingPublisher) {
+        if (maybeWrappingPublisher instanceof ListCollectionNamesPublisherImpl) {
+            return ((ListCollectionNamesPublisherImpl) maybeWrappingPublisher).getWrapped();
+        } else {
+            return maybeWrappingPublisher;
         }
     }
 
@@ -253,12 +269,29 @@ public class TestHelper {
         Mockito.lenient().doAnswer(i -> isClosed.get()).when(getBatchCursor()).isClosed();
         Mockito.lenient().doAnswer(invocation -> {
             isClosed.set(true);
-            invocation.getArgument(0, SingleResultCallback.class).onResult(null, null);
+            invocation.getArgument(0, SingleResultCallback.class).onResult(emptyList(), null);
             return null;
         }).when(getBatchCursor()).next(any(SingleResultCallback.class));
     }
 
     public AsyncBatchCursor<Document> getBatchCursor() {
         return batchCursor;
+    }
+
+    public static class MyLongCodec implements Codec<Long> {
+
+        @Override
+        public Long decode(final BsonReader reader, final DecoderContext decoderContext) {
+            return 42L;
+        }
+
+        @Override
+        public void encode(final BsonWriter writer, final Long value, final EncoderContext encoderContext) {
+        }
+
+        @Override
+        public Class<Long> getEncoderClass() {
+            return Long.class;
+        }
     }
 }

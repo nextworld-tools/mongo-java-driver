@@ -16,7 +16,6 @@
 
 package com.mongodb.internal.connection
 
-import util.spock.annotations.Slow
 import com.mongodb.ClusterFixture
 import com.mongodb.MongoClientException
 import com.mongodb.MongoException
@@ -31,13 +30,20 @@ import com.mongodb.connection.ClusterType
 import com.mongodb.connection.ServerConnectionState
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerType
+import com.mongodb.event.ServerDescriptionChangedEvent
+import com.mongodb.internal.TimeoutContext
 import com.mongodb.internal.selector.ReadPreferenceServerSelector
 import com.mongodb.internal.selector.ServerAddressSelector
 import com.mongodb.internal.selector.WritableServerSelector
+import com.mongodb.internal.time.Timeout
 import spock.lang.Specification
+import util.spock.annotations.Slow
 
 import java.util.concurrent.CountDownLatch
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
+import static com.mongodb.ClusterFixture.TIMEOUT_SETTINGS
+import static com.mongodb.ClusterFixture.createOperationContext
 import static com.mongodb.connection.ClusterConnectionMode.MULTIPLE
 import static com.mongodb.connection.ClusterSettings.builder
 import static com.mongodb.connection.ServerType.REPLICA_SET_PRIMARY
@@ -45,6 +51,9 @@ import static com.mongodb.connection.ServerType.REPLICA_SET_SECONDARY
 import static java.util.concurrent.TimeUnit.MILLISECONDS
 import static java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Add new tests to {@link BaseClusterTest}.
+ */
 class BaseClusterSpecification extends Specification {
 
     private final ServerAddress firstServer = new ServerAddress('localhost:27017')
@@ -57,7 +66,6 @@ class BaseClusterSpecification extends Specification {
         given:
         def clusterSettings = builder().mode(MULTIPLE)
                 .hosts([firstServer, secondServer, thirdServer])
-                .serverSelectionTimeout(1, MILLISECONDS)
                 .serverSelector(new ServerAddressSelector(firstServer))
                 .build()
         def cluster = new BaseCluster(new ClusterId(), clusterSettings, factory) {
@@ -66,8 +74,15 @@ class BaseClusterSpecification extends Specification {
             }
 
             @Override
-            ClusterableServer getServer(final ServerAddress serverAddress) {
-                throw new UnsupportedOperationException()
+            Cluster.ServersSnapshot getServersSnapshot(final Timeout serverSelectionTimeout,  final TimeoutContext timeoutContext) {
+                Cluster.ServersSnapshot result = {
+                    serverAddress -> throw new UnsupportedOperationException()
+                }
+                result
+            }
+
+            @Override
+            void onChange(final ServerDescriptionChangedEvent event) {
             }
         }
 
@@ -75,14 +90,18 @@ class BaseClusterSpecification extends Specification {
         cluster.getCurrentDescription() == new ClusterDescription(clusterSettings.getMode(), ClusterType.UNKNOWN, [], clusterSettings,
                 factory.getSettings())
 
-        when: 'the description is accessed before initialization'
-        cluster.getDescription()
+        when: 'a server is selected before initialization'
+        cluster.selectServer({ def clusterDescription -> [] },
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(1)))
 
         then: 'a MongoTimeoutException is thrown'
         thrown(MongoTimeoutException)
 
-        when: 'a server is selected before initialization'
-        cluster.selectServer { def clusterDescription -> [] }
+        when: 'a server is selected before initialization and timeoutMS is set'
+        cluster.selectServer({ def clusterDescription -> [] },
+                createOperationContext(TIMEOUT_SETTINGS
+                        .withServerSelectionTimeoutMS(1)
+                        .withTimeout(1, MILLISECONDS)))
 
         then: 'a MongoTimeoutException is thrown'
         thrown(MongoTimeoutException)
@@ -115,7 +134,7 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary()))
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary()), OPERATION_CONTEXT)
                 .serverDescription.address == firstServer
     }
 
@@ -123,7 +142,6 @@ class BaseClusterSpecification extends Specification {
         given:
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
-                        .serverSelectionTimeout(1, SECONDS)
                         .hosts([firstServer, secondServer, thirdServer])
                         .build(),
                 factory)
@@ -132,7 +150,46 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ServerAddressSelector(firstServer)).serverDescription.address == firstServer
+        cluster.selectServer(new ServerAddressSelector(firstServer),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(1_000)))
+                .serverDescription.address == firstServer
+    }
+
+    def 'should apply local threshold when custom server selector is present'() {
+        given:
+        def cluster = new MultiServerCluster(new ClusterId(),
+                builder().mode(MULTIPLE)
+                        .hosts([firstServer, secondServer, thirdServer])
+                        .serverSelectionTimeout(1, SECONDS)
+                        .serverSelector(new ReadPreferenceServerSelector(ReadPreference.secondary()))
+                        .localThreshold(5, MILLISECONDS)
+                        .build(),
+                factory)
+        factory.sendNotification(firstServer, 1, REPLICA_SET_SECONDARY, allServers)
+        factory.sendNotification(secondServer, 7, REPLICA_SET_SECONDARY, allServers)
+        factory.sendNotification(thirdServer, 1, REPLICA_SET_PRIMARY, allServers)
+
+        expect:
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.nearest()), OPERATION_CONTEXT)
+                .serverDescription.address == firstServer
+    }
+
+    def 'should apply local threshold when custom server selector in absent'() {
+        given:
+        def cluster = new MultiServerCluster(new ClusterId(),
+                builder().mode(MULTIPLE)
+                        .serverSelectionTimeout(1, SECONDS)
+                        .hosts([firstServer, secondServer, thirdServer])
+                        .localThreshold(5, MILLISECONDS)
+                        .build(),
+                factory)
+        factory.sendNotification(firstServer, 1, REPLICA_SET_SECONDARY, allServers)
+        factory.sendNotification(secondServer, 7, REPLICA_SET_SECONDARY, allServers)
+        factory.sendNotification(thirdServer, 1, REPLICA_SET_PRIMARY, allServers)
+
+        expect: // firstServer is the only secondary within the latency threshold
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.secondary()), OPERATION_CONTEXT)
+                .serverDescription.address == firstServer
     }
 
     def 'should timeout with useful message'() {
@@ -140,7 +197,6 @@ class BaseClusterSpecification extends Specification {
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
                         .hosts([firstServer, secondServer])
-                        .serverSelectionTimeout(serverSelectionTimeoutMS, MILLISECONDS)
                         .build(),
                 factory)
 
@@ -151,26 +207,17 @@ class BaseClusterSpecification extends Specification {
                                                                .exception(new MongoInternalException('oops'))
                                                                .build())
 
-        cluster.getDescription()
+        cluster.selectServer(new WritableServerSelector(),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(serverSelectionTimeoutMS)))
 
         then:
         def e = thrown(MongoTimeoutException)
-        e.getMessage().startsWith("Timed out after ${serverSelectionTimeoutMS} ms while waiting to connect. " +
-                'Client view of cluster state is {type=UNKNOWN')
-        e.getMessage().contains('{address=localhost:27017, type=UNKNOWN, state=CONNECTING, ' +
-                'exception={com.mongodb.MongoInternalException: oops}}');
-        e.getMessage().contains('{address=localhost:27018, type=UNKNOWN, state=CONNECTING}');
 
-        when:
-        cluster.selectServer(new WritableServerSelector())
-
-        then:
-        e = thrown(MongoTimeoutException)
-        e.getMessage().startsWith("Timed out after ${serverSelectionTimeoutMS} ms while waiting for a server " +
+        e.getMessage().startsWith("Timed out while waiting for a server " +
                 'that matches WritableServerSelector. Client view of cluster state is {type=UNKNOWN')
         e.getMessage().contains('{address=localhost:27017, type=UNKNOWN, state=CONNECTING, ' +
-                'exception={com.mongodb.MongoInternalException: oops}}');
-        e.getMessage().contains('{address=localhost:27018, type=UNKNOWN, state=CONNECTING}');
+                'exception={com.mongodb.MongoInternalException: oops}}')
+        e.getMessage().contains('{address=localhost:27018, type=UNKNOWN, state=CONNECTING}')
 
         where:
         serverSelectionTimeoutMS << [1, 0]
@@ -181,7 +228,6 @@ class BaseClusterSpecification extends Specification {
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
                         .hosts([firstServer, secondServer, thirdServer])
-                        .serverSelectionTimeout(serverSelectionTimeoutMS, SECONDS)
                         .build(),
                 factory)
         factory.sendNotification(firstServer, REPLICA_SET_SECONDARY, allServers)
@@ -189,7 +235,8 @@ class BaseClusterSpecification extends Specification {
         factory.sendNotification(thirdServer, REPLICA_SET_PRIMARY, allServers)
 
         expect:
-        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()))
+        cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(serverSelectionTimeoutMS)))
                 .serverDescription.address == thirdServer
 
         cleanup:
@@ -205,7 +252,6 @@ class BaseClusterSpecification extends Specification {
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
                         .hosts([firstServer, secondServer, thirdServer])
-                        .serverSelectionTimeout(-1, SECONDS)
                         .build(),
                 factory)
 
@@ -213,7 +259,8 @@ class BaseClusterSpecification extends Specification {
         def latch = new CountDownLatch(1)
         def thread = new Thread({
             try {
-                cluster.selectServer()(new ReadPreferenceServerSelector(ReadPreference.primary()))
+                cluster.selectServer(new ReadPreferenceServerSelector(ReadPreference.primary()),
+                        createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(-1_000)))
             } catch (MongoInterruptedException e) {
                 latch.countDown()
             }
@@ -221,41 +268,10 @@ class BaseClusterSpecification extends Specification {
         thread.start()
         sleep(1000)
         thread.interrupt()
-        latch.await(ClusterFixture.TIMEOUT, SECONDS)
+        def interrupted = latch.await(ClusterFixture.TIMEOUT, SECONDS)
 
         then:
-        true
-
-        cleanup:
-        cluster?.close()
-    }
-
-    @Slow
-    def 'should wait indefinitely for a cluster description until interrupted'() {
-        given:
-        def cluster = new MultiServerCluster(new ClusterId(),
-                builder().mode(MULTIPLE)
-                        .hosts([firstServer, secondServer, thirdServer])
-                        .serverSelectionTimeout(-1, SECONDS)
-                        .build(),
-                factory)
-
-        when:
-        def latch = new CountDownLatch(1)
-        def thread = new Thread({
-            try {
-                cluster.getDescription()
-            } catch (MongoInterruptedException e) {
-                latch.countDown()
-            }
-        })
-        thread.start()
-        sleep(1000)
-        thread.interrupt()
-        latch.await(ClusterFixture.TIMEOUT, SECONDS)
-
-        then:
-        true
+        interrupted
 
         cleanup:
         cluster?.close()
@@ -265,14 +281,13 @@ class BaseClusterSpecification extends Specification {
         given:
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
-                        .serverSelectionTimeout(serverSelectionTimeoutMS, MILLISECONDS)
                         .hosts([firstServer, secondServer, thirdServer])
                         .build(),
                 factory)
         factory.sendNotification(firstServer, REPLICA_SET_SECONDARY, allServers)
 
         when:
-        def serverDescription = selectServerAsync(cluster, firstServer).getDescription()
+        def serverDescription = selectServerAsync(cluster, firstServer, serverSelectionTimeoutMS).getDescription()
 
         then:
         serverDescription.address == firstServer
@@ -288,14 +303,13 @@ class BaseClusterSpecification extends Specification {
         given:
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
-                        .serverSelectionTimeout(serverSelectionTimeoutMS, MILLISECONDS)
                         .hosts([firstServer, secondServer, thirdServer])
                         .build(),
                 factory)
 
         when:
-        def secondServerLatch = selectServerAsync(cluster, secondServer)
-        def thirdServerLatch = selectServerAsync(cluster, thirdServer)
+        def secondServerLatch = selectServerAsync(cluster, secondServer, serverSelectionTimeoutMS)
+        def thirdServerLatch = selectServerAsync(cluster, thirdServer, serverSelectionTimeoutMS)
         factory.sendNotification(secondServer, REPLICA_SET_SECONDARY, allServers)
         factory.sendNotification(thirdServer, REPLICA_SET_SECONDARY, allServers)
 
@@ -335,12 +349,11 @@ class BaseClusterSpecification extends Specification {
         def cluster = new MultiServerCluster(new ClusterId(),
                 builder().mode(MULTIPLE)
                         .hosts([firstServer, secondServer, thirdServer])
-                        .serverSelectionTimeout(serverSelectionTimeoutMS, MILLISECONDS)
                         .build(),
                 factory)
 
         when:
-        selectServerAsyncAndGet(cluster, firstServer)
+        selectServerAsyncAndGet(cluster, firstServer, serverSelectionTimeoutMS)
 
         then:
         thrown(MongoTimeoutException)
@@ -354,16 +367,26 @@ class BaseClusterSpecification extends Specification {
     }
 
     def selectServerAsyncAndGet(BaseCluster cluster, ServerAddress serverAddress) {
-        selectServerAsync(cluster, serverAddress).get()
+        selectServerAsync(cluster, serverAddress, 1_000)
+    }
+
+    def selectServerAsyncAndGet(BaseCluster cluster, ServerAddress serverAddress, long serverSelectionTimeoutMS) {
+        selectServerAsync(cluster, serverAddress, serverSelectionTimeoutMS).get()
     }
 
     def selectServerAsync(BaseCluster cluster, ServerAddress serverAddress) {
+        selectServerAsync(cluster, serverAddress, 1_000)
+    }
+
+    def selectServerAsync(BaseCluster cluster, ServerAddress serverAddress, long serverSelectionTimeoutMS) {
         def serverLatch = new ServerLatch()
-        cluster.selectServerAsync(new ServerAddressSelector(serverAddress)) { ServerTuple result, MongoException e ->
-            serverLatch.server = result != null ? result.getServer() : null
-            serverLatch.serverDescription = result != null ? result.serverDescription : null
-            serverLatch.throwable = e
-            serverLatch.latch.countDown()
+        cluster.selectServerAsync(new ServerAddressSelector(serverAddress),
+                createOperationContext(TIMEOUT_SETTINGS.withServerSelectionTimeoutMS(serverSelectionTimeoutMS))) {
+            ServerTuple result, MongoException e ->
+                serverLatch.server = result != null ? result.getServer() : null
+                serverLatch.serverDescription = result != null ? result.serverDescription : null
+                serverLatch.throwable = e
+                serverLatch.latch.countDown()
         }
         serverLatch
     }

@@ -28,6 +28,7 @@ import com.mongodb.event.ClusterListener
 import com.mongodb.internal.selector.WritableServerSelector
 import spock.lang.Specification
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
 import static com.mongodb.connection.ClusterConnectionMode.SINGLE
 import static com.mongodb.connection.ClusterType.REPLICA_SET
 import static com.mongodb.connection.ClusterType.UNKNOWN
@@ -59,9 +60,9 @@ class SingleServerClusterSpecification extends Specification {
         sendNotification(firstServer, STANDALONE)
 
         then:
-        cluster.getDescription().type == ClusterType.STANDALONE
-        cluster.getDescription().connectionMode == SINGLE
-        ClusterDescriptionHelper.getAll(cluster.getDescription()) == getDescriptions()
+        cluster.getCurrentDescription().type == ClusterType.STANDALONE
+        cluster.getCurrentDescription().connectionMode == SINGLE
+        ClusterDescriptionHelper.getAll(cluster.getCurrentDescription()) == getDescriptions()
 
         cleanup:
         cluster?.close()
@@ -76,21 +77,25 @@ class SingleServerClusterSpecification extends Specification {
         sendNotification(firstServer, STANDALONE)
 
         then:
-        cluster.getServer(firstServer) == factory.getServer(firstServer)
+        cluster.getServersSnapshot(OPERATION_CONTEXT
+                        .getTimeoutContext()
+                        .computeServerSelectionTimeout(),
+                OPERATION_CONTEXT.getTimeoutContext()).getServer(firstServer) == factory.getServer(firstServer)
 
         cleanup:
         cluster?.close()
     }
 
 
-    def 'should not get server when closed'() {
+    def 'should not get servers snapshot when closed'() {
         given:
         def cluster = new SingleServerCluster(CLUSTER_ID,
                 ClusterSettings.builder().mode(SINGLE).hosts(Arrays.asList(firstServer)).build(), factory)
         cluster.close()
 
         when:
-        cluster.getServer(firstServer)
+        cluster.getServersSnapshot(OPERATION_CONTEXT.getTimeoutContext().computeServerSelectionTimeout(),
+                OPERATION_CONTEXT.getTimeoutContext())
 
         then:
         thrown(IllegalStateException)
@@ -109,8 +114,8 @@ class SingleServerClusterSpecification extends Specification {
         sendNotification(firstServer, ServerType.REPLICA_SET_PRIMARY)
 
         then:
-        cluster.getDescription().type == ClusterType.SHARDED
-        ClusterDescriptionHelper.getAll(cluster.getDescription()) == [] as Set
+        cluster.getCurrentDescription().type == ClusterType.SHARDED
+        ClusterDescriptionHelper.getAll(cluster.getCurrentDescription()) == [] as Set
 
         cleanup:
         cluster?.close()
@@ -126,8 +131,8 @@ class SingleServerClusterSpecification extends Specification {
         sendNotification(firstServer, ServerType.REPLICA_SET_PRIMARY, 'test1')
 
         then:
-        cluster.getDescription().type == REPLICA_SET
-        ClusterDescriptionHelper.getAll(cluster.getDescription()) == getDescriptions()
+        cluster.getCurrentDescription().type == REPLICA_SET
+        ClusterDescriptionHelper.getAll(cluster.getCurrentDescription()) == getDescriptions()
 
         cleanup:
         cluster?.close()
@@ -140,7 +145,7 @@ class SingleServerClusterSpecification extends Specification {
         sendNotification(firstServer, getBuilder(firstServer).minWireVersion(1000).maxWireVersion(1000).build())
 
         when:
-        cluster.selectServer(new WritableServerSelector())
+        cluster.selectServer(new WritableServerSelector(), OPERATION_CONTEXT)
 
         then:
         thrown(MongoIncompatibleDriverException)

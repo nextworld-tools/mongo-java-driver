@@ -7,15 +7,15 @@ set -o errexit  # Exit the script with error if any of the commands fail
 ############################################
 #            Main Program                  #
 ############################################
+RELATIVE_DIR_PATH="$(dirname "${BASH_SOURCE:-$0}")"
+. "${RELATIVE_DIR_PATH}/javaConfig.bash"
+
 RELEASE=${RELEASE:false}
 
 export ORG_GRADLE_PROJECT_nexusUsername=${NEXUS_USERNAME}
 export ORG_GRADLE_PROJECT_nexusPassword=${NEXUS_PASSWORD}
 export ORG_GRADLE_PROJECT_signingKey="${SIGNING_KEY}"
 export ORG_GRADLE_PROJECT_signingPassword=${SIGNING_PASSWORD}
-
-echo "Publishing snapshot with jdk11"
-export JAVA_HOME="/opt/java/jdk11"
 
 if [ "$RELEASE" == "true" ]; then
   TASK="publishArchives"

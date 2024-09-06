@@ -16,7 +16,6 @@
 
 package com.mongodb.internal.connection
 
-import com.mongodb.ClusterFixture
 import com.mongodb.MongoCredential
 import com.mongodb.MongoSecurityException
 import com.mongodb.ReadConcern
@@ -34,16 +33,17 @@ import org.bson.codecs.DocumentCodec
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
 import static com.mongodb.ClusterFixture.createAsyncCluster
 import static com.mongodb.ClusterFixture.createCluster
 import static com.mongodb.ClusterFixture.getBinding
-import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.ClusterFixture.isAuthenticated
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static com.mongodb.MongoCredential.createCredential
 import static com.mongodb.MongoCredential.createScramSha1Credential
 import static com.mongodb.MongoCredential.createScramSha256Credential
 
-@IgnoreIf({ !ClusterFixture.serverVersionAtLeast(4, 0) || !isAuthenticated() })
+@IgnoreIf({ serverVersionLessThan(4, 0) || !isAuthenticated() })
 class ScramSha256AuthenticationSpecification extends Specification {
 
     static MongoCredential sha1Implicit = createCredential('sha1', 'admin', 'sha1'.toCharArray())
@@ -93,7 +93,7 @@ class ScramSha256AuthenticationSpecification extends Specification {
 
     def dropUser(final String userName) {
         new CommandReadOperation<>('admin', new BsonDocument('dropUser', new BsonString(userName)),
-            new BsonDocumentCodec()).execute(getBinding())
+                new BsonDocumentCodec()).execute(getBinding())
     }
 
     def 'test authentication and authorization'() {
@@ -103,7 +103,7 @@ class ScramSha256AuthenticationSpecification extends Specification {
         when:
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()))
+                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT))
 
         then:
         noExceptionThrown()
@@ -124,7 +124,8 @@ class ScramSha256AuthenticationSpecification extends Specification {
         // make this synchronous
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()), callback)
+                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT),
+                        callback)
         callback.get()
 
         then:
@@ -144,7 +145,7 @@ class ScramSha256AuthenticationSpecification extends Specification {
         when:
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()))
+                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT))
 
         then:
         thrown(MongoSecurityException)
@@ -164,7 +165,8 @@ class ScramSha256AuthenticationSpecification extends Specification {
         when:
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()), callback)
+                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT),
+                        callback)
         callback.get()
 
         then:
@@ -184,7 +186,7 @@ class ScramSha256AuthenticationSpecification extends Specification {
         when:
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()))
+                .execute(new ClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT))
 
         then:
         noExceptionThrown()
@@ -204,7 +206,8 @@ class ScramSha256AuthenticationSpecification extends Specification {
         when:
         new CommandReadOperation<Document>('admin',
                 new BsonDocumentWrapper<Document>(new Document('dbstats', 1), new DocumentCodec()), new DocumentCodec())
-                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, getServerApi()), callback)
+                .executeAsync(new AsyncClusterBinding(cluster, ReadPreference.primary(), ReadConcern.DEFAULT, OPERATION_CONTEXT),
+                        callback)
         callback.get()
 
         then:

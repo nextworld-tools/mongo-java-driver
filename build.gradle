@@ -24,13 +24,19 @@ buildscript {
         maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
-        classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:3.0.3'
-        classpath "gradle.plugin.com.github.spotbugs.snom:spotbugs-gradle-plugin:4.5.0"
+        classpath 'com.netflix.nebula:gradle-extra-configurations-plugin:7.0.0'
+        classpath "com.github.spotbugs.snom:spotbugs-gradle-plugin:6.0.15"
         classpath 'biz.aQute.bnd:biz.aQute.bnd.gradle:5.1.2'
-        
+
         // Scala plugins
-        classpath "com.adtran:scala-multiversion-plugin:1.0.36"
-        classpath "com.diffplug.spotless:spotless-plugin-gradle:3.27.1"
+        classpath "com.adtran:scala-multiversion-plugin:2.0.4"
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.14.0"
+
+        // kotlin plugins
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:1.8.10"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:1.8.10"
+        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.21.0"
 
         // Test logging plugin
         classpath 'com.adarshr:gradle-test-logger-plugin:2.1.0'
@@ -43,47 +49,51 @@ buildscript {
 
 ext {
     configDir = new File(rootDir, 'config')
-    jnrUnixsocketVersion = '0.18'
-    nettyVersion = '4.1.43.Final'
-    snappyVersion = '1.1.4'
-    zstdVersion = '1.3.8-3'
-    mongoCryptVersion = '1.2.0'
-    projectReactorVersion = 'Californium-SR23'
-    junitBomVersion = '5.6.2'
+    jnrUnixsocketVersion = '0.38.17'
+    nettyVersion = '4.1.87.Final'
+    snappyVersion = '1.1.10.3'
+    zstdVersion = '1.5.5-3'
+    awsSdkV2Version = '2.18.9'
+    awsSdkV1Version = '1.12.337'
+    mongoCryptVersion = '1.11.0'
+    projectReactorVersion = '2022.0.0'
+    junitBomVersion = '5.10.2'
+    logbackVersion = '1.3.14'
     gitVersion = getGitVersion()
 }
 
 def configDir = ext.configDir
-def coreProjects = subprojects.findAll { !['util'].contains(it.name) }
-def javaProjects = subprojects.findAll { !it.name.contains('scala') }
+def utilProjects = project(":util").allprojects
+def coreProjects = subprojects - utilProjects
 def scalaProjects = subprojects.findAll { it.name.contains('scala') }
-def javaMainProjects = javaProjects.findAll { !['util'].contains(it.name) }
-def javaCodeCheckedProjects = javaMainProjects.findAll { !['driver-benchmarks', 'driver-workload-executor'].contains(it.name) }
+def javaProjects = subprojects - scalaProjects
+def javaMainProjects = javaProjects - utilProjects
+def javaCodeCheckedProjects = javaMainProjects.findAll { !['driver-benchmarks', 'driver-workload-executor', 'driver-lambda'].contains(it.name) }
 def javaAndScalaTestedProjects = javaCodeCheckedProjects + scalaProjects
 
 configure(coreProjects) {
     apply plugin: 'idea'
 
-    evaluationDependsOn(':util')
     group = 'org.mongodb'
-    version = '4.3.0-SNAPSHOT'
+    version = '5.2.0-SNAPSHOT'
 
     repositories {
         mavenLocal()
         google()
         mavenCentral()
-        maven {
-            url 'http://oss.sonatype.org/content/repositories/snapshots'
-        }
 
+        // Uncomment this to test with a snapshot build of mongodb-crypt
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots'
+            content {
+                includeGroup "org.mongodb"
+            }
+        }
     }
 }
 
 configure(javaProjects) {
     apply plugin: 'java-library'
-
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
 
     sourceSets {
         main {
@@ -94,32 +104,31 @@ configure(javaProjects) {
     tasks.withType(GenerateModuleMetadata) {
         enabled = false
     }
+
 }
 
 configure(scalaProjects) {
     apply plugin: 'scala'
     apply plugin: 'idea'
     apply plugin: "com.adtran.scala-multiversion-plugin"
-    apply plugin: "com.diffplug.gradle.spotless"
+    apply plugin: "com.diffplug.spotless"
 
     group = 'org.mongodb.scala'
 
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-
     dependencies {
-        compile ('org.scala-lang:scala-library:%scala-version%')
-        compile ('org.scala-lang:scala-reflect:%scala-version%')
+        implementation ('org.scala-lang:scala-library:%scala-version%')
+        implementation ('org.scala-lang:scala-reflect:%scala-version%')
 
         testImplementation(platform("org.junit:junit-bom:$junitBomVersion"))
         testImplementation("org.junit.vintage:junit-vintage-engine")
 
-        testImplementation('org.scalatest:scalatest_%%:3.0.8')
-        testImplementation('org.scalamock:scalamock_%%:4.4.0')
-        testImplementation('ch.qos.logback:logback-classic:1.1.3')
+        testImplementation('org.scalatest:scalatest-flatspec_%%:3.2.9')
+        testImplementation('org.scalatest:scalatest-shouldmatchers_%%:3.2.9')
+        testImplementation('org.scalatestplus:junit-4-13_%%:3.2.9.0')
+        testImplementation('org.scalatestplus:mockito-3-12_%%:3.2.10.0')
+        testImplementation("ch.qos.logback:logback-classic:$logbackVersion")
         testImplementation('org.reflections:reflections:0.9.10')
     }
-
 
     test{
         useJUnitPlatform {
@@ -129,7 +138,7 @@ configure(scalaProjects) {
 
     spotless {
         scala {
-            scalafmt('2.0.0').configFile("$configDir/scalafmt.conf")
+            scalafmt().configFile("$configDir/scala/scalafmt.conf")
         }
     }
     compileScala.dependsOn('spotlessApply')
@@ -137,12 +146,23 @@ configure(scalaProjects) {
 
     tasks.withType(ScalaCompile) {
         scalaCompileOptions.deprecation = false
-    }
-
-    if (project.scalaVersion.startsWith("2.13")) {
-        scaladoc {
-            scalaClasspath += files("$rootDir/gradle/scala/lib/scala-ant-2.13.1.jar")
+        if(scalaVersion.startsWith("2.11")) {
+            scalaCompileOptions.additionalParameters = [
+                    // support static methods in interfaces
+                    "-target:jvm-1.8"
+            ]
         }
+        if(scalaVersion.startsWith("2.13")) {
+            scalaCompileOptions.additionalParameters = [
+                    "-feature",
+                    "-unchecked",
+                    "-language:reflectiveCalls",
+                    "-Wconf:cat=deprecation:ws,any:e",
+                    "-Wconf:msg=While parsing annotations in:silent",
+                    "-Xlint:strict-unsealed-patmat"
+            ]
+        }
+
     }
 
     tasks.withType(GenerateModuleMetadata) {
@@ -153,11 +173,14 @@ configure(scalaProjects) {
 configure(javaMainProjects) {
     apply plugin: 'nebula.optional-base'
     apply plugin: 'java-library'
-    
+
     dependencies {
         compileOnly 'com.google.code.findbugs:jsr305:1.3.9'
         api 'org.slf4j:slf4j-api:1.7.6', optional
         testImplementation 'com.google.code.findbugs:jsr305:1.3.9'
+
+        // https://issues.apache.org/jira/browse/GROOVY-10194
+        testImplementation 'org.codehaus.groovy:groovy-all:3.0.9'
     }
 
     /* Compiling */
@@ -228,17 +251,24 @@ configure(javaCodeCheckedProjects) {
     dependencies {
         testImplementation(platform("org.junit:junit-bom:$junitBomVersion"))
         testImplementation('org.junit.jupiter:junit-jupiter')
+        testImplementation('org.junit.jupiter:junit-jupiter-params')
+        testImplementation('org.junit.jupiter:junit-jupiter-engine')
         testImplementation('org.junit.vintage:junit-vintage-engine')
 
-        testImplementation platform('org.spockframework:spock-bom:2.0-M3-groovy-2.5')
+        testImplementation platform('org.spockframework:spock-bom:2.1-groovy-3.0')
         testImplementation 'org.spockframework:spock-core'
         testImplementation 'org.spockframework:spock-junit4'
-        testImplementation("org.mockito:mockito-core:3.8.0")
+        if ('8'.equals(findProperty("javaVersion"))) {
+            testImplementation("org.mockito:mockito-core:4.6.1")
+            testImplementation("org.mockito:mockito-inline:4.6.1")
+        } else {
+            testImplementation("org.mockito:mockito-core:5.11.0")
+        }
         testImplementation 'cglib:cglib-nodep:2.2.2'
         testImplementation 'org.objenesis:objenesis:1.3'
         testImplementation 'org.hamcrest:hamcrest-all:1.3'
-        testImplementation 'ch.qos.logback:logback-classic:1.1.1'
-        testImplementation project(':util') //Adding categories to classpath
+        testImplementation "ch.qos.logback:logback-classic:$logbackVersion"
+        testImplementation project(':util:spock') //Adding categories to classpath
     }
 
     sourceSets {
@@ -274,9 +304,16 @@ configure(javaCodeCheckedProjects) {
     }
 
     task testSlowOnly(type: Test) {
+        dependsOn('testSlowGroovy')
         useJUnitPlatform {
-            includeEngines('junit-jupiter', 'junit-vintage', 'spock')
+            includeEngines('junit-jupiter', 'junit-vintage')
             includeTags('Slow')
+        }
+    }
+
+    task testSlowGroovy(type: Test) {
+        useJUnitPlatform {
+            includeEngines( 'spock')
         }
         systemProperty('spock.configuration', "${configDir}/spock/OnlySlow.groovy")
     }
@@ -292,19 +329,19 @@ configure(javaCodeCheckedProjects) {
     /* Code quality */
     tasks.withType(Checkstyle) {
         reports {
-            xml.enabled true
-            html.enabled true
+            xml.required = true
+            html.required = true
         }
     }
 
     checkstyle {
-        toolVersion = "7.4"
-        configFile = new File(configDir, 'checkstyle.xml')
-        configProperties.checkstyleConfigDir = configDir
+        toolVersion = "9.1"
     }
 
     spotbugs {
-        excludeFilter = new File(configDir, 'findbugs-exclude.xml')
+        if (!project.buildingWith('ssdlcReport.enabled')) {
+            excludeFilter = new File(configDir, 'spotbugs/exclude.xml')
+        }
     }
 
     codenarc {
@@ -316,24 +353,12 @@ configure(javaCodeCheckedProjects) {
         reports {
             xml.enabled = project.buildingWith('xmlReports.enabled')
             html.enabled = !project.buildingWith('xmlReports.enabled')
+            sarif.enabled = project.buildingWith('ssdlcReport.enabled')
         }
     }
 
     spotbugsTest {
         enabled = false
-    }
-
-    tasks.withType(Test) {
-        def jdkHome = findProperty("jdkHome")
-        if (jdkHome) {
-            def javaExecutablesPath = new File(jdkHome, 'bin')
-            def javaExecutables = [:].withDefault { execName ->
-                def executable = new File(javaExecutablesPath, execName)
-                assert executable.exists() : "There is no ${execName} executable in ${javaExecutablesPath}"
-                executable
-            }
-            executable = javaExecutables.java
-        }
     }
 }
 
@@ -346,21 +371,7 @@ def getGitVersion() {
     describeStdOut.toString().substring(1).trim()
 }
 
+apply from: 'gradle/javaToolchain.gradle'
 apply from: 'gradle/publish.gradle'
 apply from: 'gradle/deploy.gradle'
 apply from: 'gradle/javadoc.gradle'
-
-//////////////////////////////////////////
-// Root project configuration           //
-//////////////////////////////////////////
-wrapper {
-    gradleVersion = '6.0.1'
-}
-
-if (!JavaVersion.current().isJava9Compatible()) {
-    throw new GradleException("""
-        | ERROR:
-        | JDK ${JavaVersion.VERSION_1_9.getMajorVersion()} is required to build the driver: You are using JDK ${JavaVersion.current().getMajorVersion()}.
-        |""".stripMargin()
-    )
-}

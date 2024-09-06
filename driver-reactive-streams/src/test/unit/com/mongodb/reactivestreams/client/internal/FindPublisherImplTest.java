@@ -34,10 +34,8 @@ import reactor.core.publisher.Flux;
 import static com.mongodb.reactivestreams.client.MongoClients.getDefaultCodecRegistry;
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@SuppressWarnings("deprecation")
 public class FindPublisherImplTest extends TestHelper {
 
     private static final MongoNamespace NAMESPACE = new MongoNamespace("db", "coll");
@@ -51,7 +49,8 @@ public class FindPublisherImplTest extends TestHelper {
         TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
         FindPublisher<Document> publisher = new FindPublisherImpl<>(null, createMongoOperationPublisher(executor), new Document());
 
-        FindOperation<Document> expectedOperation = new FindOperation<>(NAMESPACE, getDefaultCodecRegistry().get(Document.class))
+        FindOperation<Document> expectedOperation = new FindOperation<>(NAMESPACE,
+                                                                        getDefaultCodecRegistry().get(Document.class))
                 .batchSize(Integer.MAX_VALUE)
                 .retryReads(true)
                 .filter(new BsonDocument());
@@ -67,13 +66,12 @@ public class FindPublisherImplTest extends TestHelper {
                 .filter(new Document("filter", 1))
                 .sort(Sorts.ascending("sort"))
                 .projection(new Document("projection", 1))
-                .maxTime(10, SECONDS)
-                .maxAwaitTime(20, SECONDS)
+                .maxTime(101, MILLISECONDS)
+                .maxAwaitTime(1001, MILLISECONDS)
                 .batchSize(100)
                 .limit(100)
                 .skip(10)
                 .cursorType(CursorType.NonTailable)
-                .oplogReplay(false)
                 .noCursorTimeout(false)
                 .partial(false)
                 .collation(COLLATION)
@@ -85,24 +83,24 @@ public class FindPublisherImplTest extends TestHelper {
                 .showRecordId(false)
                 .allowDiskUse(false);
 
-        expectedOperation
+        expectedOperation = new FindOperation<>(NAMESPACE,
+                                                getDefaultCodecRegistry().get(Document.class))
+                .retryReads(true)
+                .filter(new BsonDocument())
                 .allowDiskUse(false)
                 .batchSize(100)
                 .collation(COLLATION)
-                .comment("my comment")
+                .comment(new BsonString("my comment"))
                 .cursorType(CursorType.NonTailable)
                 .filter(new BsonDocument("filter", new BsonInt32(1)))
                 .hint(new BsonString("a_1"))
                 .limit(100)
                 .max(new BsonDocument("max", new BsonInt32(1)))
-                .maxAwaitTime(20000, MILLISECONDS)
-                .maxTime(10000, MILLISECONDS)
                 .min(new BsonDocument("min", new BsonInt32(1)))
                 .projection(new BsonDocument("projection", new BsonInt32(1)))
                 .returnKey(false)
                 .showRecordId(false)
                 .skip(10)
-                .slaveOk(false)
                 .sort(new BsonDocument("sort", new BsonInt32(1)));
 
         configureBatchCursor();

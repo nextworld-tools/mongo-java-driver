@@ -17,18 +17,20 @@
 package com.mongodb.internal.connection
 
 import com.mongodb.ClusterFixture
+import com.mongodb.LoggerSettings
 import com.mongodb.MongoCompressor
 import com.mongodb.SubjectProvider
 import com.mongodb.connection.ClusterId
 import com.mongodb.connection.ServerId
 import com.mongodb.connection.SocketSettings
-import com.mongodb.connection.SocketStreamFactory
 import spock.lang.IgnoreIf
 import spock.lang.Specification
 
 import javax.security.auth.login.LoginContext
 
 import static com.mongodb.AuthenticationMechanism.GSSAPI
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
+import static com.mongodb.ClusterFixture.getLoginContextName
 import static com.mongodb.ClusterFixture.getPrimary
 import static com.mongodb.ClusterFixture.getServerApi
 import static com.mongodb.ClusterFixture.getSslSettings
@@ -40,19 +42,19 @@ class GSSAPIAuthenticatorSpecification extends Specification {
 
     def 'should use subject provider mechanism property'() {
         given:
-        def loginContext = new LoginContext('com.sun.security.jgss.krb5.initiate');
-        loginContext.login();
-        def subject = loginContext.getSubject();
+        def loginContext = new LoginContext(getLoginContextName())
+        loginContext.login()
+        def subject = loginContext.getSubject()
         def subjectProvider = Mock(SubjectProvider)
         def credential = ClusterFixture.getCredential().withMechanismProperty(JAVA_SUBJECT_PROVIDER_KEY, subjectProvider)
         def credentialWithCache = new MongoCredentialWithCache(credential)
-        def streamFactory = new SocketStreamFactory(SocketSettings.builder().build(), getSslSettings())
+        def streamFactory = new SocketStreamFactory(new DefaultInetAddressResolver(), SocketSettings.builder().build(), getSslSettings())
         def internalConnection = new InternalStreamConnectionFactory(SINGLE, streamFactory, credentialWithCache, null,
-                null, Collections.<MongoCompressor> emptyList(), null, getServerApi())
+                null, Collections.<MongoCompressor> emptyList(), LoggerSettings.builder().build(), null, getServerApi())
                 .create(new ServerId(new ClusterId(), getPrimary()))
 
         when:
-        internalConnection.open()
+        internalConnection.open(OPERATION_CONTEXT)
 
         then:
         1 * subjectProvider.getSubject() >> subject

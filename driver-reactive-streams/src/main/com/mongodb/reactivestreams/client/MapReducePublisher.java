@@ -17,8 +17,10 @@
 package com.mongodb.reactivestreams.client;
 
 
+import com.mongodb.annotations.Alpha;
+import com.mongodb.annotations.Reason;
+import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
-import com.mongodb.client.model.MapReduceAction;
 import com.mongodb.lang.Nullable;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
@@ -30,7 +32,9 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <TResult> The type of the result.
  * @since 1.0
+ * @deprecated Superseded by aggregate
  */
+@Deprecated
 public interface MapReducePublisher<TResult> extends Publisher<TResult> {
 
     /**
@@ -123,7 +127,7 @@ public interface MapReducePublisher<TResult> extends Publisher<TResult> {
      * @param action an {@link com.mongodb.client.model.MapReduceAction} to perform on the collection
      * @return this
      */
-    MapReducePublisher<TResult> action(MapReduceAction action);
+    MapReducePublisher<TResult> action(com.mongodb.client.model.MapReduceAction action);
 
     /**
      * Sets the name of the database to output into.
@@ -133,29 +137,6 @@ public interface MapReducePublisher<TResult> extends Publisher<TResult> {
      * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
      */
     MapReducePublisher<TResult> databaseName(@Nullable String databaseName);
-    /**
-     * Sets if the output database is sharded
-     *
-     * @param sharded if the output database is sharded
-     * @return this
-     * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
-     * @deprecated this option will no longer be supported in MongoDB 4.4
-     */
-    @Deprecated
-    MapReducePublisher<TResult> sharded(boolean sharded);
-
-    /**
-     * Sets if the post-processing step will prevent MongoDB from locking the database.
-     *
-     * Valid only with the {@code MapReduceAction.MERGE} or {@code MapReduceAction.REDUCE} actions.
-     *
-     * @param nonAtomic if the post-processing step will prevent MongoDB from locking the database.
-     * @return this
-     * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
-     * @deprecated this option will no longer be supported in MongoDB 4.4 as it will no longer hold a global or database level write lock.
-     */
-    @Deprecated
-    MapReducePublisher<TResult> nonAtomic(boolean nonAtomic);
 
     /**
      * Sets the bypass document level validation flag.
@@ -193,7 +174,7 @@ public interface MapReducePublisher<TResult> extends Publisher<TResult> {
     /**
      * Sets the number of documents to return per batch.
      *
-     * <p>Overrides the {@link org.reactivestreams.Subscription#request(long)} value for setting the batch size, allowing for fine grained
+     * <p>Overrides the {@link org.reactivestreams.Subscription#request(long)} value for setting the batch size, allowing for fine-grained
      * control over the underlying cursor.</p>
      *
      * @param batchSize the batch size
@@ -202,6 +183,27 @@ public interface MapReducePublisher<TResult> extends Publisher<TResult> {
      * @mongodb.driver.manual reference/method/cursor.batchSize/#cursor.batchSize Batch Size
      */
     MapReducePublisher<TResult> batchSize(int batchSize);
+
+    /**
+     * Sets the timeoutMode for the cursor.
+     *
+     * <p>
+     *     Requires the {@code timeout} to be set, either in the {@link com.mongodb.MongoClientSettings},
+     *     via {@link MongoDatabase} or via {@link MongoCollection}
+     * </p>
+     * <p>
+     *     If the {@code timeout} is set then:
+     *     <ul>
+     *      <li>For non-tailable cursors, the default value of timeoutMode is {@link TimeoutMode#CURSOR_LIFETIME}</li>
+     *      <li>For tailable cursors, the default value of timeoutMode is {@link TimeoutMode#ITERATION} and its an error
+     *      to configure it as: {@link TimeoutMode#CURSOR_LIFETIME}</li>
+     *     </ul>
+     * @param timeoutMode the timeout mode
+     * @return this
+     * @since 5.2
+     */
+    @Alpha(Reason.CLIENT)
+    MapReducePublisher<TResult> timeoutMode(TimeoutMode timeoutMode);
 
     /**
      * Helper to return a publisher limited to the first result.

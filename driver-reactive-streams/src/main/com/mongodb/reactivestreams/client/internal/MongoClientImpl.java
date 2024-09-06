@@ -18,101 +18,121 @@ package com.mongodb.reactivestreams.client.internal;
 
 import com.mongodb.AutoEncryptionSettings;
 import com.mongodb.ClientSessionOptions;
-import com.mongodb.MongoClientException;
+import com.mongodb.ContextProvider;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoDriverInformation;
+import com.mongodb.ReadConcern;
+import com.mongodb.ReadPreference;
+import com.mongodb.WriteConcern;
 import com.mongodb.connection.ClusterDescription;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
-import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
+import com.mongodb.internal.TimeoutSettings;
 import com.mongodb.internal.connection.Cluster;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
 import com.mongodb.internal.session.ServerSessionPool;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.ListDatabasesPublisher;
 import com.mongodb.reactivestreams.client.MongoClient;
+import com.mongodb.reactivestreams.client.MongoCluster;
 import com.mongodb.reactivestreams.client.MongoDatabase;
+import com.mongodb.reactivestreams.client.ReactiveContextProvider;
 import com.mongodb.reactivestreams.client.internal.crypt.Crypt;
 import com.mongodb.reactivestreams.client.internal.crypt.Crypts;
+import org.bson.BsonDocument;
 import org.bson.Document;
+import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.mongodb.assertions.Assertions.notNull;
-import static org.bson.internal.CodecRegistryHelper.createRegistry;
+import static com.mongodb.internal.connection.ClientMetadataHelper.createClientMetadataDocument;
+import static java.lang.String.format;
+import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentation;
 
 
 /**
  * The internal MongoClient implementation.
  *
- * <p>This should not be considered a part of the public API.</p>
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 public final class MongoClientImpl implements MongoClient {
 
     private static final Logger LOGGER = Loggers.getLogger("client");
-    private final Cluster cluster;
     private final MongoClientSettings settings;
-    private final OperationExecutor executor;
-    private final Closeable externalResourceCloser;
-    private final ServerSessionPool serverSessionPool;
-    private final ClientSessionHelper clientSessionHelper;
-    private final MongoOperationPublisher<Document> mongoOperationPublisher;
-    private final Crypt crypt;
+    private final AutoCloseable externalResourceCloser;
 
-    public MongoClientImpl(final MongoClientSettings settings, final Cluster cluster, @Nullable final Closeable externalResourceCloser) {
-        this(settings, cluster, null, externalResourceCloser);
+    private final MongoClusterImpl delegate;
+    private final AtomicBoolean closed;
+
+    public MongoClientImpl(final MongoClientSettings settings, final MongoDriverInformation mongoDriverInformation, final Cluster cluster,
+            @Nullable final AutoCloseable externalResourceCloser) {
+        this(settings, mongoDriverInformation, cluster, null, externalResourceCloser);
     }
 
-    public MongoClientImpl(final MongoClientSettings settings, final Cluster cluster, @Nullable final OperationExecutor executor) {
-        this(settings, cluster, executor, null);
+    public MongoClientImpl(final MongoClientSettings settings, final MongoDriverInformation mongoDriverInformation, final Cluster cluster,
+            @Nullable final OperationExecutor executor) {
+        this(settings, mongoDriverInformation, cluster, executor, null);
     }
 
-    private MongoClientImpl(final MongoClientSettings settings, final Cluster cluster,
-                            @Nullable final OperationExecutor executor,
-                            @Nullable final Closeable externalResourceCloser) {
-        this.settings = notNull("settings", settings);
-        this.cluster = notNull("cluster", cluster);
-        this.serverSessionPool = new ServerSessionPool(cluster, settings.getServerApi());
-        this.clientSessionHelper = new ClientSessionHelper(this, serverSessionPool);
+    private MongoClientImpl(final MongoClientSettings settings, final MongoDriverInformation mongoDriverInformation, final Cluster cluster,
+                            @Nullable final OperationExecutor executor, @Nullable final AutoCloseable externalResourceCloser) {
+        notNull("settings", settings);
+        notNull("cluster", cluster);
+
+        TimeoutSettings timeoutSettings = TimeoutSettings.create(settings);
+        ServerSessionPool serverSessionPool = new ServerSessionPool(cluster, timeoutSettings, settings.getServerApi());
+        ClientSessionHelper clientSessionHelper = new ClientSessionHelper(this, serverSessionPool);
+
         AutoEncryptionSettings autoEncryptSettings = settings.getAutoEncryptionSettings();
-        this.crypt = autoEncryptSettings != null ? Crypts.createCrypt(this, autoEncryptSettings) : null;
-        if (executor == null) {
-            this.executor = new OperationExecutorImpl(this, clientSessionHelper);
-        } else {
-            this.executor = executor;
+        Crypt crypt = autoEncryptSettings != null ? Crypts.createCrypt(settings, autoEncryptSettings) : null;
+        ContextProvider contextProvider = settings.getContextProvider();
+        if (contextProvider != null && !(contextProvider instanceof ReactiveContextProvider)) {
+            throw new IllegalArgumentException("The contextProvider must be an instance of "
+                    + ReactiveContextProvider.class.getName() + " when using the Reactive Streams driver");
         }
+        OperationExecutor operationExecutor = executor != null ? executor
+                : new OperationExecutorImpl(this, clientSessionHelper, timeoutSettings, (ReactiveContextProvider) contextProvider);
+        MongoOperationPublisher<Document> mongoOperationPublisher = new MongoOperationPublisher<>(Document.class,
+                withUuidRepresentation(settings.getCodecRegistry(),
+                        settings.getUuidRepresentation()),
+                settings.getReadPreference(),
+                settings.getReadConcern(), settings.getWriteConcern(),
+                settings.getRetryWrites(), settings.getRetryReads(),
+                settings.getUuidRepresentation(),
+                settings.getAutoEncryptionSettings(),
+                timeoutSettings,
+                operationExecutor);
+
+        this.delegate = new MongoClusterImpl(cluster, crypt, operationExecutor, serverSessionPool, clientSessionHelper,
+                mongoOperationPublisher);
         this.externalResourceCloser = externalResourceCloser;
-        this.mongoOperationPublisher = new MongoOperationPublisher<>(Document.class,
-                                                                     createRegistry(settings.getCodecRegistry(),
-                                                                                    settings.getUuidRepresentation()),
-                                                                     settings.getReadPreference(),
-                                                                     settings.getReadConcern(), settings.getWriteConcern(),
-                                                                     settings.getRetryWrites(), settings.getRetryReads(),
-                                                                     settings.getUuidRepresentation(), this.executor);
+        this.settings = settings;
+        this.closed = new AtomicBoolean();
+        BsonDocument clientMetadataDocument = createClientMetadataDocument(settings.getApplicationName(), mongoDriverInformation);
+        LOGGER.info(format("MongoClient with metadata %s created with settings %s", clientMetadataDocument.toJson(), settings));
     }
 
     Cluster getCluster() {
-        return cluster;
+        return delegate.getCluster();
     }
 
     public ServerSessionPool getServerSessionPool() {
-        return serverSessionPool;
+        return delegate.getServerSessionPool();
     }
 
     MongoOperationPublisher<Document> getMongoOperationPublisher() {
-        return mongoOperationPublisher;
+        return delegate.getMongoOperationPublisher();
     }
 
     @Nullable
     Crypt getCrypt() {
-        return crypt;
+        return delegate.getCrypt();
     }
 
     public MongoClientSettings getSettings() {
@@ -120,114 +140,162 @@ public final class MongoClientImpl implements MongoClient {
     }
 
     @Override
-    public MongoDatabase getDatabase(final String name) {
-        return new MongoDatabaseImpl(mongoOperationPublisher.withDatabase(name));
-    }
-
-    @Override
     public void close() {
-        if (crypt != null) {
-            crypt.close();
-        }
-        serverSessionPool.close();
-        cluster.close();
-        if (externalResourceCloser != null) {
-            try {
-                externalResourceCloser.close();
-            } catch (IOException e) {
-                LOGGER.warn("Exception closing resource", e);
+        if (!closed.getAndSet(true)) {
+            Crypt crypt = getCrypt();
+            if (crypt != null) {
+                crypt.close();
+            }
+            getServerSessionPool().close();
+            getCluster().close();
+            if (externalResourceCloser != null) {
+                try {
+                    externalResourceCloser.close();
+                } catch (Exception e) {
+                    LOGGER.warn("Exception closing resource", e);
+                }
             }
         }
     }
 
     @Override
     public Publisher<String> listDatabaseNames() {
-        return Flux.from(listDatabases().nameOnly(true)).map(d -> d.getString("name"));
+        return delegate.listDatabaseNames();
     }
 
     @Override
     public Publisher<String> listDatabaseNames(final ClientSession clientSession) {
-        return Flux.from(listDatabases(clientSession).nameOnly(true)).map(d -> d.getString("name"));
+        return delegate.listDatabaseNames(clientSession);
     }
 
     @Override
     public ListDatabasesPublisher<Document> listDatabases() {
-        return listDatabases(Document.class);
+        return delegate.listDatabases();
     }
 
     @Override
-    public <T> ListDatabasesPublisher<T> listDatabases(final Class<T> clazz) {
-        return new ListDatabasesPublisherImpl<>(null, mongoOperationPublisher.withDocumentClass(clazz));
+    public <TResult> ListDatabasesPublisher<TResult> listDatabases(final Class<TResult> clazz) {
+        return delegate.listDatabases(clazz);
     }
 
     @Override
     public ListDatabasesPublisher<Document> listDatabases(final ClientSession clientSession) {
-        return listDatabases(clientSession, Document.class);
+        return delegate.listDatabases(clientSession);
     }
 
     @Override
-    public <T> ListDatabasesPublisher<T> listDatabases(final ClientSession clientSession, final Class<T> clazz) {
-        return new ListDatabasesPublisherImpl<>(notNull("clientSession", clientSession), mongoOperationPublisher.withDocumentClass(clazz));
+    public <TResult> ListDatabasesPublisher<TResult> listDatabases(final ClientSession clientSession, final Class<TResult> clazz) {
+        return delegate.listDatabases(clientSession, clazz);
     }
 
     @Override
     public ChangeStreamPublisher<Document> watch() {
-        return watch(Collections.emptyList());
+        return delegate.watch();
     }
 
     @Override
-    public <T> ChangeStreamPublisher<T> watch(final Class<T> resultClass) {
-        return watch(Collections.emptyList(), resultClass);
+    public <TResult> ChangeStreamPublisher<TResult> watch(final Class<TResult> resultClass) {
+        return delegate.watch(resultClass);
     }
 
     @Override
     public ChangeStreamPublisher<Document> watch(final List<? extends Bson> pipeline) {
-        return watch(pipeline, Document.class);
+        return delegate.watch(pipeline);
     }
 
     @Override
-    public <T> ChangeStreamPublisher<T> watch(final List<? extends Bson> pipeline, final Class<T> resultClass) {
-        return new ChangeStreamPublisherImpl<>(null, mongoOperationPublisher.withDatabase("admin"),
-                                               resultClass, pipeline, ChangeStreamLevel.CLIENT);
+    public <TResult> ChangeStreamPublisher<TResult> watch(final List<? extends Bson> pipeline, final Class<TResult> resultClass) {
+        return delegate.watch(pipeline, resultClass);
     }
 
     @Override
     public ChangeStreamPublisher<Document> watch(final ClientSession clientSession) {
-        return watch(clientSession, Collections.emptyList(), Document.class);
+        return delegate.watch(clientSession);
     }
 
     @Override
-    public <T> ChangeStreamPublisher<T> watch(final ClientSession clientSession, final Class<T> resultClass) {
-        return watch(clientSession, Collections.emptyList(), resultClass);
+    public <TResult> ChangeStreamPublisher<TResult> watch(final ClientSession clientSession, final Class<TResult> resultClass) {
+        return delegate.watch(clientSession, resultClass);
     }
 
     @Override
     public ChangeStreamPublisher<Document> watch(final ClientSession clientSession, final List<? extends Bson> pipeline) {
-        return watch(clientSession, pipeline, Document.class);
+        return delegate.watch(clientSession, pipeline);
     }
 
     @Override
-    public <T> ChangeStreamPublisher<T> watch(final ClientSession clientSession, final List<? extends Bson> pipeline,
-                                              final Class<T> resultClass) {
-        return new ChangeStreamPublisherImpl<>(notNull("clientSession", clientSession), mongoOperationPublisher.withDatabase("admin"),
-                                               resultClass, pipeline, ChangeStreamLevel.CLIENT);
+    public <TResult> ChangeStreamPublisher<TResult> watch(
+            final ClientSession clientSession, final List<? extends Bson> pipeline, final Class<TResult> resultClass) {
+        return delegate.watch(clientSession, pipeline, resultClass);
     }
 
     @Override
     public Publisher<ClientSession> startSession() {
-        return startSession(ClientSessionOptions.builder().build());
+        return delegate.startSession();
     }
 
     @Override
     public Publisher<ClientSession> startSession(final ClientSessionOptions options) {
-        return clientSessionHelper.createClientSessionMono(notNull("options", options), executor)
-                .switchIfEmpty(Mono.create(sink -> sink.error(
-                        new MongoClientException("Sessions are not supported by the MongoDB cluster to which this client is connected"))));
+        return delegate.startSession(options);
+    }
+
+    @Override
+    public CodecRegistry getCodecRegistry() {
+        return delegate.getCodecRegistry();
+    }
+
+    @Override
+    public ReadPreference getReadPreference() {
+        return delegate.getReadPreference();
+    }
+
+    @Override
+    public WriteConcern getWriteConcern() {
+        return delegate.getWriteConcern();
+    }
+
+    @Override
+    public ReadConcern getReadConcern() {
+        return delegate.getReadConcern();
+    }
+
+    @Override
+    public Long getTimeout(final TimeUnit timeUnit) {
+        return null;
+    }
+
+    @Override
+    public MongoCluster withCodecRegistry(final CodecRegistry codecRegistry) {
+        return delegate.withCodecRegistry(codecRegistry);
+    }
+
+    @Override
+    public MongoCluster withReadPreference(final ReadPreference readPreference) {
+        return delegate.withReadPreference(readPreference);
+    }
+
+    @Override
+    public MongoCluster withWriteConcern(final WriteConcern writeConcern) {
+        return delegate.withWriteConcern(writeConcern);
+    }
+
+    @Override
+    public MongoCluster withReadConcern(final ReadConcern readConcern) {
+        return delegate.withReadConcern(readConcern);
+    }
+
+    @Override
+    public MongoCluster withTimeout(final long timeout, final TimeUnit timeUnit) {
+        return delegate.withTimeout(timeout, timeUnit);
+    }
+
+    @Override
+    public MongoDatabase getDatabase(final String name) {
+        return delegate.getDatabase(name);
     }
 
     @Override
     public ClusterDescription getClusterDescription() {
         return getCluster().getCurrentDescription();
     }
-
 }

@@ -16,7 +16,6 @@
 
 package com.mongodb.internal.operation
 
-
 import com.mongodb.MongoNamespace
 import com.mongodb.MongoWriteConcernException
 import com.mongodb.OperationFunctionalSpecification
@@ -28,7 +27,7 @@ import spock.lang.IgnoreIf
 import static com.mongodb.ClusterFixture.executeAsync
 import static com.mongodb.ClusterFixture.getBinding
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
-import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 
 class DropCollectionOperationSpecification extends OperationFunctionalSpecification {
 
@@ -38,7 +37,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
         assert collectionNameExists(getCollectionName())
 
         when:
-        new DropCollectionOperation(getNamespace()).execute(getBinding())
+        new DropCollectionOperation(getNamespace(), WriteConcern.ACKNOWLEDGED).execute(getBinding())
 
         then:
         !collectionNameExists(getCollectionName())
@@ -51,7 +50,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
         assert collectionNameExists(getCollectionName())
 
         when:
-        executeAsync(new DropCollectionOperation(getNamespace()))
+        executeAsync(new DropCollectionOperation(getNamespace(), WriteConcern.ACKNOWLEDGED))
 
         then:
         !collectionNameExists(getCollectionName())
@@ -62,7 +61,7 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
         def namespace = new MongoNamespace(getDatabaseName(), 'nonExistingCollection')
 
         when:
-        new DropCollectionOperation(namespace).execute(getBinding())
+        new DropCollectionOperation(namespace, WriteConcern.ACKNOWLEDGED).execute(getBinding())
 
         then:
         !collectionNameExists('nonExistingCollection')
@@ -74,13 +73,13 @@ class DropCollectionOperationSpecification extends OperationFunctionalSpecificat
         def namespace = new MongoNamespace(getDatabaseName(), 'nonExistingCollection')
 
         when:
-        executeAsync(new DropCollectionOperation(namespace))
+        executeAsync(new DropCollectionOperation(namespace, WriteConcern.ACKNOWLEDGED))
 
         then:
         !collectionNameExists('nonExistingCollection')
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
         getCollectionHelper().insertDocuments(new DocumentCodec(), new Document('documentTo', 'createTheCollection'))

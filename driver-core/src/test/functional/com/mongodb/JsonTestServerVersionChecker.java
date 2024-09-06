@@ -18,12 +18,14 @@ package com.mongodb;
 import com.mongodb.connection.ServerVersion;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
+import org.bson.BsonString;
 import org.bson.BsonValue;
 
 import java.util.List;
 
 import static com.mongodb.ClusterFixture.getServerVersion;
 import static com.mongodb.ClusterFixture.getVersionList;
+import static com.mongodb.ClusterFixture.isAuthenticated;
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet;
 import static com.mongodb.ClusterFixture.isLoadBalanced;
 import static com.mongodb.ClusterFixture.isSharded;
@@ -43,6 +45,10 @@ public final class JsonTestServerVersionChecker {
     }
 
     private static boolean canRunTest(final BsonDocument document, final ServerVersion serverVersion) {
+        if ((!serverlessMatches(document.getString("serverless", new BsonString("allow")).getValue()))) {
+            return false;
+        }
+
         if (document.containsKey("minServerVersion")
                 && serverVersion.compareTo(getMinServerVersionForField("minServerVersion", document)) < 0) {
             return false;
@@ -51,9 +57,14 @@ public final class JsonTestServerVersionChecker {
                 && serverVersion.compareTo(getMaxServerVersionForField("maxServerVersion", document)) > 0) {
             return false;
         }
-        if (document.containsKey("topology")) {
-            BsonArray topologyTypes = document.getArray("topology");
-            return topologyMatches(topologyTypes);
+        if (document.containsKey("topology") && !topologyMatches(document.getArray("topology"))) {
+            return false;
+        }
+        if (document.containsKey("topologies") && !topologyMatches(document.getArray("topologies"))) {
+            return false;
+        }
+        if (document.containsKey("authEnabled") && (isAuthenticated() != document.getBoolean("authEnabled").getValue())) {
+            return false;
         }
 
         if (document.containsKey("runOn")) {
@@ -69,22 +80,15 @@ public final class JsonTestServerVersionChecker {
                 && serverVersion.compareTo(getMaxServerVersionForField("ignore_if_server_version_greater_than", document)) > 0) {
             return false;
         }
-        if (document.containsKey("ignore_if_topology_type")) {
-            return !topologyMatches(document.getArray("ignore_if_topology_type"));
+        if (document.containsKey("ignore_if_topology_type") && topologyMatches(document.getArray("ignore_if_topology_type"))) {
+            return false;
         }
 
         return true;
     }
 
     private static boolean canRunTest(final BsonArray runOn, final ServerVersion serverVersion) {
-        boolean topologyFound = false;
-        for (BsonValue info : runOn) {
-            topologyFound = canRunTest(info.asDocument(), serverVersion);
-            if (topologyFound) {
-                break;
-            }
-        }
-        return topologyFound;
+        return runOn.stream().anyMatch(v -> canRunTest(v.asDocument(), serverVersion));
     }
 
     public static boolean topologyMatches(final BsonArray topologyTypes) {
@@ -103,6 +107,19 @@ public final class JsonTestServerVersionChecker {
             }
         }
         return false;
+    }
+
+    public static boolean serverlessMatches(final String serverlessRequirement) {
+        switch (serverlessRequirement) {
+            case "require":
+                return ClusterFixture.isServerlessTest();
+            case "forbid":
+                return !ClusterFixture.isServerlessTest();
+            case "allow":
+                return true;
+            default:
+                throw new UnsupportedOperationException("Unsupported serverless requirement value: " + serverlessRequirement);
+        }
     }
 
     public static ServerVersion getMinServerVersionForField(final String fieldName, final BsonDocument document) {

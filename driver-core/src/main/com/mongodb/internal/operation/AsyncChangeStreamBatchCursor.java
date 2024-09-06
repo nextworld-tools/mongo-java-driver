@@ -17,13 +17,13 @@
 package com.mongodb.internal.operation;
 
 import com.mongodb.MongoException;
+import com.mongodb.internal.TimeoutContext;
 import com.mongodb.internal.async.AsyncAggregateResponseBatchCursor;
 import com.mongodb.internal.async.AsyncBatchCursor;
 import com.mongodb.internal.async.SingleResultCallback;
-import com.mongodb.internal.binding.AsyncConnectionSource;
 import com.mongodb.internal.binding.AsyncReadBinding;
-import com.mongodb.internal.operation.OperationHelper.AsyncCallableWithSource;
 import com.mongodb.lang.NonNull;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import org.bson.RawBsonDocument;
@@ -35,69 +35,55 @@ import java.util.concurrent.atomic.AtomicReference;
 import static com.mongodb.assertions.Assertions.assertNotNull;
 import static com.mongodb.assertions.Assertions.assertNull;
 import static com.mongodb.internal.async.ErrorHandlingResultCallback.errorHandlingCallback;
+import static com.mongodb.internal.operation.AsyncOperationHelper.withAsyncReadConnectionSource;
 import static com.mongodb.internal.operation.ChangeStreamBatchCursor.convertAndProduceLastId;
-import static com.mongodb.internal.operation.ChangeStreamBatchCursorHelper.isRetryableError;
+import static com.mongodb.internal.operation.ChangeStreamBatchCursorHelper.isResumableError;
 import static com.mongodb.internal.operation.OperationHelper.LOGGER;
-import static com.mongodb.internal.operation.OperationHelper.withAsyncReadConnection;
 import static java.lang.String.format;
 
 final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBatchCursor<T> {
     private final AsyncReadBinding binding;
+    private final TimeoutContext timeoutContext;
     private final ChangeStreamOperation<T> changeStreamOperation;
     private final int maxWireVersion;
 
     private volatile BsonDocument resumeToken;
     /**
-     * {@linkplain ChangeStreamBatchCursorHelper#isRetryableError(Throwable, int) Retryable errors} can result in
+     * {@linkplain ChangeStreamBatchCursorHelper#isResumableError(Throwable, int) Retryable errors} can result in
      * {@code wrapped} containing {@code null} and {@link #isClosed} being {@code false}.
      * This represents a situation in which the wrapped object was closed by {@code this} but {@code this} remained open.
      */
-    private final AtomicReference<AsyncAggregateResponseBatchCursor<RawBsonDocument>> wrapped;
+    private final AtomicReference<AsyncCommandBatchCursor<RawBsonDocument>> wrapped;
     private final AtomicBoolean isClosed;
 
     AsyncChangeStreamBatchCursor(final ChangeStreamOperation<T> changeStreamOperation,
-                                 final AsyncAggregateResponseBatchCursor<RawBsonDocument> wrapped,
+                                 final AsyncCommandBatchCursor<RawBsonDocument> wrapped,
                                  final AsyncReadBinding binding,
-                                 final BsonDocument resumeToken,
+                                 @Nullable final BsonDocument resumeToken,
                                  final int maxWireVersion) {
         this.changeStreamOperation = changeStreamOperation;
         this.wrapped = new AtomicReference<>(assertNotNull(wrapped));
         this.binding = binding;
         binding.retain();
+        this.timeoutContext = binding.getOperationContext().getTimeoutContext();
         this.resumeToken = resumeToken;
         this.maxWireVersion = maxWireVersion;
         isClosed = new AtomicBoolean();
     }
 
     @NonNull
-    AsyncAggregateResponseBatchCursor<RawBsonDocument> getWrapped() {
+    AsyncCommandBatchCursor<RawBsonDocument> getWrapped() {
         return assertNotNull(wrapped.get());
     }
 
     @Override
     public void next(final SingleResultCallback<List<T>> callback) {
-        resumeableOperation(new AsyncBlock() {
-            @Override
-            public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
-                              final SingleResultCallback<List<RawBsonDocument>> callback) {
-                cursor.next(callback);
-            }
-        }, callback, false);
-    }
-
-    @Override
-    public void tryNext(final SingleResultCallback<List<T>> callback) {
-        resumeableOperation(new AsyncBlock() {
-            @Override
-            public void apply(final AsyncAggregateResponseBatchCursor<RawBsonDocument> cursor,
-                              final SingleResultCallback<List<RawBsonDocument>> callback) {
-                cursor.tryNext(callback);
-            }
-        }, callback, true);
+        resumeableOperation(AsyncBatchCursor::next, callback, false);
     }
 
     @Override
     public void close() {
+        timeoutContext.resetTimeoutIfPresent();
         if (isClosed.compareAndSet(false, true)) {
             try {
                 nullifyAndCloseWrapped();
@@ -148,15 +134,15 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     /**
      * This method guarantees that the {@code newValue} argument is closed even if
-     * {@link #setWrappedOrCloseIt(AsyncAggregateResponseBatchCursor)} is called concurrently with or after (in the happens-before order)
+     * {@code setWrappedOrCloseIt(AsyncCommandBatchCursor)} is called concurrently with or after (in the happens-before order)
      * the method {@link #close()}.
      */
-    private void setWrappedOrCloseIt(final AsyncAggregateResponseBatchCursor<RawBsonDocument> newValue) {
+    private void setWrappedOrCloseIt(final AsyncCommandBatchCursor<RawBsonDocument> newValue) {
         if (isClosed()) {
-            assertNull(this.wrapped.get());
+            assertNull(wrapped.get());
             newValue.close();
         } else {
-            assertNull(this.wrapped.getAndSet(newValue));
+            assertNull(wrapped.getAndSet(newValue));
             if (isClosed()) {
                 nullifyAndCloseWrapped();
             }
@@ -183,8 +169,8 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
         return maxWireVersion;
     }
 
-    private void cachePostBatchResumeToken(final AsyncAggregateResponseBatchCursor<RawBsonDocument> queryBatchCursor) {
-        BsonDocument resumeToken = queryBatchCursor.getPostBatchResumeToken();
+    private void cachePostBatchResumeToken(final AsyncCommandBatchCursor<RawBsonDocument> cursor) {
+        BsonDocument resumeToken = cursor.getPostBatchResumeToken();
         if (resumeToken != null) {
             this.resumeToken = resumeToken;
         }
@@ -195,37 +181,35 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
     }
 
     private void resumeableOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<T>> callback, final boolean tryNext) {
+        timeoutContext.resetTimeoutIfPresent();
         SingleResultCallback<List<T>> errHandlingCallback = errorHandlingCallback(callback, LOGGER);
         if (isClosed()) {
             errHandlingCallback.onResult(null, new MongoException(format("%s called after the cursor was closed.",
                     tryNext ? "tryNext()" : "next()")));
             return;
         }
-        AsyncAggregateResponseBatchCursor<RawBsonDocument> wrappedCursor = getWrapped();
-        asyncBlock.apply(wrappedCursor, new SingleResultCallback<List<RawBsonDocument>>() {
-            @Override
-            public void onResult(final List<RawBsonDocument> result, final Throwable t) {
-                if (t == null) {
+        AsyncCommandBatchCursor<RawBsonDocument> wrappedCursor = getWrapped();
+        asyncBlock.apply(wrappedCursor, (result, t) -> {
+            if (t == null) {
+                try {
+                    List<T> convertedResults;
                     try {
-                        List<T> convertedResults;
-                        try {
-                            convertedResults = convertAndProduceLastId(result, changeStreamOperation.getDecoder(),
-                                    lastId -> resumeToken = lastId);
-                        } finally {
-                            cachePostBatchResumeToken(wrappedCursor);
-                        }
-                        errHandlingCallback.onResult(convertedResults, null);
-                    } catch (RuntimeException e) {
-                        errHandlingCallback.onResult(null, e);
+                        convertedResults = convertAndProduceLastId(assertNotNull(result), changeStreamOperation.getDecoder(),
+                                lastId -> resumeToken = lastId);
+                    } finally {
+                        cachePostBatchResumeToken(wrappedCursor);
                     }
+                    errHandlingCallback.onResult(convertedResults, null);
+                } catch (Exception e) {
+                    errHandlingCallback.onResult(null, e);
+                }
+            } else {
+                cachePostBatchResumeToken(wrappedCursor);
+                if (isResumableError(t, maxWireVersion)) {
+                    nullifyAndCloseWrapped();
+                    retryOperation(asyncBlock, errHandlingCallback, tryNext);
                 } else {
-                    cachePostBatchResumeToken(wrappedCursor);
-                    if (isRetryableError(t, maxWireVersion)) {
-                        nullifyAndCloseWrapped();
-                        retryOperation(asyncBlock, errHandlingCallback, tryNext);
-                    } else {
-                        errHandlingCallback.onResult(null, t);
-                    }
+                    errHandlingCallback.onResult(null, t);
                 }
             }
         });
@@ -233,33 +217,28 @@ final class AsyncChangeStreamBatchCursor<T> implements AsyncAggregateResponseBat
 
     private void retryOperation(final AsyncBlock asyncBlock, final SingleResultCallback<List<T>> callback,
                                 final boolean tryNext) {
-        withAsyncReadConnection(binding, new AsyncCallableWithSource() {
-            @Override
-            public void call(final AsyncConnectionSource source, final Throwable t) {
-                if (t != null) {
-                    callback.onResult(null, t);
-                } else {
-                    changeStreamOperation.setChangeStreamOptionsForResume(resumeToken, source.getServerDescription().getMaxWireVersion());
-                    source.release();
-                    changeStreamOperation.executeAsync(binding, new SingleResultCallback<AsyncBatchCursor<T>>() {
-                        @Override
-                        public void onResult(final AsyncBatchCursor<T> result, final Throwable t) {
-                            if (t != null) {
-                                callback.onResult(null, t);
-                            } else {
-                                try {
-                                    setWrappedOrCloseIt(((AsyncChangeStreamBatchCursor<T>) result).getWrapped());
-                                } finally {
-                                    try {
-                                        binding.release(); // release the new change stream batch cursor's reference to the binding
-                                    } finally {
-                                        resumeableOperation(asyncBlock, callback, tryNext);
-                                    }
-                                }
+        withAsyncReadConnectionSource(binding, (source, t) -> {
+            if (t != null) {
+                callback.onResult(null, t);
+            } else {
+                changeStreamOperation.setChangeStreamOptionsForResume(resumeToken,
+                        assertNotNull(source).getServerDescription().getMaxWireVersion());
+                source.release();
+                changeStreamOperation.executeAsync(binding, (asyncBatchCursor, t1) -> {
+                    if (t1 != null) {
+                        callback.onResult(null, t1);
+                    } else {
+                        try {
+                            setWrappedOrCloseIt(assertNotNull((AsyncChangeStreamBatchCursor<T>) asyncBatchCursor).getWrapped());
+                        } finally {
+                            try {
+                                binding.release(); // release the new change stream batch cursor's reference to the binding
+                            } finally {
+                                resumeableOperation(asyncBlock, callback, tryNext);
                             }
                         }
-                    });
-                }
+                    }
+                });
             }
         });
     }

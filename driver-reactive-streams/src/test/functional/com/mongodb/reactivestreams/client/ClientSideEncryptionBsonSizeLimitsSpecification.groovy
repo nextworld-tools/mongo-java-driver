@@ -53,7 +53,7 @@ class ClientSideEncryptionBsonSizeLimitsSpecification extends FunctionalSpecific
     def setup() {
         assumeTrue(serverVersionAtLeast(4, 2))
         assumeTrue('Key vault tests disabled',
-                !System.getProperty('org.mongodb.test.awsAccessKeyId', '').isEmpty())
+                !System.getProperty('AWS_ACCESS_KEY_ID', '').isEmpty())
         drop(keyVaultNamespace)
         drop(autoEncryptingCollectionNamespace)
 
@@ -62,8 +62,8 @@ class ClientSideEncryptionBsonSizeLimitsSpecification extends FunctionalSpecific
                 WriteConcern.MAJORITY)
 
         def providerProperties =
-                ['local': ['key': Base64.getDecoder().decode('Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN'
-                        + '3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk')]
+                ['local': ['key': Base64.getDecoder().decode('Mng0NCt4ZHVUYUJCa1kxNkVyNUR1QURhZ2h2UzR2d2RrZzh0cFBwM3R6NmdWMDFBMUN' +
+                        '3YkQ5aXRRMkhGRGdQV09wOGVNYUMxT2k3NjZKelhaQmRCZGJkTXVyZG9uSjFk')]
                 ]
 
         autoEncryptingClient = MongoClients.create(getMongoClientBuilderFromConnectionString()

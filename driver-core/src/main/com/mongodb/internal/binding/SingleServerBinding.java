@@ -18,39 +18,35 @@ package com.mongodb.internal.binding;
 
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.connection.Cluster;
 import com.mongodb.internal.connection.Connection;
-import com.mongodb.internal.connection.NoOpSessionContext;
+import com.mongodb.internal.connection.OperationContext;
 import com.mongodb.internal.connection.ServerTuple;
 import com.mongodb.internal.selector.ServerAddressSelector;
-import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
 /**
  * A simple binding where all connection sources are bound to the server specified in the constructor.
  *
- * @since 3.0
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 public class SingleServerBinding extends AbstractReferenceCounted implements ReadWriteBinding {
     private final Cluster cluster;
     private final ServerAddress serverAddress;
-    @Nullable
-    private final ServerApi serverApi;
+    private final OperationContext operationContext;
 
     /**
      * Creates an instance, defaulting to {@link com.mongodb.ReadPreference#primary()} for reads.
      * @param cluster       a non-null  Cluster which will be used to select a server to bind to
      * @param serverAddress a non-null  address of the server to bind to
-     * @param serverApi     the server API, which may be null
+     * @param operationContext the operation context
      */
-    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, @Nullable final ServerApi serverApi) {
+    public SingleServerBinding(final Cluster cluster, final ServerAddress serverAddress, final OperationContext operationContext) {
         this.cluster = notNull("cluster", cluster);
         this.serverAddress = notNull("serverAddress", serverAddress);
-        this.serverApi = serverApi;
+        this.operationContext = notNull("operationContext", operationContext);
     }
 
     @Override
@@ -69,14 +65,13 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
     }
 
     @Override
-    public SessionContext getSessionContext() {
-        return NoOpSessionContext.INSTANCE;
+    public ConnectionSource getReadConnectionSource(final int minWireVersion, final ReadPreference fallbackReadPreference) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return serverApi;
+    public OperationContext getOperationContext() {
+        return operationContext;
     }
 
     @Override
@@ -90,7 +85,7 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
 
         private SingleServerBindingConnectionSource() {
             SingleServerBinding.this.retain();
-            ServerTuple serverTuple = cluster.selectServer(new ServerAddressSelector(serverAddress));
+            ServerTuple serverTuple = cluster.selectServer(new ServerAddressSelector(serverAddress), operationContext);
             serverDescription = serverTuple.getServerDescription();
         }
 
@@ -100,18 +95,21 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
         }
 
         @Override
-        public SessionContext getSessionContext() {
-            return NoOpSessionContext.INSTANCE;
+        public OperationContext getOperationContext() {
+            return operationContext;
         }
 
         @Override
-        public ServerApi getServerApi() {
-            return serverApi;
+        public ReadPreference getReadPreference() {
+            return ReadPreference.primary();
         }
 
         @Override
         public Connection getConnection() {
-            return cluster.selectServer(new ServerAddressSelector(serverAddress)).getServer().getConnection();
+            return cluster
+                    .selectServer(new ServerAddressSelector(serverAddress), operationContext)
+                    .getServer()
+                    .getConnection(operationContext);
         }
 
         @Override
@@ -121,12 +119,12 @@ public class SingleServerBinding extends AbstractReferenceCounted implements Rea
         }
 
         @Override
-        public void release() {
-            super.release();
-            if (super.getCount() == 0) {
+        public int release() {
+            int count = super.release();
+            if (count == 0) {
                 SingleServerBinding.this.release();
             }
+            return count;
         }
     }
 }
-

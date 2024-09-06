@@ -18,20 +18,24 @@ package com.mongodb.reactivestreams.client.internal;
 
 import com.mongodb.CursorType;
 import com.mongodb.ExplainVerbosity;
+import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
+import com.mongodb.internal.TimeoutSettings;
 import com.mongodb.internal.async.AsyncBatchCursor;
 import com.mongodb.internal.client.model.FindOptions;
 import com.mongodb.internal.operation.AsyncExplainableReadOperation;
+import com.mongodb.internal.operation.AsyncOperations;
 import com.mongodb.internal.operation.AsyncReadOperation;
-import com.mongodb.internal.operation.FindOperation;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ClientSession;
 import com.mongodb.reactivestreams.client.FindPublisher;
+import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.reactivestreams.Publisher;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
@@ -74,7 +78,7 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
 
     @Override
     public FindPublisher<T> maxAwaitTime(final long maxAwaitTime, final TimeUnit timeUnit) {
-        notNull("timeUnit", timeUnit);
+        validateMaxAwaitTime(maxAwaitTime, timeUnit);
         findOptions.maxAwaitTime(maxAwaitTime, timeUnit);
         return this;
     }
@@ -111,13 +115,6 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
     }
 
     @Override
-    @Deprecated
-    public FindPublisher<T> oplogReplay(final boolean oplogReplay) {
-        findOptions.oplogReplay(oplogReplay);
-        return this;
-    }
-
-    @Override
     public FindPublisher<T> partial(final boolean partial) {
         findOptions.partial(partial);
         return this;
@@ -136,6 +133,12 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
     }
 
     @Override
+    public FindPublisher<T> comment(@Nullable final BsonValue comment) {
+        findOptions.comment(comment);
+        return this;
+    }
+
+    @Override
     public FindPublisher<T> hint(@Nullable final Bson hint) {
         findOptions.hint(hint);
         return this;
@@ -144,6 +147,12 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
     @Override
     public FindPublisher<T> hintString(@Nullable final String hint) {
         findOptions.hintString(hint);
+        return this;
+    }
+
+    @Override
+    public FindPublisher<T> let(@Nullable final Bson variables) {
+        findOptions.let(variables);
         return this;
     }
 
@@ -178,6 +187,13 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
     }
 
     @Override
+    public FindPublisher<T> timeoutMode(final TimeoutMode timeoutMode) {
+        super.timeoutMode(timeoutMode);
+        findOptions.timeoutMode(timeoutMode);
+        return this;
+    }
+
+    @Override
     public Publisher<Document> explain() {
         return publishExplain(Document.class, null);
     }
@@ -199,16 +215,20 @@ final class FindPublisherImpl<T> extends BatchCursorPublisher<T> implements Find
 
     private <E> Publisher<E> publishExplain(final Class<E> explainResultClass, @Nullable final ExplainVerbosity verbosity) {
         notNull("explainDocumentClass", explainResultClass);
-        return getMongoOperationPublisher().createReadOperationMono(() ->
-                        asAsyncReadOperation(0).asAsyncExplainableOperation(verbosity,
-                                getCodecRegistry().get(explainResultClass)),
-                getClientSession());
+        return getMongoOperationPublisher().createReadOperationMono(
+                getTimeoutSettings(),
+                () -> asAsyncReadOperation(0)
+                        .asAsyncExplainableOperation(verbosity, getCodecRegistry().get(explainResultClass)), getClientSession());
     }
 
     @Override
     AsyncExplainableReadOperation<AsyncBatchCursor<T>> asAsyncReadOperation(final int initialBatchSize) {
-        FindOperation<T> operation = getOperations().find(filter, getDocumentClass(), findOptions.withBatchSize(initialBatchSize));
-        return operation;
+        return getOperations().find(filter, getDocumentClass(), findOptions.withBatchSize(initialBatchSize));
+    }
+
+    @Override
+    Function<AsyncOperations<?>, TimeoutSettings> getTimeoutSettings() {
+        return (asyncOperations -> asyncOperations.createTimeoutSettings(findOptions));
     }
 
     @Override

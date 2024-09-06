@@ -16,8 +16,10 @@
 
 package com.mongodb.client;
 
+import com.mongodb.annotations.Alpha;
+import com.mongodb.annotations.Reason;
+import com.mongodb.client.cursor.TimeoutMode;
 import com.mongodb.client.model.Collation;
-import com.mongodb.client.model.MapReduceAction;
 import com.mongodb.lang.Nullable;
 import org.bson.conversions.Bson;
 
@@ -31,7 +33,9 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <TResult> The type of the result.
  * @since 3.0
+ * @deprecated Superseded by aggregate
  */
+@Deprecated
 public interface MapReduceIterable<TResult> extends MongoIterable<TResult> {
 
     /**
@@ -131,10 +135,10 @@ public interface MapReduceIterable<TResult> extends MongoIterable<TResult> {
     /**
      * Specify the {@code MapReduceAction} to be used when writing to a collection.
      *
-     * @param action an {@link MapReduceAction} to perform on the collection
+     * @param action an {@link com.mongodb.client.model.MapReduceAction} to perform on the collection
      * @return this
      */
-    MapReduceIterable<TResult> action(MapReduceAction action);
+    MapReduceIterable<TResult> action(com.mongodb.client.model.MapReduceAction action);
 
     /**
      * Sets the name of the database to output into.
@@ -144,30 +148,6 @@ public interface MapReduceIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
      */
     MapReduceIterable<TResult> databaseName(@Nullable String databaseName);
-
-    /**
-     * Sets if the output database is sharded
-     *
-     * @param sharded if the output database is sharded
-     * @return this
-     * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
-     * @deprecated this option will no longer be supported in MongoDB 4.4.
-     */
-    @Deprecated
-    MapReduceIterable<TResult> sharded(boolean sharded);
-
-    /**
-     * Sets if the post-processing step will prevent MongoDB from locking the database.
-     *
-     * Valid only with the {@code MapReduceAction.MERGE} or {@code MapReduceAction.REDUCE} actions.
-     *
-     * @param nonAtomic if the post-processing step will prevent MongoDB from locking the database.
-     * @return this
-     * @mongodb.driver.manual reference/command/mapReduce/#output-to-a-collection-with-an-action output with an action
-     * @deprecated this option will no longer be supported in MongoDB 4.4 as it will no longer hold a global or database level write lock.
-     */
-    @Deprecated
-    MapReduceIterable<TResult> nonAtomic(boolean nonAtomic);
 
     /**
      * Sets the number of documents to return per batch.
@@ -202,4 +182,18 @@ public interface MapReduceIterable<TResult> extends MongoIterable<TResult> {
      * @mongodb.server.release 3.4
      */
     MapReduceIterable<TResult> collation(@Nullable Collation collation);
+
+    /**
+     * Sets the timeoutMode for the cursor.
+     *
+     * <p>
+     *     Requires the {@code timeout} to be set, either in the {@link com.mongodb.MongoClientSettings},
+     *     via {@link MongoDatabase} or via {@link MongoCollection}
+     * </p>
+     * @param timeoutMode the timeout mode
+     * @return this
+     * @since 5.2
+     */
+    @Alpha(Reason.CLIENT)
+    MapReduceIterable<TResult> timeoutMode(TimeoutMode timeoutMode);
 }

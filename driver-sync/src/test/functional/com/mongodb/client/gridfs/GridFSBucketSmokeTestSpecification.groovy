@@ -35,7 +35,7 @@ import org.bson.types.ObjectId
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 
-import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 import static com.mongodb.client.Fixture.getDefaultDatabase
 import static com.mongodb.client.Fixture.getDefaultDatabaseName
 import static com.mongodb.client.Fixture.getMongoClientSettingsBuilder
@@ -45,10 +45,10 @@ import static org.bson.codecs.configuration.CodecRegistries.fromCodecs
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries
 
 class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
-    protected MongoDatabase mongoDatabase;
-    protected MongoCollection<GridFSFile> filesCollection;
-    protected MongoCollection<Document> chunksCollection;
-    protected GridFSBucket gridFSBucket;
+    protected MongoDatabase mongoDatabase
+    protected MongoCollection<GridFSFile> filesCollection
+    protected MongoCollection<Document> chunksCollection
+    protected GridFSBucket gridFSBucket
     def singleChunkString = 'GridFS'
     def multiChunkString = singleChunkString.padLeft(1024 * 255 * 5)
 
@@ -84,6 +84,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
             def outputStream = gridFSBucket.openUploadStream('myFile')
             outputStream.write(contentBytes)
             outputStream.close()
+            outputStream.close() // check for close idempotency
             fileId = outputStream.getObjectId()
         }
 
@@ -130,7 +131,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
         byte[] gridFSContentBytes
 
         when:
-        fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes));
+        fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes))
 
         then:
         filesCollection.countDocuments() == 1
@@ -160,7 +161,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
         byte[] gridFSContentBytes
 
         when:
-        gridFSBucket.uploadFromStream(fileId, 'myFile', new ByteArrayInputStream(contentBytes));
+        gridFSBucket.uploadFromStream(fileId, 'myFile', new ByteArrayInputStream(contentBytes))
         gridFSContentBytes = gridFSBucket.openDownloadStream(fileId).batchSize(1).getBytes()
 
         then:
@@ -419,7 +420,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         if (direct) {
-            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes));
+            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes))
         } else {
             def outputStream = gridFSBucket.openUploadStream('myFile')
             outputStream.write(contentBytes)
@@ -445,7 +446,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         if (direct) {
-            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes));
+            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes))
         } else {
             def outputStream = gridFSBucket.openUploadStream('myFile')
             outputStream.write(contentBytes)
@@ -460,7 +461,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
         direct << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should not create if index is numerically the same'() {
         when:
         filesCollection.createIndex(new Document('filename', indexValue1).append('uploadDate', indexValue2))
@@ -473,7 +474,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         if (direct) {
-            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes));
+            gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes))
         } else {
             def outputStream = gridFSBucket.openUploadStream('myFile')
             outputStream.write(contentBytes)
@@ -495,7 +496,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         def fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(content),
-                new GridFSUploadOptions().chunkSizeBytes(500));
+                new GridFSUploadOptions().chunkSizeBytes(500))
 
         then:
         filesCollection.countDocuments() == 1
@@ -555,7 +556,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         def fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(multiChunkString as byte[]),
-                new GridFSUploadOptions().metadata(fileMeta));
+                new GridFSUploadOptions().metadata(fileMeta))
 
         def file = gridFSBucket.find(new Document('_id', fileId)).first()
 
@@ -579,7 +580,7 @@ class GridFSBucketSmokeTestSpecification extends FunctionalSpecification {
 
         when:
         if (direct) {
-            fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes));
+            fileId = gridFSBucket.uploadFromStream('myFile', new ByteArrayInputStream(contentBytes))
         } else {
             def outputStream = gridFSBucket.openUploadStream('myFile')
             outputStream.write(contentBytes)

@@ -23,6 +23,7 @@ import com.mongodb.MongoSecurityException;
 import com.mongodb.ServerAddress;
 import com.mongodb.ServerApi;
 import com.mongodb.SubjectProvider;
+import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.lang.NonNull;
 import com.mongodb.lang.Nullable;
 import org.ietf.jgss.GSSCredential;
@@ -43,6 +44,7 @@ import static com.mongodb.AuthenticationMechanism.GSSAPI;
 import static com.mongodb.MongoCredential.CANONICALIZE_HOST_NAME_KEY;
 import static com.mongodb.MongoCredential.JAVA_SASL_CLIENT_PROPERTIES_KEY;
 import static com.mongodb.MongoCredential.SERVICE_NAME_KEY;
+import static com.mongodb.assertions.Assertions.assertNotNull;
 
 class GSSAPIAuthenticator extends SaslAuthenticator {
     private static final String GSSAPI_MECHANISM_NAME = "GSSAPI";
@@ -50,8 +52,9 @@ class GSSAPIAuthenticator extends SaslAuthenticator {
     private static final String SERVICE_NAME_DEFAULT_VALUE = "mongodb";
     private static final Boolean CANONICALIZE_HOST_NAME_DEFAULT_VALUE = false;
 
-    GSSAPIAuthenticator(final MongoCredentialWithCache credential, final @Nullable ServerApi serverApi) {
-        super(credential, serverApi);
+    GSSAPIAuthenticator(final MongoCredentialWithCache credential, final ClusterConnectionMode clusterConnectionMode,
+                        @Nullable final ServerApi serverApi) {
+        super(credential, clusterConnectionMode, serverApi);
 
         if (getMongoCredential().getAuthenticationMechanism() != GSSAPI) {
             throw new MongoException("Incorrect mechanism: " + getMongoCredential().getMechanism());
@@ -69,9 +72,9 @@ class GSSAPIAuthenticator extends SaslAuthenticator {
         try {
             Map<String, Object> saslClientProperties = credential.getMechanismProperty(JAVA_SASL_CLIENT_PROPERTIES_KEY, null);
             if (saslClientProperties == null) {
-                saslClientProperties = new HashMap<String, Object>();
+                saslClientProperties = new HashMap<>();
                 saslClientProperties.put(Sasl.MAX_BUFFER, "0");
-                saslClientProperties.put(Sasl.CREDENTIALS, getGSSCredential(credential.getUserName()));
+                saslClientProperties.put(Sasl.CREDENTIALS, getGSSCredential(assertNotNull(credential.getUserName())));
             }
 
             SaslClient saslClient = Sasl.createSaslClient(new String[]{GSSAPI.getMechanismName()}, credential.getUserName(),

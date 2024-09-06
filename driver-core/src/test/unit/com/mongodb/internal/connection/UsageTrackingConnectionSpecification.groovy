@@ -16,7 +16,6 @@
 
 package com.mongodb.internal.connection
 
-
 import com.mongodb.MongoNamespace
 import com.mongodb.ServerAddress
 import com.mongodb.async.FutureResultCallback
@@ -28,7 +27,9 @@ import org.bson.BsonInt32
 import org.bson.codecs.BsonDocumentCodec
 import spock.lang.Specification
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
 import static com.mongodb.ReadPreference.primary
+import static com.mongodb.connection.ClusterConnectionMode.SINGLE
 
 class UsageTrackingConnectionSpecification extends Specification {
     private static final ServerId SERVER_ID = new ServerId(new ClusterId(), new ServerAddress())
@@ -49,7 +50,7 @@ class UsageTrackingConnectionSpecification extends Specification {
         connection.openedAt == Long.MAX_VALUE
 
         when:
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
 
         then:
         connection.openedAt <= System.currentTimeMillis()
@@ -65,7 +66,7 @@ class UsageTrackingConnectionSpecification extends Specification {
         connection.openedAt == Long.MAX_VALUE
 
         when:
-        connection.openAsync(futureResultCallback)
+        connection.openAsync(OPERATION_CONTEXT, futureResultCallback)
         futureResultCallback.get()
 
         then:
@@ -80,7 +81,7 @@ class UsageTrackingConnectionSpecification extends Specification {
         connection.lastUsedAt == Long.MAX_VALUE
 
         when:
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
 
         then:
         connection.lastUsedAt <= System.currentTimeMillis()
@@ -96,7 +97,7 @@ class UsageTrackingConnectionSpecification extends Specification {
         connection.lastUsedAt == Long.MAX_VALUE
 
         when:
-        connection.openAsync(futureResultCallback)
+        connection.openAsync(OPERATION_CONTEXT, futureResultCallback)
         futureResultCallback.get()
 
         then:
@@ -106,11 +107,11 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on sendMessage'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
 
         when:
-        connection.sendMessage(Arrays.asList(), 1)
+        connection.sendMessage([], 1, OPERATION_CONTEXT)
 
         then:
         connection.lastUsedAt >= openedLastUsedAt
@@ -121,12 +122,12 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on sendMessage asynchronously'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
         def futureResultCallback = new FutureResultCallback<Void>()
 
         when:
-        connection.sendMessageAsync(Arrays.asList(), 1, futureResultCallback)
+        connection.sendMessageAsync([], 1, OPERATION_CONTEXT, futureResultCallback)
         futureResultCallback.get()
 
         then:
@@ -137,10 +138,10 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on receiveMessage'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
         when:
-        connection.receiveMessage(1)
+        connection.receiveMessage(1, OPERATION_CONTEXT)
 
         then:
         connection.lastUsedAt >= openedLastUsedAt
@@ -150,12 +151,12 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on receiveMessage asynchronously'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
         def futureResultCallback = new FutureResultCallback<Void>()
 
         when:
-        connection.receiveMessageAsync(1, futureResultCallback)
+        connection.receiveMessageAsync(1, OPERATION_CONTEXT, futureResultCallback)
         futureResultCallback.get()
 
         then:
@@ -166,14 +167,13 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on sendAndReceive'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
 
         when:
         connection.sendAndReceive(new CommandMessage(new MongoNamespace('test.coll'),
-                new BsonDocument('ping', new BsonInt32(1)), new NoOpFieldNameValidator(), primary(),
-                MessageSettings.builder().build(), null),
-                new BsonDocumentCodec(), NoOpSessionContext.INSTANCE)
+                new BsonDocument('ping', new BsonInt32(1)), NoOpFieldNameValidator.INSTANCE, primary(),
+                MessageSettings.builder().build(), SINGLE, null), new BsonDocumentCodec(),  OPERATION_CONTEXT)
 
         then:
         connection.lastUsedAt >= openedLastUsedAt
@@ -183,15 +183,15 @@ class UsageTrackingConnectionSpecification extends Specification {
     def 'lastUsedAt should be set on sendAndReceive asynchronously'() {
         given:
         def connection = createConnection()
-        connection.open()
+        connection.open(OPERATION_CONTEXT)
         def openedLastUsedAt = connection.lastUsedAt
         def futureResultCallback = new FutureResultCallback<Void>()
 
         when:
         connection.sendAndReceiveAsync(new CommandMessage(new MongoNamespace('test.coll'),
-                new BsonDocument('ping', new BsonInt32(1)), new NoOpFieldNameValidator(), primary(),
-                MessageSettings.builder().build(), null),
-                new BsonDocumentCodec(), NoOpSessionContext.INSTANCE, futureResultCallback)
+                new BsonDocument('ping', new BsonInt32(1)), NoOpFieldNameValidator.INSTANCE, primary(),
+                MessageSettings.builder().build(), SINGLE, null),
+                new BsonDocumentCodec(), OPERATION_CONTEXT, futureResultCallback)
         futureResultCallback.get()
 
         then:

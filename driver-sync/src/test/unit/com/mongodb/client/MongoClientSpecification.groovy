@@ -32,14 +32,14 @@ import com.mongodb.connection.ClusterType
 import com.mongodb.connection.ServerConnectionState
 import com.mongodb.connection.ServerDescription
 import com.mongodb.connection.ServerType
+import com.mongodb.internal.TimeoutSettings
 import com.mongodb.internal.client.model.changestream.ChangeStreamLevel
 import com.mongodb.internal.connection.Cluster
 import org.bson.BsonDocument
 import org.bson.Document
-import org.bson.codecs.BsonValueCodecProvider
+import org.bson.codecs.UuidCodec
 import org.bson.codecs.ValueCodecProvider
 import org.bson.codecs.configuration.CodecRegistry
-import org.bson.internal.OverridableUuidRepresentationCodecRegistry
 import spock.lang.Specification
 
 import static com.mongodb.CustomMatchers.isTheSameAs
@@ -47,14 +47,17 @@ import static com.mongodb.MongoClientSettings.getDefaultCodecRegistry
 import static com.mongodb.ReadPreference.primary
 import static com.mongodb.ReadPreference.secondary
 import static com.mongodb.client.internal.TestHelper.execute
-import static org.bson.UuidRepresentation.STANDARD
+import static java.util.concurrent.TimeUnit.SECONDS
+import static org.bson.UuidRepresentation.C_SHARP_LEGACY
 import static org.bson.UuidRepresentation.UNSPECIFIED
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders
+import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentation
 import static spock.util.matcher.HamcrestSupport.expect
 
 class MongoClientSpecification extends Specification {
 
-    private static CodecRegistry codecRegistry = fromProviders(new ValueCodecProvider())
+    private static final CodecRegistry CODEC_REGISTRY = fromProviders(new ValueCodecProvider())
+    private static final TimeoutSettings TIMEOUT_SETTINGS = new TimeoutSettings(30_000, 10_000, 0, null, SECONDS.toMillis(120))
 
     def 'should pass the correct settings to getDatabase'() {
         given:
@@ -63,7 +66,7 @@ class MongoClientSpecification extends Specification {
                 .writeConcern(WriteConcern.MAJORITY)
                 .readConcern(ReadConcern.MAJORITY)
                 .retryWrites(true)
-                .codecRegistry(codecRegistry)
+                .codecRegistry(CODEC_REGISTRY)
                 .build()
         def client = new MongoClientImpl(Stub(Cluster), null, settings, new TestOperationExecutor([]))
 
@@ -74,8 +77,9 @@ class MongoClientSpecification extends Specification {
         expect database, isTheSameAs(expectedDatabase)
 
         where:
-        expectedDatabase << new MongoDatabaseImpl('name', codecRegistry, secondary(),
-                WriteConcern.MAJORITY, true, true, ReadConcern.MAJORITY, UNSPECIFIED, new TestOperationExecutor([]))
+        expectedDatabase << new MongoDatabaseImpl('name', withUuidRepresentation(CODEC_REGISTRY, UNSPECIFIED), secondary(),
+                WriteConcern.MAJORITY, true, true, ReadConcern.MAJORITY, UNSPECIFIED, null,
+                TIMEOUT_SETTINGS, new TestOperationExecutor([]))
     }
 
     def 'should use ListDatabasesIterableImpl correctly'() {
@@ -90,14 +94,14 @@ class MongoClientSpecification extends Specification {
 
         then:
         expect listDatabasesIterable, isTheSameAs(new ListDatabasesIterableImpl<>(session, Document,
-                getDefaultCodecRegistry(), primary(), executor, true))
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED), primary(), executor, true, TIMEOUT_SETTINGS))
 
         when:
         listDatabasesIterable = execute(listDatabasesMethod, session, BsonDocument)
 
         then:
         expect listDatabasesIterable, isTheSameAs(new ListDatabasesIterableImpl<>(session, BsonDocument,
-                getDefaultCodecRegistry(), primary(), executor, true))
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED), primary(), executor, true, TIMEOUT_SETTINGS))
 
         when:
         def listDatabaseNamesIterable = execute(listDatabasesNamesMethod, session) as MongoIterable<String>
@@ -105,7 +109,8 @@ class MongoClientSpecification extends Specification {
         then:
         // listDatabaseNamesIterable is an instance of a MappingIterable, so have to get the mapped iterable inside it
         expect listDatabaseNamesIterable.getMapped(), isTheSameAs(new ListDatabasesIterableImpl<>(session, BsonDocument,
-                getDefaultCodecRegistry(), primary(), executor, true).nameOnly(true))
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED), primary(), executor, true, TIMEOUT_SETTINGS)
+                .nameOnly(true))
 
         cleanup:
         client?.close()
@@ -123,7 +128,6 @@ class MongoClientSpecification extends Specification {
                 .readConcern(ReadConcern.MAJORITY)
                 .codecRegistry(getDefaultCodecRegistry())
                 .build()
-        def codecRegistry = settings.getCodecRegistry()
         def readPreference = settings.getReadPreference()
         def readConcern = settings.getReadConcern()
         def client = new MongoClientImpl(Stub(Cluster), null, settings, executor)
@@ -133,25 +137,28 @@ class MongoClientSpecification extends Specification {
         def changeStreamIterable = execute(watchMethod, session)
 
         then:
-        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
-                readPreference, readConcern, executor, [], Document, ChangeStreamLevel.CLIENT, true),
+        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace,
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED),
+                readPreference, readConcern, executor, [], Document, ChangeStreamLevel.CLIENT, true, TIMEOUT_SETTINGS),
                 ['codec'])
 
         when:
         changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)])
 
         then:
-        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
+        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace,
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED),
                 readPreference, readConcern, executor, [new Document('$match', 1)], Document, ChangeStreamLevel.CLIENT,
-                true), ['codec'])
+                true, TIMEOUT_SETTINGS), ['codec'])
 
         when:
         changeStreamIterable = execute(watchMethod, session, [new Document('$match', 1)], BsonDocument)
 
         then:
-        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace, codecRegistry,
+        expect changeStreamIterable, isTheSameAs(new ChangeStreamIterableImpl<>(session, namespace,
+                withUuidRepresentation(getDefaultCodecRegistry(), UNSPECIFIED),
                 readPreference, readConcern, executor, [new Document('$match', 1)], BsonDocument,
-                ChangeStreamLevel.CLIENT, true), ['codec'])
+                ChangeStreamLevel.CLIENT, true, TIMEOUT_SETTINGS), ['codec'])
 
         where:
         session << [null, Stub(ClientSession)]
@@ -197,20 +204,17 @@ class MongoClientSpecification extends Specification {
 
     def 'should create registry reflecting UuidRepresentation'() {
         given:
-        def codecRegistry = fromProviders([new BsonValueCodecProvider()])
+        def codecRegistry = fromProviders([new ValueCodecProvider()])
         def settings = MongoClientSettings.builder()
                 .codecRegistry(codecRegistry)
-                .uuidRepresentation(STANDARD)
+                .uuidRepresentation(C_SHARP_LEGACY)
                 .build()
 
         when:
         def client = new MongoClientImpl(Stub(Cluster), null, settings, new TestOperationExecutor([]))
-        def registry = client.getCodecRegistry()
 
         then:
-        registry instanceof OverridableUuidRepresentationCodecRegistry
-        (registry as OverridableUuidRepresentationCodecRegistry).uuidRepresentation == STANDARD
-        (registry as OverridableUuidRepresentationCodecRegistry).wrapped == codecRegistry
+        (client.getCodecRegistry().get(UUID) as UuidCodec).getUuidRepresentation() == C_SHARP_LEGACY
 
         cleanup:
         client?.close()

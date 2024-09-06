@@ -22,6 +22,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -45,7 +46,9 @@ class BatchCursorFlux<T> implements Publisher<T> {
                 if (calculateDemand(demand) > 0 && inProgress.compareAndSet(false, true)) {
                     if (batchCursor == null) {
                         int batchSize = calculateBatchSize(sink.requestedFromDownstream());
-                        batchCursorPublisher.batchCursor(batchSize).subscribe(bc -> {
+                        batchCursorPublisher.batchCursor(batchSize)
+                                .contextWrite(sink.contextView())
+                                .subscribe(bc -> {
                             batchCursor = bc;
                             inProgress.set(false);
 
@@ -80,28 +83,31 @@ class BatchCursorFlux<T> implements Publisher<T> {
                 sink.complete();
             } else {
                 batchCursor.setBatchSize(calculateBatchSize(sink.requestedFromDownstream()));
-                Mono.from(batchCursor.next())
+                Mono.from(batchCursor.next(() -> sink.isCancelled()))
+                        .contextWrite(sink.contextView())
                         .doOnCancel(this::closeCursor)
-                        .doOnError((e) -> {
-                            try {
-                                closeCursor();
-                            } finally {
-                                sink.error(e);
-                            }
-                        })
-                        .doOnSuccess(results -> {
-                            if (results != null) {
-                                results.forEach(sink::next);
-                                calculateDemand(-results.size());
-                            }
-                            if (batchCursor.isClosed()) {
-                                sink.complete();
-                            } else {
-                                inProgress.set(false);
-                                recurseCursor();
-                            }
-                        })
-                        .subscribe();
+                        .subscribe(results -> {
+                                    if (!results.isEmpty()) {
+                                        results
+                                                .stream()
+                                                .filter(Objects::nonNull)
+                                                .forEach(sink::next);
+                                        calculateDemand(-results.size());
+                                    }
+                                    if (batchCursor.isClosed()) {
+                                        sink.complete();
+                                    } else {
+                                        inProgress.set(false);
+                                        recurseCursor();
+                                    }
+                                },
+                                e -> {
+                                    try {
+                                        closeCursor();
+                                    } finally {
+                                        sink.error(e);
+                                    }
+                                });
                 }
         }
     }

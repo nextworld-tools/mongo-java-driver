@@ -26,7 +26,11 @@ import com.mongodb.event.ConnectionPoolClearedEvent;
 import com.mongodb.event.ConnectionPoolClosedEvent;
 import com.mongodb.event.ConnectionPoolCreatedEvent;
 import com.mongodb.event.ConnectionPoolListener;
+import com.mongodb.event.ConnectionPoolReadyEvent;
 import com.mongodb.event.ConnectionReadyEvent;
+import com.mongodb.internal.time.StartTime;
+import com.mongodb.internal.time.TimePointTest;
+import com.mongodb.internal.time.Timeout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,12 +44,11 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-@SuppressWarnings("deprecation")
 public class TestConnectionPoolListener implements ConnectionPoolListener {
 
     private final Set<String> eventTypes;
 
-    private final List<Object> events = new ArrayList<Object>();
+    private final List<Object> events = new ArrayList<>();
     private final Lock lock = new ReentrantLock();
     private final Condition condition = lock.newCondition();
     private volatile Class<?> waitingForEventClass;
@@ -68,7 +71,7 @@ public class TestConnectionPoolListener implements ConnectionPoolListener {
     public List<Object> getEvents() {
         lock.lock();
         try {
-            return new ArrayList<Object>(events);
+            return new ArrayList<>(events);
         } finally {
             lock.unlock();
         }
@@ -82,6 +85,22 @@ public class TestConnectionPoolListener implements ConnectionPoolListener {
             }
         }
         return eventCount;
+    }
+
+    public void waitForEvents(final List<Class<?>> eventClasses, final long time, final TimeUnit unit)
+            throws InterruptedException, TimeoutException {
+        Timeout timeout = StartTime.now().timeoutAfterOrInfiniteIfNegative(time, unit);
+        ArrayList<Object> seen = new ArrayList<>();
+
+        for (Class<?> eventClass : eventClasses) {
+            waitForEvent(eventClass, 1, TimePointTest.remaining(timeout, unit), unit);
+
+            if (TimePointTest.hasExpired(timeout)) {
+                throw new TimeoutException("Timed out waiting for event of type " + eventClass
+                        + ". Timing out after seeing " + seen);
+            }
+            seen.add(eventClass);
+        }
     }
 
     public <T> void waitForEvent(final Class<T> eventClass, final int count, final long time, final TimeUnit unit)
@@ -105,6 +124,7 @@ public class TestConnectionPoolListener implements ConnectionPoolListener {
             lock.unlock();
         }
     }
+
 
     private <T> boolean containsEvent(final Class<T> eventClass, final int expectedEventCount) {
         return countEvents(eventClass) >= expectedEventCount;
@@ -133,15 +153,15 @@ public class TestConnectionPoolListener implements ConnectionPoolListener {
     }
 
     @Override
-    public void connectionPoolOpened(final com.mongodb.event.ConnectionPoolOpenedEvent event) {
-        if (eventTypes.contains("poolOpenedEvent")) {
+    public void connectionPoolCleared(final ConnectionPoolClearedEvent event) {
+        if (eventTypes.contains("poolClearedEvent")) {
             addEvent(event);
         }
     }
 
     @Override
-    public void connectionPoolCleared(final ConnectionPoolClearedEvent event) {
-        if (eventTypes.contains("poolClearedEvent")) {
+    public void connectionPoolReady(final ConnectionPoolReadyEvent event) {
+        if (eventTypes.contains("poolReadyEvent")) {
             addEvent(event);
         }
     }
@@ -186,20 +206,6 @@ public class TestConnectionPoolListener implements ConnectionPoolListener {
     @Override
     public void connectionCreated(final ConnectionCreatedEvent event) {
         if (eventTypes.contains("connectionCreatedEvent")) {
-            addEvent(event);
-        }
-    }
-
-    @Override
-    public void connectionAdded(final com.mongodb.event.ConnectionAddedEvent event) {
-        if (eventTypes.contains("connectionAddedEvent")) {
-            addEvent(event);
-        }
-    }
-
-    @Override
-    public void connectionRemoved(final com.mongodb.event.ConnectionRemovedEvent event) {
-        if (eventTypes.contains("connectionRemovedEvent")) {
             addEvent(event);
         }
     }

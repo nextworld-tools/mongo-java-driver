@@ -18,16 +18,14 @@ package com.mongodb.internal.connection;
 
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.internal.session.SessionContext;
+import com.mongodb.lang.Nullable;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 public interface ProtocolExecutor {
-    default <T> T execute(LegacyProtocol<T> protocol, InternalConnection connection) {
-        throw new UnsupportedOperationException();
-    }
 
-    default <T> void executeAsync(LegacyProtocol<T> protocol, InternalConnection connection, SingleResultCallback<T> callback) {
-        throw new UnsupportedOperationException();
-    }
-
+    @Nullable
     <T> T execute(CommandProtocol<T> protocol, InternalConnection connection, SessionContext sessionContext);
 
     <T> void executeAsync(CommandProtocol<T> protocol, InternalConnection connection, SessionContext sessionContext,

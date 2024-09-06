@@ -23,14 +23,19 @@ import com.mongodb.MongoExecutionTimeoutException;
 import com.mongodb.MongoNodeIsRecoveringException;
 import com.mongodb.MongoNotPrimaryException;
 import com.mongodb.MongoQueryException;
+import com.mongodb.RequestContext;
 import com.mongodb.ServerAddress;
 import com.mongodb.connection.ConnectionDescription;
-import com.mongodb.diagnostics.logging.Logger;
-import com.mongodb.diagnostics.logging.Loggers;
+import com.mongodb.connection.ServerDescription;
 import com.mongodb.event.CommandFailedEvent;
 import com.mongodb.event.CommandListener;
 import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.event.CommandSucceededEvent;
+import com.mongodb.internal.IgnorableRequestContext;
+import com.mongodb.internal.TimeoutContext;
+import com.mongodb.internal.diagnostics.logging.Logger;
+import com.mongodb.internal.diagnostics.logging.Loggers;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonBinaryReader;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -42,11 +47,11 @@ import org.bson.BsonValue;
 import org.bson.codecs.BsonValueCodecProvider;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.io.BsonOutput;
 import org.bson.io.ByteBufferBsonInput;
 
 import java.util.List;
 
+import static com.mongodb.assertions.Assertions.notNull;
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -54,7 +59,7 @@ import static org.bson.codecs.BsonValueCodecProvider.getClassForBsonType;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 
 /**
- * This class is NOT part of the public API. It may change at any time without notification.
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
  */
 public final class ProtocolHelper {
     private static final Logger PROTOCOL_EVENT_LOGGER = Loggers.getLogger("protocol.event");
@@ -79,50 +84,68 @@ public final class ProtocolHelper {
         }
     }
 
-    static MongoException createSpecialWriteConcernException(final ResponseBuffers responseBuffers, final ServerAddress serverAddress) {
+    @Nullable
+    static MongoException createSpecialWriteConcernException(final ResponseBuffers responseBuffers,
+                                                             final ServerAddress serverAddress,
+                                                             final TimeoutContext timeoutContext) {
         BsonValue writeConcernError = getField(createBsonReader(responseBuffers), "writeConcernError");
         if (writeConcernError == null) {
             return null;
         } else {
-            return createSpecialException(writeConcernError.asDocument(), serverAddress, "errmsg");
+            return createSpecialException(writeConcernError.asDocument(), serverAddress, "errmsg", timeoutContext);
         }
     }
 
+    @Nullable
     static BsonTimestamp getOperationTime(final ResponseBuffers responseBuffers) {
-        try {
-            BsonValue operationTime = getField(createBsonReader(responseBuffers), "operationTime");
-            if (operationTime == null) {
-                return null;
-            }
-            return operationTime.asTimestamp();
-        } finally {
-            responseBuffers.reset();
-        }
+        return getFieldValueAsTimestamp(responseBuffers, "operationTime");
     }
 
+    @Nullable
     static BsonDocument getClusterTime(final ResponseBuffers responseBuffers) {
-        return getFieldDocument(responseBuffers, "$clusterTime");
+        return getFieldValueAsDocument(responseBuffers, "$clusterTime");
     }
 
-    static BsonDocument getClusterTime(final BsonDocument response) {
-        BsonValue clusterTime = response.get("$clusterTime");
-        if (clusterTime == null) {
+    @Nullable
+    static BsonTimestamp getSnapshotTimestamp(final ResponseBuffers responseBuffers) {
+        BsonValue atClusterTimeValue = getNestedFieldValue(responseBuffers, "cursor", "atClusterTime");
+        if (atClusterTimeValue == null) {
+            atClusterTimeValue = getFieldValue(responseBuffers, "atClusterTime");
+        }
+        if (atClusterTimeValue != null && atClusterTimeValue.isTimestamp()) {
+            return atClusterTimeValue.asTimestamp();
+        }
+        return null;
+    }
+
+    @Nullable
+    static BsonDocument getRecoveryToken(final ResponseBuffers responseBuffers) {
+        return getFieldValueAsDocument(responseBuffers, "recoveryToken");
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    @Nullable
+    private static BsonTimestamp getFieldValueAsTimestamp(final ResponseBuffers responseBuffers, final String fieldName) {
+        BsonValue value = getFieldValue(responseBuffers, fieldName);
+        if (value == null) {
             return null;
         }
-        return clusterTime.asDocument();
+        return value.asTimestamp();
     }
 
-    static BsonDocument getRecoveryToken(final ResponseBuffers responseBuffers) {
-        return getFieldDocument(responseBuffers, "recoveryToken");
+    @Nullable
+    private static BsonDocument getFieldValueAsDocument(final ResponseBuffers responseBuffers, final String fieldName) {
+        BsonValue value = getFieldValue(responseBuffers, fieldName);
+        if (value == null) {
+            return null;
+        }
+        return value.asDocument();
     }
 
-    private static BsonDocument getFieldDocument(final ResponseBuffers responseBuffers, final String fieldName) {
+    @Nullable
+    private static BsonValue getFieldValue(final ResponseBuffers responseBuffers, final String fieldName) {
         try {
-            BsonValue fieldValue = getField(createBsonReader(responseBuffers), fieldName);
-            if (fieldValue == null) {
-                return null;
-            }
-            return fieldValue.asDocument();
+            return getField(createBsonReader(responseBuffers), fieldName);
         } finally {
             responseBuffers.reset();
         }
@@ -132,7 +155,7 @@ public final class ProtocolHelper {
         return new BsonBinaryReader(new ByteBufferBsonInput(responseBuffers.getBodyByteBuffer()));
     }
 
-
+    @Nullable
     private static BsonValue getField(final BsonReader bsonReader, final String fieldName) {
         bsonReader.readStartDocument();
         while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
@@ -146,7 +169,27 @@ public final class ProtocolHelper {
         return null;
     }
 
-    private static boolean isCommandOk(final BsonValue okValue) {
+    @SuppressWarnings("SameParameterValue")
+    @Nullable
+    private static BsonValue getNestedFieldValue(final ResponseBuffers responseBuffers, final String topLevelFieldName,
+                                                 final String nestedFieldName) {
+        try {
+            BsonReader bsonReader = createBsonReader(responseBuffers);
+            bsonReader.readStartDocument();
+            while (bsonReader.readBsonType() != BsonType.END_OF_DOCUMENT) {
+                if (bsonReader.readName().equals(topLevelFieldName)) {
+                    return getField(bsonReader, nestedFieldName);
+                }
+                bsonReader.skipValue();
+            }
+            bsonReader.readEndDocument();
+            return null;
+        } finally {
+            responseBuffers.reset();
+        }
+    }
+
+    private static boolean isCommandOk(@Nullable final BsonValue okValue) {
         if (okValue == null) {
             return false;
         } else if (okValue.isBoolean()) {
@@ -158,8 +201,9 @@ public final class ProtocolHelper {
         }
     }
 
-    static MongoException getCommandFailureException(final BsonDocument response, final ServerAddress serverAddress) {
-        MongoException specialException = createSpecialException(response, serverAddress, "errmsg");
+    static MongoException getCommandFailureException(final BsonDocument response, final ServerAddress serverAddress,
+                                                     final TimeoutContext timeoutContext) {
+        MongoException specialException = createSpecialException(response, serverAddress, "errmsg", timeoutContext);
         if (specialException != null) {
             return specialException;
         }
@@ -174,68 +218,61 @@ public final class ProtocolHelper {
         return response.getString(errorMessageFieldName, new BsonString("")).getValue();
     }
 
-    static MongoException getQueryFailureException(final BsonDocument errorDocument, final ServerAddress serverAddress) {
-        MongoException specialException = createSpecialException(errorDocument, serverAddress, "$err");
+    static MongoException getQueryFailureException(final BsonDocument errorDocument, final ServerAddress serverAddress,
+                                                   final TimeoutContext timeoutContext) {
+        MongoException specialException = createSpecialException(errorDocument, serverAddress, "$err", timeoutContext);
         if (specialException != null) {
             return specialException;
         }
-        return new MongoQueryException(serverAddress, getErrorCode(errorDocument), getErrorMessage(errorDocument, "$err"));
+        return new MongoQueryException(errorDocument, serverAddress);
     }
 
-    static MessageSettings getMessageSettings(final ConnectionDescription connectionDescription) {
+    static MessageSettings getMessageSettings(final ConnectionDescription connectionDescription, final ServerDescription serverDescription) {
         return MessageSettings.builder()
                 .maxDocumentSize(connectionDescription.getMaxDocumentSize())
                 .maxMessageSize(connectionDescription.getMaxMessageSize())
                 .maxBatchCount(connectionDescription.getMaxBatchCount())
                 .maxWireVersion(connectionDescription.getMaxWireVersion())
                 .serverType(connectionDescription.getServerType())
+                .sessionSupported(connectionDescription.getLogicalSessionTimeoutMinutes() != null)
+                .cryptd(serverDescription.isCryptd())
                 .build();
-    }
-
-    static void encodeMessage(final RequestMessage message, final BsonOutput bsonOutput) {
-        try {
-            message.encode(bsonOutput, NoOpSessionContext.INSTANCE);
-        } catch (RuntimeException e) {
-            bsonOutput.close();
-            throw e;
-        } catch (Error e) {
-            bsonOutput.close();
-            throw e;
-        }
-    }
-
-    static RequestMessage.EncodingMetadata encodeMessageWithMetadata(final RequestMessage message, final BsonOutput bsonOutput) {
-        try {
-            message.encode(bsonOutput, NoOpSessionContext.INSTANCE);
-            return message.getEncodingMetadata();
-        } catch (RuntimeException e) {
-            bsonOutput.close();
-            throw e;
-        } catch (Error e) {
-            bsonOutput.close();
-            throw e;
-        }
     }
 
     private static final List<Integer> NOT_PRIMARY_CODES = asList(10107, 13435, 10058);
     private static final List<String> NOT_PRIMARY_MESSAGES = singletonList("not master");
     private static final List<Integer> RECOVERING_CODES = asList(11600, 11602, 13436, 189, 91);
     private static final List<String> RECOVERING_MESSAGES = asList("not master or secondary", "node is recovering");
-    public static MongoException createSpecialException(final BsonDocument response, final ServerAddress serverAddress,
-                                                        final String errorMessageFieldName) {
+
+    @Nullable
+    public static MongoException createSpecialException(@Nullable final BsonDocument response,
+                                                        final ServerAddress serverAddress,
+                                                        final String errorMessageFieldName,
+                                                        final TimeoutContext timeoutContext) {
         if (response == null) {
             return null;
         }
         int errorCode = getErrorCode(response);
         String errorMessage = getErrorMessage(response, errorMessageFieldName);
         if (ErrorCategory.fromErrorCode(errorCode) == ErrorCategory.EXECUTION_TIMEOUT) {
-            return new MongoExecutionTimeoutException(errorCode, errorMessage, response);
+            MongoExecutionTimeoutException mongoExecutionTimeoutException = new MongoExecutionTimeoutException(errorCode, errorMessage, response);
+            if (timeoutContext.hasTimeoutMS()) {
+                return TimeoutContext.createMongoTimeoutException(mongoExecutionTimeoutException);
+            }
+            return mongoExecutionTimeoutException;
         } else if (isNodeIsRecoveringError(errorCode, errorMessage)) {
             return new MongoNodeIsRecoveringException(response, serverAddress);
         } else if (isNotPrimaryError(errorCode, errorMessage)) {
             return new MongoNotPrimaryException(response, serverAddress);
         } else if (response.containsKey("writeConcernError")) {
-            return createSpecialException(response.getDocument("writeConcernError"), serverAddress, "errmsg");
+            MongoException writeConcernException = createSpecialException(response.getDocument("writeConcernError"), serverAddress,
+                    "errmsg", timeoutContext);
+            if (writeConcernException != null && response.isArray("errorLabels")) {
+                for (BsonValue errorLabel : response.getArray("errorLabels")) {
+                    writeConcernException.addLabel(errorLabel.asString().getValue());
+                }
+            }
+            return writeConcernException;
         } else {
             return null;
         }
@@ -252,11 +289,12 @@ public final class ProtocolHelper {
     }
 
     static void sendCommandStartedEvent(final RequestMessage message, final String databaseName, final String commandName,
-                                        final BsonDocument command, final ConnectionDescription connectionDescription,
-                                        final CommandListener commandListener) {
+            final BsonDocument command, final ConnectionDescription connectionDescription,
+            final CommandListener commandListener, final OperationContext operationContext) {
+        notNull("operationContext", operationContext);
         try {
-            commandListener.commandStarted(new CommandStartedEvent(message.getId(), connectionDescription,
-                                                                   databaseName, commandName, command));
+            commandListener.commandStarted(new CommandStartedEvent(getRequestContextForEvent(operationContext.getRequestContext()),
+                    operationContext.getId(), message.getId(), connectionDescription, databaseName, commandName, command));
         } catch (Exception e) {
             if (PROTOCOL_EVENT_LOGGER.isWarnEnabled()) {
                 PROTOCOL_EVENT_LOGGER.warn(format("Exception thrown raising command started event to listener %s", commandListener), e);
@@ -264,11 +302,14 @@ public final class ProtocolHelper {
         }
     }
 
-    static void sendCommandSucceededEvent(final RequestMessage message, final String commandName, final BsonDocument response,
-                                          final ConnectionDescription connectionDescription, final long elapsedTimeNanos,
-                                          final CommandListener commandListener) {
+    static void sendCommandSucceededEvent(final RequestMessage message, final String commandName, final String databaseName,
+            final BsonDocument response, final ConnectionDescription connectionDescription, final long elapsedTimeNanos,
+            final CommandListener commandListener, final OperationContext operationContext) {
+        notNull("operationContext", operationContext);
         try {
-            commandListener.commandSucceeded(new CommandSucceededEvent(message.getId(), connectionDescription, commandName, response,
+
+            commandListener.commandSucceeded(new CommandSucceededEvent(getRequestContextForEvent(operationContext.getRequestContext()),
+                    operationContext.getId(), message.getId(), connectionDescription, databaseName, commandName, response,
                     elapsedTimeNanos));
         } catch (Exception e) {
             if (PROTOCOL_EVENT_LOGGER.isWarnEnabled()) {
@@ -277,12 +318,15 @@ public final class ProtocolHelper {
         }
     }
 
-    static void sendCommandFailedEvent(final RequestMessage message, final String commandName,
-                                       final ConnectionDescription connectionDescription, final long elapsedTimeNanos,
-                                       final Throwable throwable, final CommandListener commandListener) {
+    static void sendCommandFailedEvent(final RequestMessage message, final String commandName, final String databaseName,
+            final ConnectionDescription connectionDescription, final long elapsedTimeNanos,
+            final Throwable throwable, final CommandListener commandListener, final OperationContext operationContext) {
+        notNull("operationContext", operationContext);
         try {
-            commandListener.commandFailed(new CommandFailedEvent(message.getId(), connectionDescription, commandName, elapsedTimeNanos,
+            commandListener.commandFailed(new CommandFailedEvent(getRequestContextForEvent(operationContext.getRequestContext()),
+                    operationContext.getId(), message.getId(), connectionDescription, databaseName, commandName, elapsedTimeNanos,
                     throwable));
+
         } catch (Exception e) {
             if (PROTOCOL_EVENT_LOGGER.isWarnEnabled()) {
                 PROTOCOL_EVENT_LOGGER.warn(format("Exception thrown raising command failed event to listener %s", commandListener), e);
@@ -290,6 +334,10 @@ public final class ProtocolHelper {
         }
     }
 
+    @Nullable
+    private static RequestContext getRequestContextForEvent(final RequestContext requestContext) {
+        return requestContext == IgnorableRequestContext.INSTANCE ? null : requestContext;
+    }
 
     private ProtocolHelper() {
     }

@@ -1,11 +1,11 @@
 {
   "description": "mongos-unpin",
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.4",
   "runOnRequirements": [
     {
       "minServerVersion": "4.2",
       "topologies": [
-        "sharded-replicaset"
+        "sharded"
       ]
     }
   ],
@@ -49,7 +49,15 @@
   },
   "tests": [
     {
-      "description": "unpin after TransientTransctionError error on commit",
+      "description": "unpin after TransientTransactionError error on commit",
+      "runOnRequirements": [
+        {
+          "serverless": "forbid",
+          "topologies": [
+            "sharded"
+          ]
+        }
+      ],
       "operations": [
         {
           "name": "startTransaction",
@@ -103,6 +111,24 @@
           "arguments": {
             "session": "session0"
           }
+        },
+        {
+          "name": "startTransaction",
+          "object": "session0"
+        },
+        {
+          "name": "insertOne",
+          "object": "collection0",
+          "arguments": {
+            "document": {
+              "x": 1
+            },
+            "session": "session0"
+          }
+        },
+        {
+          "name": "abortTransaction",
+          "object": "session0"
         }
       ]
     },
@@ -137,7 +163,15 @@
       ]
     },
     {
-      "description": "unpin after TransientTransctionError error on abort",
+      "description": "unpin after non-transient error on abort",
+      "runOnRequirements": [
+        {
+          "serverless": "forbid",
+          "topologies": [
+            "sharded"
+          ]
+        }
+      ],
       "operations": [
         {
           "name": "startTransaction",
@@ -182,11 +216,36 @@
           "arguments": {
             "session": "session0"
           }
+        },
+        {
+          "name": "startTransaction",
+          "object": "session0"
+        },
+        {
+          "name": "insertOne",
+          "object": "collection0",
+          "arguments": {
+            "document": {
+              "x": 1
+            },
+            "session": "session0"
+          }
+        },
+        {
+          "name": "abortTransaction",
+          "object": "session0"
         }
       ]
     },
     {
-      "description": "unpin after non-transient error on abort",
+      "description": "unpin after TransientTransactionError error on abort",
+      "runOnRequirements": [
+        {
+          "topologies": [
+            "sharded"
+          ]
+        }
+      ],
       "operations": [
         {
           "name": "startTransaction",
@@ -231,6 +290,24 @@
           "arguments": {
             "session": "session0"
           }
+        },
+        {
+          "name": "startTransaction",
+          "object": "session0"
+        },
+        {
+          "name": "insertOne",
+          "object": "collection0",
+          "arguments": {
+            "document": {
+              "x": 1
+            },
+            "session": "session0"
+          }
+        },
+        {
+          "name": "abortTransaction",
+          "object": "session0"
         }
       ]
     },

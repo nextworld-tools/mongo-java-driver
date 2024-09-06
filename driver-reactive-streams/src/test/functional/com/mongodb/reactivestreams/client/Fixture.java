@@ -20,14 +20,10 @@ import com.mongodb.ClusterFixture;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
-import com.mongodb.MongoInterruptedException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.MongoTimeoutException;
-import com.mongodb.connection.AsynchronousSocketChannelStreamFactoryFactory;
 import com.mongodb.connection.ClusterType;
 import com.mongodb.connection.ServerVersion;
-import com.mongodb.connection.StreamFactoryFactory;
-import com.mongodb.connection.TlsChannelStreamFactoryFactory;
 import com.mongodb.reactivestreams.client.internal.MongoClientImpl;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -38,7 +34,7 @@ import java.util.List;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
 import static com.mongodb.ClusterFixture.getServerApi;
-import static com.mongodb.ClusterFixture.getSslSettings;
+import static com.mongodb.internal.thread.InterruptionUtil.interruptAndCreateMongoInterruptedException;
 import static java.lang.Thread.sleep;
 
 /**
@@ -67,11 +63,15 @@ public final class Fixture {
     }
 
     public static MongoClientSettings.Builder getMongoClientSettingsBuilder() {
+        return getMongoClientSettingsBuilder(ClusterFixture.getConnectionString());
+    }
+
+    public static MongoClientSettings.Builder getMongoClientSettingsBuilder(final ConnectionString connectionString) {
         MongoClientSettings.Builder builder = MongoClientSettings.builder();
         if (getServerApi() != null) {
             builder.serverApi(getServerApi());
         }
-        return builder.applyConnectionString(ClusterFixture.getConnectionString());
+        return builder.applyConnectionString(connectionString);
     }
 
     public static String getDefaultDatabaseName() {
@@ -127,7 +127,7 @@ public final class Fixture {
     public static synchronized void waitForLastServerSessionPoolRelease() {
         if (mongoClient != null) {
             long startTime = System.currentTimeMillis();
-            int sessionInUseCount = getSessionInUseCount();
+            long sessionInUseCount = getSessionInUseCount();
             while (sessionInUseCount > 0) {
                 try {
                     if (System.currentTimeMillis() > startTime + TIMEOUT_DURATION.toMillis()) {
@@ -137,13 +137,13 @@ public final class Fixture {
                     sleep(10);
                     sessionInUseCount = getSessionInUseCount();
                 } catch (InterruptedException e) {
-                    throw new MongoInterruptedException("Interrupted", e);
+                    throw interruptAndCreateMongoInterruptedException("Interrupted", e);
                 }
             }
         }
     }
 
-    private static int getSessionInUseCount() {
+    private static long getSessionInUseCount() {
         return mongoClient.getServerSessionPool().getInUseCount();
     }
 
@@ -157,14 +157,6 @@ public final class Fixture {
         return clusterType == ClusterType.REPLICA_SET;
     }
 
-    public static StreamFactoryFactory getStreamFactoryFactory() {
-        if (getSslSettings().isEnabled()) {
-            return new TlsChannelStreamFactoryFactory();
-        } else {
-            return AsynchronousSocketChannelStreamFactoryFactory.builder().build();
-        }
-    }
-
     public static synchronized ConnectionString getConnectionString() {
         return ClusterFixture.getConnectionString();
     }
@@ -172,7 +164,6 @@ public final class Fixture {
     public static MongoClientSettings.Builder getMongoClientBuilderFromConnectionString() {
         MongoClientSettings.Builder builder = MongoClientSettings.builder()
                 .applyConnectionString(getConnectionString());
-        builder.streamFactoryFactory(getStreamFactoryFactory());
         if (getServerApi() != null) {
             builder.serverApi(getServerApi());
         }

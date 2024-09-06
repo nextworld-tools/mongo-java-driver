@@ -30,6 +30,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.isTrue;
@@ -70,10 +71,19 @@ public class WriteConcern implements Serializable {
     // map of the constants from above for use by fromString
     private static final Map<String, WriteConcern> NAMED_CONCERNS;
 
+    /**
+     * The w value.
+     */
     private final Object w;
 
+    /**
+     * The w timeout value.
+     */
     private final Integer wTimeoutMS;
 
+    /**
+     * The journal value.
+     */
     private final Boolean journal;
 
     /**
@@ -82,7 +92,7 @@ public class WriteConcern implements Serializable {
      * @since 2.10.0
      * @mongodb.driver.manual core/write-concern/#write-concern-acknowledged Acknowledged
      */
-    public static final WriteConcern ACKNOWLEDGED = new WriteConcern((Object) null, null, null);
+    public static final WriteConcern ACKNOWLEDGED = new WriteConcern(null, null, null);
 
     /**
      * Write operations that use this write concern will wait for acknowledgement from a single member.
@@ -219,6 +229,7 @@ public class WriteConcern implements Serializable {
      *
      * @param timeUnit the non-null time unit for the result
      * @return the WTimeout, which may be null if a wTimeout has not been specified
+     * @see #withWTimeout(long, TimeUnit)
      * @since 3.2
      * @mongodb.driver.manual core/write-concern/#timeouts wTimeout
      */
@@ -300,13 +311,13 @@ public class WriteConcern implements Serializable {
 
         WriteConcern that = (WriteConcern) o;
 
-        if (w != null ? !w.equals(that.w) : that.w != null) {
+        if (!Objects.equals(w, that.w)) {
             return false;
         }
-        if (wTimeoutMS != null ? !wTimeoutMS.equals(that.wTimeoutMS) : that.wTimeoutMS != null) {
+        if (!Objects.equals(wTimeoutMS, that.wTimeoutMS)) {
             return false;
         }
-        if (journal != null ? !journal.equals(that.journal) : that.journal != null) {
+        if (!Objects.equals(journal, that.journal)) {
             return false;
         }
 
@@ -323,7 +334,7 @@ public class WriteConcern implements Serializable {
 
     @Override
     public String toString() {
-        return "WriteConcern{w=" + w + ", wTimeout=" + wTimeoutMS + " ms, journal=" + journal;
+        return "WriteConcern{w=" + w + ", wTimeout=" + wTimeoutMS + " ms, journal=" + journal + "}";
 
     }
 
@@ -370,6 +381,7 @@ public class WriteConcern implements Serializable {
      * @param wTimeout the wTimeout, which must be &gt;= 0 and &lt;= Integer.MAX_VALUE after conversion to milliseconds
      * @param timeUnit the non-null time unit to apply to wTimeout
      * @return the WriteConcern with the given wTimeout
+     * @see #getWTimeout(TimeUnit)
      * @since 3.2
      * @mongodb.driver.manual reference/write-concern/#wtimeout wtimeout option
      */
@@ -402,7 +414,7 @@ public class WriteConcern implements Serializable {
     }
 
     static {
-        NAMED_CONCERNS = new HashMap<String, WriteConcern>();
+        NAMED_CONCERNS = new HashMap<>();
         for (final Field f : WriteConcern.class.getFields()) {
             if (Modifier.isStatic(f.getModifiers()) && f.getType().equals(WriteConcern.class)) {
                 String key = f.getName().toLowerCase();

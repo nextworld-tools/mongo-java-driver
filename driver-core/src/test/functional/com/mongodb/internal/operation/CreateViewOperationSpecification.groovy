@@ -32,13 +32,14 @@ import spock.lang.IgnoreIf
 import static com.mongodb.ClusterFixture.getBinding
 import static com.mongodb.ClusterFixture.isDiscoverableReplicaSet
 import static com.mongodb.ClusterFixture.serverVersionAtLeast
+import static com.mongodb.ClusterFixture.serverVersionLessThan
 
 class CreateViewOperationSpecification extends OperationFunctionalSpecification {
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should create view'() {
         given:
-        def viewOn = getCollectionName();
+        def viewOn = getCollectionName()
         def viewName = getCollectionName() + '-view'
         def viewNamespace = new MongoNamespace(getDatabaseName(), viewName)
 
@@ -50,7 +51,8 @@ class CreateViewOperationSpecification extends OperationFunctionalSpecification 
         getCollectionHelper().insertDocuments([trueXDocument, falseXDocument])
 
         def pipeline = [new BsonDocument('$match', trueXDocument)]
-        def operation = new CreateViewOperation(getDatabaseName(), viewName, viewOn, pipeline, WriteConcern.ACKNOWLEDGED)
+        def operation = new CreateViewOperation(getDatabaseName(), viewName, viewOn, pipeline,
+                WriteConcern.ACKNOWLEDGED)
 
         when:
         execute(operation, async)
@@ -68,17 +70,18 @@ class CreateViewOperationSpecification extends OperationFunctionalSpecification 
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) })
+    @IgnoreIf({ serverVersionLessThan(3, 4) })
     def 'should create view with collation'() {
         given:
-        def viewOn = getCollectionName();
+        def viewOn = getCollectionName()
         def viewName = getCollectionName() + '-view'
         def viewNamespace = new MongoNamespace(getDatabaseName(), viewName)
 
         assert !collectionNameExists(viewOn)
         assert !collectionNameExists(viewName)
 
-        def operation = new CreateViewOperation(getDatabaseName(), viewName, viewOn, [], WriteConcern.ACKNOWLEDGED)
+        def operation = new CreateViewOperation(getDatabaseName(), viewName, viewOn, [],
+                WriteConcern.ACKNOWLEDGED)
                 .collation(defaultCollation)
 
         when:
@@ -112,14 +115,15 @@ class CreateViewOperationSpecification extends OperationFunctionalSpecification 
         async << [true, false]
     }
 
-    @IgnoreIf({ !serverVersionAtLeast(3, 4) || !isDiscoverableReplicaSet() })
+    @IgnoreIf({ serverVersionLessThan(3, 4) || !isDiscoverableReplicaSet() })
     def 'should throw on write concern error'() {
         given:
         def viewName = getCollectionName() + '-view'
         def viewNamespace = new MongoNamespace(getDatabaseName(), viewName)
         assert !collectionNameExists(viewName)
 
-        def operation = new CreateViewOperation(getDatabaseName(), viewName, getCollectionName(), [], new WriteConcern(5))
+        def operation = new CreateViewOperation(getDatabaseName(), viewName, getCollectionName(), [],
+                new WriteConcern(5))
 
         when:
         execute(operation, async)

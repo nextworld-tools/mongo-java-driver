@@ -20,10 +20,13 @@ import com.mongodb.MongoException;
 import com.mongodb.ReadPreference;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 import com.mongodb.internal.client.model.changestream.ChangeStreamLevel;
 import com.mongodb.internal.operation.ChangeStreamOperation;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonString;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecConfigurationException;
@@ -37,7 +40,7 @@ import java.util.List;
 import static com.mongodb.reactivestreams.client.MongoClients.getDefaultCodecRegistry;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -54,7 +57,8 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
                                                                                     Document.class, pipeline, ChangeStreamLevel.COLLECTION);
 
         ChangeStreamOperation<ChangeStreamDocument<Document>> expectedOperation =
-                new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, pipeline, codec)
+                new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, FullDocumentBeforeChange.DEFAULT, pipeline,
+                        codec)
                         .batchSize(Integer.MAX_VALUE)
                         .retryReads(true);
 
@@ -68,14 +72,18 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
         publisher
                 .batchSize(100)
                 .collation(COLLATION)
-                .maxAwaitTime(20, SECONDS)
+                .comment("comment")
+                .maxAwaitTime(101, MILLISECONDS)
                 .fullDocument(FullDocument.UPDATE_LOOKUP);
 
-        expectedOperation = new ChangeStreamOperation<>(NAMESPACE, FullDocument.UPDATE_LOOKUP, pipeline, codec).retryReads(true);
+        expectedOperation = new ChangeStreamOperation<>(NAMESPACE, FullDocument.UPDATE_LOOKUP,
+                FullDocumentBeforeChange.DEFAULT,
+                pipeline,
+                                                        codec).retryReads(true);
         expectedOperation
                 .batchSize(100)
                 .collation(COLLATION)
-                .maxAwaitTime(20, SECONDS);
+                .comment(new BsonString("comment"));
 
         Flux.from(publisher).blockFirst();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
@@ -88,13 +96,18 @@ public class ChangeStreamPublisherImplTest extends TestHelper {
         List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
         TestOperationExecutor executor = createOperationExecutor(singletonList(getBatchCursor()));
 
+        int batchSize = 100;
         Publisher<BsonDocument> publisher = new ChangeStreamPublisherImpl<>(null, createMongoOperationPublisher(executor),
                                                                             Document.class, pipeline, ChangeStreamLevel.COLLECTION)
-                        .withDocumentClass(BsonDocument.class);
+                .batchSize(batchSize)
+                .comment(new BsonInt32(1))
+                .withDocumentClass(BsonDocument.class);
 
         ChangeStreamOperation<BsonDocument> expectedOperation =
-                new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, pipeline, getDefaultCodecRegistry().get(BsonDocument.class))
-                        .batchSize(Integer.MAX_VALUE)
+                new ChangeStreamOperation<>(NAMESPACE, FullDocument.DEFAULT, FullDocumentBeforeChange.DEFAULT, pipeline,
+                                            getDefaultCodecRegistry().get(BsonDocument.class))
+                        .batchSize(batchSize)
+                        .comment(new BsonInt32(1))
                         .retryReads(true);
 
         // default input should be as expected

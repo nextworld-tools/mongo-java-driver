@@ -25,10 +25,12 @@ import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.changestream.ChangeStreamDocument;
 import com.mongodb.client.model.changestream.FullDocument;
+import com.mongodb.client.model.changestream.FullDocumentBeforeChange;
 import com.mongodb.lang.Nullable;
 import com.mongodb.reactivestreams.client.ChangeStreamPublisher;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
+import org.bson.BsonValue;
 
 import java.util.concurrent.TimeUnit;
 
@@ -43,7 +45,7 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
     }
 
     public MongoChangeStreamCursor<ChangeStreamDocument<T>> cursor() {
-        final MongoCursor<ChangeStreamDocument<T>> wrapped = super.cursor();
+        MongoCursor<ChangeStreamDocument<T>> wrapped = super.cursor();
         return new MongoChangeStreamCursor<ChangeStreamDocument<T>>() {
             @Override
             public BsonDocument getResumeToken() {
@@ -66,6 +68,11 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
             }
 
             @Override
+            public int available() {
+                return wrapped.available();
+            }
+
+            @Override
             public ChangeStreamDocument<T> tryNext() {
                 return wrapped.tryNext();
             }
@@ -85,6 +92,12 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
     @Override
     public ChangeStreamIterable<T> fullDocument(final FullDocument fullDocument) {
         wrapped.fullDocument(fullDocument);
+        return this;
+    }
+
+    @Override
+    public ChangeStreamIterable<T> fullDocumentBeforeChange(final FullDocumentBeforeChange fullDocumentBeforeChange) {
+        wrapped.fullDocumentBeforeChange(fullDocumentBeforeChange);
         return this;
     }
 
@@ -132,6 +145,24 @@ class SyncChangeStreamIterable<T> extends SyncMongoIterable<ChangeStreamDocument
     @Override
     public ChangeStreamIterable<T> startAfter(final BsonDocument startAfter) {
         wrapped.startAfter(startAfter);
+        return this;
+    }
+
+    @Override
+    public ChangeStreamIterable<T> comment(@Nullable final String comment) {
+        wrapped.comment(comment);
+        return this;
+    }
+
+    @Override
+    public ChangeStreamIterable<T> comment(@Nullable final BsonValue comment) {
+        wrapped.comment(comment);
+        return this;
+    }
+
+    @Override
+    public ChangeStreamIterable<T> showExpandedEvents(final boolean showExpandedEvents) {
+        wrapped.showExpandedEvents(showExpandedEvents);
         return this;
     }
 }

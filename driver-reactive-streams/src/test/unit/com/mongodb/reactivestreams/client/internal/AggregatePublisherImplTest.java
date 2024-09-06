@@ -27,6 +27,8 @@ import com.mongodb.internal.operation.AggregateToCollectionOperation;
 import com.mongodb.internal.operation.FindOperation;
 import com.mongodb.reactivestreams.client.AggregatePublisher;
 import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonString;
 import org.bson.Document;
 import org.bson.codecs.configuration.CodecConfigurationException;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +42,7 @@ import static com.mongodb.reactivestreams.client.MongoClients.getDefaultCodecReg
 import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -75,21 +77,70 @@ public class AggregatePublisherImplTest extends TestHelper {
                 .collation(COLLATION)
                 .comment("my comment")
                 .hint(BsonDocument.parse("{a: 1}"))
-                .maxAwaitTime(20, SECONDS)
-                .maxTime(10, SECONDS);
+                .maxAwaitTime(1001, MILLISECONDS)
+                .maxTime(101, MILLISECONDS);
 
-        expectedOperation
+        expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                getDefaultCodecRegistry().get(Document.class))
+                .retryReads(true)
                 .allowDiskUse(true)
                 .batchSize(100)
                 .collation(COLLATION)
-                .comment("my comment")
-                .hint(BsonDocument.parse("{a: 1}"))
-                .maxAwaitTime(20, SECONDS)
-                .maxTime(10, SECONDS);
+                .comment(new BsonString("my comment"))
+                .hint(BsonDocument.parse("{a: 1}"));
 
         Flux.from(publisher).blockFirst();
         assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
+    }
+
+    @DisplayName("Should build the expected AggregateOperation for hint string")
+    @Test
+    void shouldBuildTheExpectedOperationForHintString() {
+        List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
+
+        TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
+        AggregatePublisher<Document> publisher =
+                new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
+
+        AggregateOperation<Document> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                                                                                  getDefaultCodecRegistry().get(Document.class))
+                .batchSize(Integer.MAX_VALUE)
+                .retryReads(true);
+
+        publisher
+                .hintString("x_1");
+
+        expectedOperation
+                .hint(new BsonString("x_1"));
+
+        Flux.from(publisher).blockFirst();
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
+    }
+
+    @DisplayName("Should build the expected AggregateOperation when both hint and hintString are set")
+    @Test
+    void shouldBuildTheExpectedOperationForHintPlusHintString() {
+        List<BsonDocument> pipeline = singletonList(BsonDocument.parse("{'$match': 1}"));
+
+        TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor()));
+        AggregatePublisher<Document> publisher =
+                new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
+
+        AggregateOperation<Document> expectedOperation = new AggregateOperation<>(NAMESPACE, pipeline,
+                                                                                  getDefaultCodecRegistry().get(Document.class))
+                .batchSize(Integer.MAX_VALUE)
+                .retryReads(true);
+
+        publisher
+                .hint(new Document("x", 1))
+                .hintString("x_1");
+
+        expectedOperation
+                .hint(new BsonDocument("x", new BsonInt32(1)));
+
+        Flux.from(publisher).blockFirst();
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
     }
 
     @DisplayName("Should build the expected AggregateOperation for $out")
@@ -105,15 +156,14 @@ public class AggregatePublisherImplTest extends TestHelper {
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
-                                                                                              ReadConcern.DEFAULT,
-                                                                                              WriteConcern.ACKNOWLEDGED);
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
 
         // default input should be as expected
         Flux.from(publisher).blockFirst();
 
-        WriteOperationThenCursorReadOperation operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
+        VoidReadOperationThenCursorReadOperation operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         // Should apply settings
         publisher
@@ -123,51 +173,107 @@ public class AggregatePublisherImplTest extends TestHelper {
                 .collation(COLLATION)
                 .comment("my comment")
                 .hint(BsonDocument.parse("{a: 1}"))
-                .maxAwaitTime(20, SECONDS) // Ignored on $out
-                .maxTime(10, SECONDS);
+                .maxAwaitTime(1001, MILLISECONDS) // Ignored on $out
+                .maxTime(100, MILLISECONDS);
 
-        expectedOperation
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED)
                 .allowDiskUse(true)
                 .bypassDocumentValidation(true)
                 .collation(COLLATION)
-                .comment("my comment")
-                .hint(BsonDocument.parse("{a: 1}"))
-                .maxTime(10, SECONDS);
+                .comment(new BsonString("my comment"))
+                .hint(BsonDocument.parse("{a: 1}"));
 
         Flux.from(publisher).blockFirst();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         FindOperation<Document> expectedFindOperation =
                 new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
                         .batchSize(100)
                         .collation(COLLATION)
                         .filter(new BsonDocument())
-                        .maxAwaitTime(0, SECONDS)
-                        .maxTime(0, SECONDS)
+                        .comment(new BsonString("my comment"))
                         .retryReads(true);
 
-        assertOperationIsTheSameAs(expectedFindOperation, operation.getReadOperation());
+        assertOperationIsTheSameAs(expectedFindOperation, operation.getCursorReadOperation());
 
         // Should handle database level aggregations
         publisher = new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.DATABASE);
 
-        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT,
+                                                               WriteConcern.ACKNOWLEDGED);
 
         Flux.from(publisher).blockFirst();
-        operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
+        operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         // Should handle toCollection
         publisher = new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
-        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT,
+                                                               WriteConcern.ACKNOWLEDGED);
 
         // default input should be as expected
         Flux.from(publisher.toCollection()).blockFirst();
-        assertOperationIsTheSameAs(expectedOperation, executor.getWriteOperation());
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
+    }
+
+    @DisplayName("Should build the expected AggregateOperation for $out with hint string")
+    @Test
+    void shouldBuildTheExpectedOperationsForDollarOutWithHintString() {
+        String collectionName = "collectionName";
+        List<BsonDocument> pipeline = asList(BsonDocument.parse("{'$match': 1}"),
+                BsonDocument.parse(format("{'$out': '%s'}", collectionName)));
+        MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
+
+        TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
+        AggregatePublisher<Document> publisher =
+                new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
+
+        AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+
+        publisher
+                .hintString("x_1");
+
+        expectedOperation
+                .hint(new BsonString("x_1"));
+
+        Flux.from(publisher).blockFirst();
+        assertEquals(ReadPreference.primary(), executor.getReadPreference());
+        VoidReadOperationThenCursorReadOperation operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
+    }
+
+    @DisplayName("Should build the expected AggregateOperation for $out when both hint and hint string are set")
+    @Test
+    void shouldBuildTheExpectedOperationsForDollarOutWithHintPlusHintString() {
+        String collectionName = "collectionName";
+        List<BsonDocument> pipeline = asList(BsonDocument.parse("{'$match': 1}"),
+                BsonDocument.parse(format("{'$out': '%s'}", collectionName)));
+        MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
+
+        TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
+        AggregatePublisher<Document> publisher =
+                new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
+
+        AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+
+        publisher
+                .hint(new Document("x", 1))
+                .hintString("x_1");
+
+        expectedOperation
+                .hint(new BsonDocument("x", new BsonInt32(1)));
+
+        Flux.from(publisher).blockFirst();
+        assertEquals(ReadPreference.primary(), executor.getReadPreference());
+        VoidReadOperationThenCursorReadOperation operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
     }
 
     @DisplayName("Should build the expected AggregateOperation for $out as document")
@@ -187,11 +293,11 @@ public class AggregatePublisherImplTest extends TestHelper {
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION)
                         .toCollection();
 
-        AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT,
-                                                                                              WriteConcern.ACKNOWLEDGED);
+        AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
 
         Flux.from(toCollectionPublisher).blockFirst();
-        assertOperationIsTheSameAs(expectedOperation, executor.getWriteOperation());
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
 
         // Should handle database level
         toCollectionPublisher =
@@ -199,7 +305,7 @@ public class AggregatePublisherImplTest extends TestHelper {
                         .toCollection();
 
         Flux.from(toCollectionPublisher).blockFirst();
-        assertOperationIsTheSameAs(expectedOperation, executor.getWriteOperation());
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
 
         // Should handle $out with namespace
         List<BsonDocument> pipelineWithNamespace = asList(BsonDocument.parse("{'$match': 1}"),
@@ -212,12 +318,12 @@ public class AggregatePublisherImplTest extends TestHelper {
                                                                WriteConcern.ACKNOWLEDGED);
 
         Flux.from(toCollectionPublisher).blockFirst();
-        assertOperationIsTheSameAs(expectedOperation, executor.getWriteOperation());
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
     }
 
-    @DisplayName("Should build the expected AggregateOperation for $merge")
+    @DisplayName("Should build the expected AggregateOperation for $merge document")
     @Test
-    void shouldBuildTheExpectedOperationsForDollarMerge() {
+    void shouldBuildTheExpectedOperationsForDollarMergeDocument() {
         String collectionName = "collectionName";
         List<BsonDocument> pipeline = asList(BsonDocument.parse("{'$match': 1}"),
                                              BsonDocument.parse(format("{'$merge': {into: '%s'}}", collectionName)));
@@ -228,15 +334,14 @@ public class AggregatePublisherImplTest extends TestHelper {
                 new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
         AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
-                                                                                              ReadConcern.DEFAULT,
-                                                                                              WriteConcern.ACKNOWLEDGED);
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
 
         // default input should be as expected
         Flux.from(publisher).blockFirst();
 
-        WriteOperationThenCursorReadOperation operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
+        VoidReadOperationThenCursorReadOperation operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         // Should apply settings
         publisher
@@ -244,53 +349,85 @@ public class AggregatePublisherImplTest extends TestHelper {
                 .batchSize(100) // Used in Find
                 .bypassDocumentValidation(true)
                 .collation(COLLATION)
-                .comment("my comment")
+                .comment(new BsonInt32(1))
                 .hint(BsonDocument.parse("{a: 1}"))
-                .maxAwaitTime(20, SECONDS) // Ignored on $out
-                .maxTime(10, SECONDS);
+                .maxAwaitTime(1001, MILLISECONDS) // Ignored on $out
+                .maxTime(100, MILLISECONDS);
 
-        expectedOperation
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED)
                 .allowDiskUse(true)
                 .bypassDocumentValidation(true)
                 .collation(COLLATION)
-                .comment("my comment")
-                .hint(BsonDocument.parse("{a: 1}"))
-                .maxTime(10, SECONDS);
+                .comment(new BsonInt32(1))
+                .hint(BsonDocument.parse("{a: 1}"));
 
         Flux.from(publisher).blockFirst();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         FindOperation<Document> expectedFindOperation =
                 new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
                         .batchSize(100)
                         .collation(COLLATION)
                         .filter(new BsonDocument())
-                        .maxAwaitTime(0, SECONDS)
-                        .maxTime(0, SECONDS)
+                        .comment(new BsonInt32(1))
                         .retryReads(true);
 
-        assertOperationIsTheSameAs(expectedFindOperation, operation.getReadOperation());
+        assertOperationIsTheSameAs(expectedFindOperation, operation.getCursorReadOperation());
 
         // Should handle database level aggregations
         publisher = new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.DATABASE);
 
-        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT,
+                                                               WriteConcern.ACKNOWLEDGED);
 
         Flux.from(publisher).blockFirst();
-        operation = (WriteOperationThenCursorReadOperation) executor.getReadOperation();
+        operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
         assertEquals(ReadPreference.primary(), executor.getReadPreference());
-        assertOperationIsTheSameAs(expectedOperation, operation.getAggregateToCollectionOperation());
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
 
         // Should handle toCollection
         publisher = new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
 
-        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+        expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline, ReadConcern.DEFAULT,
+                                                               WriteConcern.ACKNOWLEDGED);
 
         // default input should be as expected
         Flux.from(publisher.toCollection()).blockFirst();
-        assertOperationIsTheSameAs(expectedOperation, executor.getWriteOperation());
+        assertOperationIsTheSameAs(expectedOperation, executor.getReadOperation());
+    }
+
+    @DisplayName("Should build the expected AggregateOperation for $merge string")
+    @Test
+    void shouldBuildTheExpectedOperationsForDollarMergeString() {
+        String collectionName = "collectionName";
+        MongoNamespace collectionNamespace = new MongoNamespace(NAMESPACE.getDatabaseName(), collectionName);
+        List<BsonDocument> pipeline = asList(BsonDocument.parse("{'$match': 1}"),
+                BsonDocument.parse(format("{'$merge': '%s'}", collectionName)));
+
+        TestOperationExecutor executor = createOperationExecutor(asList(getBatchCursor(), getBatchCursor(), getBatchCursor(), null));
+        AggregatePublisher<Document> publisher =
+                new AggregatePublisherImpl<>(null, createMongoOperationPublisher(executor), pipeline, AggregationLevel.COLLECTION);
+
+        AggregateToCollectionOperation expectedOperation = new AggregateToCollectionOperation(NAMESPACE, pipeline,
+                                                                                              ReadConcern.DEFAULT, WriteConcern.ACKNOWLEDGED);
+
+        // default input should be as expected
+        Flux.from(publisher).blockFirst();
+
+        VoidReadOperationThenCursorReadOperation operation = (VoidReadOperationThenCursorReadOperation) executor.getReadOperation();
+        assertEquals(ReadPreference.primary(), executor.getReadPreference());
+        assertOperationIsTheSameAs(expectedOperation, operation.getReadOperation());
+
+        FindOperation<Document> expectedFindOperation =
+                new FindOperation<>(collectionNamespace, getDefaultCodecRegistry().get(Document.class))
+                .filter(new BsonDocument())
+                .batchSize(Integer.MAX_VALUE)
+                .retryReads(true);
+
+        assertOperationIsTheSameAs(expectedFindOperation, operation.getCursorReadOperation());
     }
 
     @DisplayName("Should handle error scenarios")

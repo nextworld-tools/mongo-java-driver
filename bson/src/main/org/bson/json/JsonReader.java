@@ -28,7 +28,6 @@ import org.bson.BsonRegularExpression;
 import org.bson.BsonTimestamp;
 import org.bson.BsonType;
 import org.bson.BsonUndefined;
-import org.bson.internal.Base64;
 import org.bson.types.Decimal128;
 import org.bson.types.MaxKey;
 import org.bson.types.MinKey;
@@ -39,6 +38,7 @@ import java.text.DateFormat;
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeParseException;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
@@ -53,12 +53,12 @@ import static java.lang.String.format;
  * <ul>
  *  <li><em>Strict mode</em> that conforms to the <a href="http://www.json.org/">JSON RFC specifications.</a></li>
  *  <li><em>JavaScript mode</em> that that most JavaScript interpreters can process</li>
- *  <li><em>Shell mode</em> that the <a href="http://docs.mongodb.org/manual/reference/mongo/#mongo">mongo</a> shell can process.
+ *  <li><em>Shell mode</em> that the <a href="https://www.mongodb.com/docs/manual/reference/mongo/#mongo">mongo</a> shell can process.
  * This is also called "extended" JavaScript format.</li>
  * </ul>
  * For more information about this modes please see
- * <a href="http://docs.mongodb.org/manual/reference/mongodb-extended-json/">
- * http://docs.mongodb.org/manual/reference/mongodb-extended-json/
+ * <a href="https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/">
+ * https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/
  * </a>
  *
  * @since 3.0
@@ -93,7 +93,6 @@ public class JsonReader extends AbstractBsonReader {
     }
 
     private JsonReader(final JsonScanner scanner) {
-        super();
         this.scanner = scanner;
         setContext(new Context(null, BsonContextType.TOP_LEVEL));
     }
@@ -741,7 +740,7 @@ public class JsonReader extends AbstractBsonReader {
         }
         verifyToken(JsonTokenType.RIGHT_PAREN);
 
-        byte[] bytes = Base64.decode(bytesToken.getValue(String.class));
+        byte[] bytes = Base64.getDecoder().decode(bytesToken.getValue(String.class));
         return new BsonBinary(subTypeToken.getValue(Integer.class).byteValue(), bytes);
     }
 
@@ -986,7 +985,7 @@ public class JsonReader extends AbstractBsonReader {
                     byte type;
                     if (firstNestedKey.equals("base64")) {
                         verifyToken(JsonTokenType.COLON);
-                        data = Base64.decode(readStringFromExtendedJson());
+                        data = Base64.getDecoder().decode(readStringFromExtendedJson());
                         verifyToken(JsonTokenType.COMMA);
                         verifyString("subType");
                         verifyToken(JsonTokenType.COLON);
@@ -997,7 +996,7 @@ public class JsonReader extends AbstractBsonReader {
                         verifyToken(JsonTokenType.COMMA);
                         verifyString("base64");
                         verifyToken(JsonTokenType.COLON);
-                        data = Base64.decode(readStringFromExtendedJson());
+                        data = Base64.getDecoder().decode(readStringFromExtendedJson());
                     } else {
                         throw new JsonParseException("Unexpected key for $binary: " + firstNestedKey);
                     }
@@ -1028,7 +1027,7 @@ public class JsonReader extends AbstractBsonReader {
             byte type;
 
             if (firstKey.equals("$binary")) {
-                data = Base64.decode(readStringFromExtendedJson());
+                data = Base64.getDecoder().decode(readStringFromExtendedJson());
                 verifyToken(JsonTokenType.COMMA);
                 verifyString("$type");
                 verifyToken(JsonTokenType.COLON);
@@ -1038,15 +1037,12 @@ public class JsonReader extends AbstractBsonReader {
                 verifyToken(JsonTokenType.COMMA);
                 verifyString("$binary");
                 verifyToken(JsonTokenType.COLON);
-                data = Base64.decode(readStringFromExtendedJson());
+                data = Base64.getDecoder().decode(readStringFromExtendedJson());
             }
             verifyToken(JsonTokenType.END_OBJECT);
 
             return new BsonBinary(type, data);
-        } catch (JsonParseException e) {
-            mark.reset();
-            return null;
-        } catch (NumberFormatException e) {
+        } catch (JsonParseException | NumberFormatException e) {
             mark.reset();
             return null;
         } finally {
@@ -1075,7 +1071,7 @@ public class JsonReader extends AbstractBsonReader {
             JsonToken nameToken = popToken();
             String name = nameToken.getValue(String.class);
             if (!name.equals("$numberLong")) {
-                throw new JsonParseException(String.format("JSON reader expected $numberLong within $date, but found %s", name));
+                throw new JsonParseException(format("JSON reader expected $numberLong within $date, but found %s", name));
             }
             value = visitNumberLongExtendedJson();
             verifyToken(JsonTokenType.END_OBJECT);
@@ -1124,8 +1120,7 @@ public class JsonReader extends AbstractBsonReader {
 
         String pattern;
         String options = "";
-
-        String firstKey = readStringFromExtendedJson();
+        String firstKey = readStringKeyFromExtendedJson();
         if (firstKey.equals("pattern")) {
             verifyToken(JsonTokenType.COLON);
             pattern = readStringFromExtendedJson();
@@ -1141,7 +1136,7 @@ public class JsonReader extends AbstractBsonReader {
             verifyToken(JsonTokenType.COLON);
             pattern = readStringFromExtendedJson();
         } else {
-            throw new JsonParseException("Expected 't' and 'i' fields in $timestamp document but found " + firstKey);
+            throw new JsonParseException("Expected 'pattern' and 'options' fields in $regularExpression document but found " + firstKey);
         }
 
         verifyToken(JsonTokenType.END_OBJECT);
@@ -1203,7 +1198,7 @@ public class JsonReader extends AbstractBsonReader {
         int time;
         int increment;
 
-        String firstKey = readStringFromExtendedJson();
+        String firstKey = readStringKeyFromExtendedJson();
         if (firstKey.equals("t")) {
             verifyToken(JsonTokenType.COLON);
             time = readIntFromExtendedJson();
@@ -1386,18 +1381,24 @@ public class JsonReader extends AbstractBsonReader {
         return (Context) super.getContext();
     }
 
+    /**
+     * An implementation of {@code AbstractBsonReader.Mark}.
+     */
     protected class Mark extends AbstractBsonReader.Mark {
         private final JsonToken pushedToken;
         private final Object currentValue;
         private final int markPos;
 
+        /**
+         * Construct an instance.
+         */
         protected Mark() {
-            super();
             pushedToken = JsonReader.this.pushedToken;
             currentValue = JsonReader.this.currentValue;
             markPos = JsonReader.this.scanner.mark();
         }
 
+        @Override
         public void reset() {
             super.reset();
             JsonReader.this.pushedToken = pushedToken;
@@ -1406,21 +1407,35 @@ public class JsonReader extends AbstractBsonReader {
             JsonReader.this.setContext(new Context(getParentContext(), getContextType()));
         }
 
+        /**
+         * Discard the mark.
+         */
         public void discard() {
             JsonReader.this.scanner.discard(markPos);
         }
     }
 
 
+    /**
+     * An implementation of {@code AbstractBsonReader.Context}/
+     */
     protected class Context extends AbstractBsonReader.Context {
+        /**
+         * Construct an instance.
+         *
+         * @param parentContext the parent context
+         * @param contextType the context type
+         */
         protected Context(final AbstractBsonReader.Context parentContext, final BsonContextType contextType) {
             super(parentContext, contextType);
         }
 
+        @Override
         protected Context getParentContext() {
             return (Context) super.getParentContext();
         }
 
+        @Override
         protected BsonContextType getContextType() {
             return super.getContextType();
         }
@@ -1444,6 +1459,19 @@ public class JsonReader extends AbstractBsonReader {
         }
 
         return out;
+    }
+
+    /**
+     * Read an extended json key and verify its type.
+     * Throws a org.bson.json.JsonParseException if the key is not an unquoted string or a simple string.
+     * @return the key string value
+     */
+    private String readStringKeyFromExtendedJson() {
+        JsonToken patternToken = popToken();
+        if (patternToken.getType() != JsonTokenType.STRING && patternToken.getType() != JsonTokenType.UNQUOTED_STRING) {
+            throw new JsonParseException("JSON reader expected a string but found '%s'.", patternToken.getValue());
+        }
+        return patternToken.getValue(String.class);
     }
 }
 

@@ -16,7 +16,7 @@
 
 package org.bson.types;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,17 +27,19 @@ import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Random;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ObjectIdTest {
     @Test
     public void testToBytes() {
-        byte[] expectedBytes = new byte[]{81, 6, -4, -102, -68, -126, 55, 85, -127, 54, -46, -119};
+        byte[] expectedBytes = {81, 6, -4, -102, -68, -126, 55, 85, -127, 54, -46, -119};
         ObjectId objectId = new ObjectId(expectedBytes);
 
         assertArrayEquals(expectedBytes, objectId.toByteArray());
@@ -71,7 +73,7 @@ public class ObjectIdTest {
             assertEquals("state should be: bytes has length of 12", e.getMessage());
         }
 
-        byte[] bytes = new byte[]{81, 6, -4, -102, -68, -126, 55, 85, -127, 54, -46, -119};
+        byte[] bytes = {81, 6, -4, -102, -68, -126, 55, 85, -127, 54, -46, -119};
 
         ObjectId objectId1 = new ObjectId(bytes);
         assertEquals(0x5106FC9A, objectId1.getTimestamp());
@@ -99,7 +101,7 @@ public class ObjectIdTest {
     @Test
     public void testGetSmallestWithDate() {
         Date date = new Date(1588467737760L);
-        byte[] expectedBytes = new byte[]{94, -82, 24, 25, 0, 0, 0, 0, 0, 0, 0, 0};
+        byte[] expectedBytes = {94, -82, 24, 25, 0, 0, 0, 0, 0, 0, 0, 0};
         ObjectId objectId = ObjectId.getSmallestWithDate(date);
         assertArrayEquals(expectedBytes, objectId.toByteArray());
         assertEquals(date.getTime() / 1000 * 1000, objectId.getDate().getTime());
@@ -142,6 +144,10 @@ public class ObjectIdTest {
     public void testHexStringConstructor() {
         ObjectId id = new ObjectId();
         assertEquals(id, new ObjectId(id.toHexString()));
+        assertEquals(id, new ObjectId(id.toHexString().toUpperCase(Locale.US)));
+        assertThrows(IllegalArgumentException.class, () -> new ObjectId((String) null));
+        assertThrows(IllegalArgumentException.class, () -> new ObjectId(id.toHexString().substring(0, 23)));
+        assertThrows(IllegalArgumentException.class, () -> new ObjectId(id.toHexString().substring(0, 23) + '%'));
     }
 
     @Test
@@ -161,8 +167,7 @@ public class ObjectIdTest {
     @Test
     public void testToHexString() {
         assertEquals("000000000000000000000000", new ObjectId(new byte[12]).toHexString());
-        assertEquals("7fffffff007fff7fff007fff",
-                new ObjectId(new byte[]{127, -1, -1, -1, 0, 127, -1, 127, -1, 0, 127, -1}).toHexString());
+        assertEquals("7fffffff007fff7fff007fff", new ObjectId(new byte[]{127, -1, -1, -1, 0, 127, -1, 127, -1, 0, 127, -1}).toHexString());
     }
 
     private Date getDate(final String s) throws ParseException {
@@ -200,13 +205,12 @@ public class ObjectIdTest {
         oos.writeObject(objectId);
 
         // then
-        assertTrue(new String(baos.toByteArray()).contains("org.bson.types.ObjectId$SerializationProxy"));
+        assertTrue(baos.toString().contains("org.bson.types.ObjectId$SerializationProxy"));
         assertArrayEquals(new byte[] {-84, -19, 0, 5, 115, 114, 0, 42, 111, 114, 103, 46, 98, 115, 111, 110, 46, 116, 121, 112, 101, 115,
                         46, 79, 98, 106, 101, 99, 116, 73, 100, 36, 83, 101, 114, 105, 97, 108, 105, 122, 97, 116, 105, 111, 110, 80, 114,
                         111, 120, 121, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 1, 91, 0, 5, 98, 121, 116, 101, 115, 116, 0, 2, 91, 66, 120, 112, 117,
                         114, 0, 2, 91, 66, -84, -13, 23, -8, 6, 8, 84, -32, 2, 0, 0, 120, 112, 0, 0, 0, 12, 95, -113, 79, -49, 39, 81, 111,
-                        5, -25, -22, -27, -66},
-                baos.toByteArray());
+                        5, -25, -22, -27, -66}, baos.toByteArray());
 
         // when
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());

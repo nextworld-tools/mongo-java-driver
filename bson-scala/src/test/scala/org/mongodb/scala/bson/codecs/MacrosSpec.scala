@@ -144,11 +144,11 @@ class MacrosSpec extends BaseSpec {
   }
 
   sealed trait CaseObjectEnum
-  object CaseObjectEnum {
-    case object Alpha extends CaseObjectEnum
-    case object Bravo extends CaseObjectEnum
-    case object Charlie extends CaseObjectEnum
-  }
+  case object Alpha extends CaseObjectEnum
+  case object Bravo extends CaseObjectEnum
+  case object Charlie extends CaseObjectEnum
+
+  case class ContainsEnumADT(name: String, enum: CaseObjectEnum)
 
   sealed class SealedClass
   case class SealedClassA(stringField: String) extends SealedClass
@@ -179,50 +179,14 @@ class MacrosSpec extends BaseSpec {
   case class SealedTraitB(intField: Int) extends SealedTrait
   case class ContainsSealedTrait(list: List[SealedTrait])
 
-  object CaseObjectEnumCodecProvider extends CodecProvider {
-    def isCaseObjectEnum[T](clazz: Class[T]): Boolean = {
-      clazz.isInstance(CaseObjectEnum.Alpha) || clazz.isInstance(CaseObjectEnum.Bravo) || clazz.isInstance(
-        CaseObjectEnum.Charlie
-      )
-    }
+  sealed class SingleSealedClass
+  case class SingleSealedClassImpl() extends SingleSealedClass
 
-    override def get[T](clazz: Class[T], registry: CodecRegistry): Codec[T] = {
-      if (isCaseObjectEnum(clazz)) {
-        CaseObjectEnumCodec.asInstanceOf[Codec[T]]
-      } else {
-        null
-      }
-    }
+  sealed abstract class SingleSealedAbstractClass
+  case class SingleSealedAbstractClassImpl() extends SingleSealedAbstractClass
 
-    object CaseObjectEnumCodec extends Codec[CaseObjectEnum] {
-      val identifier = "_t"
-      override def decode(reader: BsonReader, decoderContext: DecoderContext): CaseObjectEnum = {
-        reader.readStartDocument()
-        val enumName = reader.readString(identifier)
-        reader.readEndDocument()
-        enumName match {
-          case "Alpha"   => CaseObjectEnum.Alpha
-          case "Bravo"   => CaseObjectEnum.Bravo
-          case "Charlie" => CaseObjectEnum.Charlie
-          case _         => throw new BsonInvalidOperationException(s"$enumName is an invalid value for a MyEnum object")
-        }
-      }
-
-      override def encode(writer: BsonWriter, value: CaseObjectEnum, encoderContext: EncoderContext): Unit = {
-        val name = value match {
-          case CaseObjectEnum.Alpha   => "Alpha"
-          case CaseObjectEnum.Bravo   => "Bravo"
-          case CaseObjectEnum.Charlie => "Charlie"
-        }
-        writer.writeStartDocument()
-        writer.writeString(identifier, name)
-        writer.writeEndDocument()
-      }
-
-      override def getEncoderClass: Class[CaseObjectEnum] = CaseObjectEnum.getClass.asInstanceOf[Class[CaseObjectEnum]]
-    }
-  }
-  case class ContainsMyEnum(myEnum: CaseObjectEnum)
+  sealed trait SingleSealedTrait
+  case class SingleSealedTraitImpl() extends SingleSealedTrait
 
   "Macros" should "be able to round trip simple case classes" in {
     roundTrip(Empty(), "{}", classOf[Empty])
@@ -365,8 +329,8 @@ class MacrosSpec extends BaseSpec {
 
   it should "be able to round trip nested case classes in maps" in {
     roundTrip(
-      ContainsMapOfCaseClasses("Bob", Map("mother" -> Person("Jane", "Jones"))),
-      """{name: "Bob", friends: {mother: {firstName: "Jane", lastName: "Jones"}}}""",
+      ContainsMapOfCaseClasses("Bob", Map("name" -> Person("Jane", "Jones"))),
+      """{name: "Bob", friends: {name: {firstName: "Jane", lastName: "Jones"}}}""",
       classOf[ContainsMapOfCaseClasses],
       classOf[Person]
     )
@@ -520,6 +484,16 @@ class MacrosSpec extends BaseSpec {
     )
   }
 
+  it should "write the type of sealed classes and traits with only one subclass" in {
+    roundTrip(SingleSealedClassImpl(), """{ "_t" : "SingleSealedClassImpl" }""".stripMargin, classOf[SingleSealedClass])
+    roundTrip(
+      SingleSealedAbstractClassImpl(),
+      """{ "_t" : "SingleSealedAbstractClassImpl" }""".stripMargin,
+      classOf[SingleSealedAbstractClass]
+    )
+    roundTrip(SingleSealedTraitImpl(), """{ "_t" : "SingleSealedTraitImpl" }""".stripMargin, classOf[SingleSealedTrait])
+  }
+
   it should "support optional values in ADT sealed classes" in {
     val nodeA = Node("nodeA", None)
     val nodeB = Node("nodeB", Some(nodeA))
@@ -594,6 +568,19 @@ class MacrosSpec extends BaseSpec {
     )
   }
 
+  it should "support case object enum types" in {
+    roundTrip(Alpha, """{_t:"Alpha"}""", classOf[CaseObjectEnum])
+    roundTrip(Bravo, """{_t:"Bravo"}""", classOf[CaseObjectEnum])
+    roundTrip(Charlie, """{_t:"Charlie"}""", classOf[CaseObjectEnum])
+
+    roundTrip(
+      ContainsEnumADT("Bob", Alpha),
+      """{name:"Bob", enum:{_t:"Alpha"}}""",
+      classOf[ContainsEnumADT],
+      classOf[CaseObjectEnum]
+    )
+  }
+
   it should "support extra fields in the document" in {
     val json =
       """{firstName: "Bob", lastName: "Jones", address: {number: 1, street: "Acacia Avenue"}, aliases: ["Robert", "Rob"]}"""
@@ -641,12 +628,6 @@ class MacrosSpec extends BaseSpec {
   it should "not compile if there are no concrete implementations of a sealed class or trait" in {
     "Macros.createCodecProvider(classOf[NotImplementedSealedClass])" shouldNot compile
     "Macros.createCodecProvider(classOf[NotImplementedSealedTrait])" shouldNot compile
-    "Macros.createCodecProvider(classOf[SealedClassCaseObject])" shouldNot compile
-  }
-
-  it should "not compile if passing a case object" in {
-    "Macros.createCodecProvider(classOf[CaseObjectEnum])" shouldNot compile
-    "Macros.createCodecProvider(CaseObjectEnum.Alpha.getClass)" shouldNot compile
   }
 
   it should "error when reading unexpected lists" in {

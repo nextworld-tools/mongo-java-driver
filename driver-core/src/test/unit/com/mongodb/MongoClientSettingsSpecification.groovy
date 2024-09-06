@@ -19,11 +19,14 @@ package com.mongodb
 import com.mongodb.connection.ClusterConnectionMode
 import com.mongodb.connection.ClusterSettings
 import com.mongodb.connection.ConnectionPoolSettings
+import com.mongodb.connection.ProxySettings
 import com.mongodb.connection.ServerSettings
 import com.mongodb.connection.SocketSettings
 import com.mongodb.connection.SslSettings
-import com.mongodb.connection.netty.NettyStreamFactoryFactory
+import com.mongodb.connection.TransportSettings
 import com.mongodb.event.CommandListener
+import com.mongodb.spi.dns.DnsClient
+import com.mongodb.spi.dns.InetAddressResolver
 import org.bson.UuidRepresentation
 import org.bson.codecs.configuration.CodecRegistry
 import spock.lang.Specification
@@ -47,15 +50,21 @@ class MongoClientSettingsSpecification extends Specification {
         settings.getReadPreference() == ReadPreference.primary()
         settings.getCommandListeners().isEmpty()
         settings.getApplicationName() == null
+        settings.getLoggerSettings() == LoggerSettings.builder().build()
         settings.clusterSettings == ClusterSettings.builder().build()
         settings.connectionPoolSettings == ConnectionPoolSettings.builder().build()
         settings.socketSettings == SocketSettings.builder().build()
+        settings.socketSettings.proxySettings == ProxySettings.builder().build()
         settings.heartbeatSocketSettings == SocketSettings.builder().readTimeout(10000, TimeUnit.MILLISECONDS).build()
         settings.serverSettings == ServerSettings.builder().build()
-        settings.streamFactoryFactory == null
+        settings.transportSettings == null
         settings.compressorList == []
         settings.credential == null
         settings.uuidRepresentation == UuidRepresentation.UNSPECIFIED
+        settings.contextProvider == null
+        settings.dnsClient == null
+        settings.inetAddressResolver == null
+        settings.getTimeout(TimeUnit.MILLISECONDS) == null
     }
 
     @SuppressWarnings('UnnecessaryObjectReferences')
@@ -89,7 +98,7 @@ class MongoClientSettingsSpecification extends Specification {
         thrown(IllegalArgumentException)
 
         when:
-        builder.streamFactoryFactory(null)
+        builder.transportSettings(null)
         then:
         thrown(IllegalArgumentException)
 
@@ -111,11 +120,14 @@ class MongoClientSettingsSpecification extends Specification {
 
     def 'should build with set configuration'() {
         given:
-        def streamFactoryFactory = NettyStreamFactoryFactory.builder().build()
+        def transportSettings = TransportSettings.nettyBuilder().build()
         def credential = MongoCredential.createMongoX509Credential('test')
         def codecRegistry = Stub(CodecRegistry)
         def commandListener = Stub(CommandListener)
         def clusterSettings = ClusterSettings.builder().hosts([new ServerAddress('localhost')]).requiredReplicaSetName('test').build()
+        def contextProvider = Stub(ContextProvider)
+        def dnsClient = Stub(DnsClient)
+        def inetAddressResolver = Stub(InetAddressResolver)
 
         when:
         def settings = MongoClientSettings.builder()
@@ -134,9 +146,13 @@ class MongoClientSettingsSpecification extends Specification {
                         builder.applySettings(clusterSettings)
                     }
                 })
-                .streamFactoryFactory(streamFactoryFactory)
+                .transportSettings(transportSettings)
                 .compressorList([MongoCompressor.createZlibCompressor()])
                 .uuidRepresentation(UuidRepresentation.STANDARD)
+                .contextProvider(contextProvider)
+                .dnsClient(dnsClient)
+                .inetAddressResolver(inetAddressResolver)
+                .timeout(1000, TimeUnit.SECONDS)
                 .build()
 
         then:
@@ -152,9 +168,13 @@ class MongoClientSettingsSpecification extends Specification {
         settings.getCodecRegistry() == codecRegistry
         settings.getCredential() == credential
         settings.getClusterSettings() == clusterSettings
-        settings.getStreamFactoryFactory() == streamFactoryFactory
+        settings.getTransportSettings() == transportSettings
         settings.getCompressorList() == [MongoCompressor.createZlibCompressor()]
         settings.getUuidRepresentation() == UuidRepresentation.STANDARD
+        settings.getContextProvider() == contextProvider
+        settings.getDnsClient() == dnsClient
+        settings.getInetAddressResolver() == inetAddressResolver
+        settings.getTimeout(TimeUnit.MILLISECONDS) == 1_000_000
     }
 
     def 'should be easy to create new settings from existing'() {
@@ -169,6 +189,9 @@ class MongoClientSettingsSpecification extends Specification {
         def codecRegistry = Stub(CodecRegistry)
         def commandListener = Stub(CommandListener)
         def compressorList = [MongoCompressor.createZlibCompressor()]
+        def contextProvider = Stub(ContextProvider)
+        def dnsClient = Stub(DnsClient)
+        def inetAddressResolver = Stub(InetAddressResolver)
 
         settings = MongoClientSettings.builder()
                 .heartbeatConnectTimeoutMS(24000)
@@ -176,20 +199,24 @@ class MongoClientSettingsSpecification extends Specification {
                 .readPreference(ReadPreference.secondary())
                 .writeConcern(WriteConcern.JOURNALED)
                 .retryWrites(true)
-                .retryReads(false)
+                .retryReads(true)
                 .readConcern(ReadConcern.LOCAL)
                 .applicationName('app1')
                 .addCommandListener(commandListener)
-                .applyToClusterSettings(new Block<ClusterSettings.Builder>() {
-                    @Override
-                    void apply(final ClusterSettings.Builder builder) {
-                           builder.hosts([new ServerAddress('localhost')])
-                                   .requiredReplicaSetName('test')
-                    }
-                })
+                .applyToLoggerSettings { LoggerSettings.Builder builder ->
+                    builder.maxDocumentLength(10)
+                }
+                .applyToClusterSettings { ClusterSettings.Builder builder ->
+                    builder.hosts([new ServerAddress('localhost')])
+                            .requiredReplicaSetName('test')
+                }
                 .credential(credential)
                 .codecRegistry(codecRegistry)
                 .compressorList(compressorList)
+                .contextProvider(contextProvider)
+                .dnsClient(dnsClient)
+                .inetAddressResolver(inetAddressResolver)
+                .timeout(0, TimeUnit.SECONDS)
                 .build()
 
         then:
@@ -216,6 +243,30 @@ class MongoClientSettingsSpecification extends Specification {
 
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def 'should throw an exception if the timeout is invalid'() {
+        given:
+        def builder = MongoClientSettings.builder()
+
+        when:
+        builder.timeout(500, TimeUnit.NANOSECONDS)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        builder.timeout(-1, TimeUnit.SECONDS)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        def connectionString = new ConnectionString('mongodb://localhost/?timeoutMS=-1')
+        builder.applyConnectionString(connectionString).build()
+
+        then:
+        thrown(IllegalStateException)
     }
 
     def 'should add command listeners'() {
@@ -285,6 +336,11 @@ class MongoClientSettingsSpecification extends Specification {
                 + '&readConcernLevel=majority'
                 + '&compressors=zlib&zlibCompressionLevel=5'
                 + '&uuidRepresentation=standard'
+                + '&timeoutMS=10000'
+                + '&proxyHost=proxy.com'
+                + '&proxyPort=1080'
+                + '&proxyUsername=username'
+                + '&proxyPassword=password'
         )
         MongoClientSettings settings = MongoClientSettings.builder().applyConnectionString(connectionString).build()
         MongoClientSettings expected = MongoClientSettings.builder()
@@ -319,6 +375,12 @@ class MongoClientSettingsSpecification extends Specification {
             void apply(final SocketSettings.Builder builder) {
                 builder.connectTimeout(2500, TimeUnit.MILLISECONDS)
                         .readTimeout(5500, TimeUnit.MILLISECONDS)
+                        .applyToProxySettings {
+                            it.host('proxy.com')
+                            it.port(1080)
+                            it.username('username')
+                            it.password('password')
+                        }
             }
         })
             .applyToSslSettings(new Block<SslSettings.Builder>() {
@@ -337,6 +399,7 @@ class MongoClientSettingsSpecification extends Specification {
             .retryWrites(true)
             .retryReads(true)
             .uuidRepresentation(UuidRepresentation.STANDARD)
+            .timeout(10000, TimeUnit.MILLISECONDS)
             .build()
 
         then:
@@ -376,6 +439,12 @@ class MongoClientSettingsSpecification extends Specification {
             void apply(final SocketSettings.Builder builder) {
                 builder.connectTimeout(2500, TimeUnit.MILLISECONDS)
                         .readTimeout(5500, TimeUnit.MILLISECONDS)
+                        .applyToProxySettings {
+                            it.host('proxy.com')
+                            it.port(1080)
+                            it.username('username')
+                            it.password('password')
+                        }
             }
         })
                 .applyToSslSettings(new Block<SslSettings.Builder>() {
@@ -427,6 +496,31 @@ class MongoClientSettingsSpecification extends Specification {
                 .build()
     }
 
+    def 'should use the proxy settings for the heartbeat settings'() {
+        when:
+        def settings = MongoClientSettings.builder().applyToSocketSettings { SocketSettings.Builder builder ->
+            builder.connectTimeout(42, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .applyToProxySettings {
+                        it.host('proxy.com')
+                        it.port(1080)
+                        it.username('username')
+                        it.password('password')
+                    }
+        }.build()
+
+        then:
+        settings.getHeartbeatSocketSettings() == SocketSettings.builder().connectTimeout(42, TimeUnit.SECONDS)
+                .readTimeout(42, TimeUnit.SECONDS)
+                .applyToProxySettings {
+                    it.host('proxy.com')
+                    it.port(1080)
+                    it.username('username')
+                    it.password('password')
+                }
+                .build()
+    }
+
     def 'should use the configured heartbeat timeouts for the heartbeat settings'() {
         when:
         def settings = MongoClientSettings.builder()
@@ -457,11 +551,11 @@ class MongoClientSettingsSpecification extends Specification {
         // A regression test so that if anymore fields are added then the builder(final MongoClientSettings settings) should be updated
         def actual = MongoClientSettings.Builder.declaredFields.grep {  !it.synthetic } *.name.sort()
         def expected = ['applicationName', 'autoEncryptionSettings', 'clusterSettingsBuilder', 'codecRegistry', 'commandListeners',
-                        'compressorList', 'connectionPoolSettingsBuilder', 'credential',
-                        'heartbeatConnectTimeoutMS', 'heartbeatSocketTimeoutMS',
+                        'compressorList', 'connectionPoolSettingsBuilder', 'contextProvider', 'credential', 'dnsClient',
+                        'heartbeatConnectTimeoutMS', 'heartbeatSocketTimeoutMS', 'inetAddressResolver', 'loggerSettingsBuilder',
                         'readConcern', 'readPreference', 'retryReads',
                         'retryWrites', 'serverApi', 'serverSettingsBuilder', 'socketSettingsBuilder', 'sslSettingsBuilder',
-                        'streamFactoryFactory', 'uuidRepresentation', 'writeConcern']
+                        'timeoutMS', 'transportSettings', 'uuidRepresentation', 'writeConcern']
 
         then:
         actual == expected
@@ -472,11 +566,12 @@ class MongoClientSettingsSpecification extends Specification {
         // A regression test so that if anymore methods are added then the builder(final MongoClientSettings settings) should be updated
         def actual = MongoClientSettings.Builder.declaredMethods.grep {  !it.synthetic } *.name.sort()
         def expected = ['addCommandListener', 'applicationName', 'applyConnectionString', 'applyToClusterSettings',
-                        'applyToConnectionPoolSettings', 'applyToServerSettings', 'applyToSocketSettings', 'applyToSslSettings',
-                        'autoEncryptionSettings', 'build', 'codecRegistry', 'commandListenerList', 'compressorList', 'credential',
-                        'heartbeatConnectTimeoutMS', 'heartbeatSocketTimeoutMS', 'readConcern', 'readPreference', 'retryReads',
-                        'retryWrites', 'serverApi', 'streamFactoryFactory', 'uuidRepresentation',
-                        'writeConcern']
+                        'applyToConnectionPoolSettings', 'applyToLoggerSettings', 'applyToServerSettings', 'applyToSocketSettings',
+                        'applyToSslSettings', 'autoEncryptionSettings', 'build', 'codecRegistry', 'commandListenerList',
+                        'compressorList', 'contextProvider', 'credential', 'dnsClient', 'heartbeatConnectTimeoutMS',
+                        'heartbeatSocketTimeoutMS', 'inetAddressResolver', 'readConcern', 'readPreference', 'retryReads', 'retryWrites',
+                        'serverApi', 'timeout', 'transportSettings', 'uuidRepresentation', 'writeConcern']
+
         then:
         actual == expected
     }

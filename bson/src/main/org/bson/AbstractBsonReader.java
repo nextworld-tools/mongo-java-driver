@@ -180,14 +180,14 @@ public abstract class AbstractBsonReader implements BsonReader {
     protected abstract Decimal128 doReadDecimal128();
 
     /**
-     * Handles the logic to read Javascript functions
+     * Handles the logic to read JavaScript functions
      *
      * @return the String value
      */
     protected abstract String doReadJavaScript();
 
     /**
-     * Handles the logic to read scoped Javascript functions
+     * Handles the logic to read scoped JavaScript functions
      *
      * @return the String value
      */
@@ -321,7 +321,7 @@ public abstract class AbstractBsonReader implements BsonReader {
     @Override
     public void readEndArray() {
         if (isClosed()) {
-            throw new IllegalStateException("BSONBinaryWriter");
+            throw new IllegalStateException("BsonReader is closed");
         }
         if (getContext().getContextType() != BsonContextType.ARRAY) {
             throwInvalidContextType("readEndArray", getContext().getContextType(), BsonContextType.ARRAY);
@@ -341,7 +341,7 @@ public abstract class AbstractBsonReader implements BsonReader {
     @Override
     public void readEndDocument() {
         if (isClosed()) {
-            throw new IllegalStateException("BSONBinaryWriter");
+            throw new IllegalStateException("BsonReader is closed");
         }
         if (getContext().getContextType() != BsonContextType.DOCUMENT && getContext().getContextType() != BsonContextType.SCOPE_DOCUMENT) {
             throwInvalidContextType("readEndDocument",
@@ -715,7 +715,7 @@ public abstract class AbstractBsonReader implements BsonReader {
      */
     protected void checkPreconditions(final String methodName, final BsonType type) {
         if (isClosed()) {
-            throw new IllegalStateException("BsonWriter is closed");
+            throw new IllegalStateException("BsonReader is closed");
         }
 
         verifyBSONType(methodName, type);
@@ -771,6 +771,9 @@ public abstract class AbstractBsonReader implements BsonReader {
         }
     }
 
+    /**
+     * An implementation of {@code BsonReaderMark}.
+     */
     protected class Mark implements BsonReaderMark {
         private final State state;
         private final Context parentContext;
@@ -778,14 +781,27 @@ public abstract class AbstractBsonReader implements BsonReader {
         private final BsonType currentBsonType;
         private final String currentName;
 
+        /**
+         * Gets the parent context.
+         *
+         * @return the parent context
+         */
         protected Context getParentContext() {
             return parentContext;
         }
 
+        /**
+         * Gets the context type.
+         *
+         * @return the context type
+         */
         protected BsonContextType getContextType() {
             return contextType;
         }
 
+        /**
+         * Construct an instance.
+         */
         protected Mark() {
             state = AbstractBsonReader.this.state;
             parentContext = AbstractBsonReader.this.context.parentContext;
@@ -794,6 +810,7 @@ public abstract class AbstractBsonReader implements BsonReader {
             currentName = AbstractBsonReader.this.currentName;
         }
 
+        @Override
         public void reset() {
             AbstractBsonReader.this.state = state;
             AbstractBsonReader.this.currentBsonType = currentBsonType;

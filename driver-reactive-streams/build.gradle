@@ -21,7 +21,7 @@ dependencies {
     api project(path: ':bson', configuration: 'default')
     api project(path: ':driver-core', configuration: 'default')
 
-    api 'org.reactivestreams:reactive-streams:1.0.2'
+    api 'org.reactivestreams:reactive-streams:1.0.4'
     implementation platform("io.projectreactor:reactor-bom:$projectReactorVersion")
     implementation 'io.projectreactor:reactor-core'
 
@@ -29,13 +29,20 @@ dependencies {
     testImplementation project(':driver-sync')
     testImplementation project(':driver-sync').sourceSets.test.output
     testImplementation project(':driver-core').sourceSets.test.output
-    testImplementation 'org.reactivestreams:reactive-streams-tck:1.0.2'
+    testImplementation 'org.reactivestreams:reactive-streams-tck:1.0.4'
     testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'org.mockito:mockito-junit-jupiter:3.5.13'
+    if ('8'.equals(findProperty("javaVersion"))) {
+        testImplementation 'org.mockito:mockito-junit-jupiter:4.6.1'
+    } else {
+        testImplementation 'org.mockito:mockito-junit-jupiter:5.11.0'
+    }
+
+    testRuntimeOnly project(path: ':driver-core', configuration: 'consumableTestRuntimeOnly')
 }
 
 sourceSets {
     test.groovy.srcDirs += ['src/examples']
+    test.java.srcDirs += ['src/test/tck']
 }
 
 test {
@@ -50,10 +57,10 @@ task tckTest(type: Test) {
     classpath = sourceSets.test.runtimeClasspath
     testClassesDirs = sourceSets.test.output.classesDirs
 
-    binResultsDir = file("$buildDir/$name-results/binary")
+    binaryResultsDirectory.set(file("$buildDir/$name-results/binary"))
     reports {
         html.destination = file("$buildDir/reports/$name")
-        junitXml.destination = binResultsDir.parentFile
+        junitXml.destination = file("$buildDir/$name-results")
     }
 
     maxParallelForks = 1
@@ -67,9 +74,7 @@ afterEvaluate {
     jar.manifest.attributes['Automatic-Module-Name'] = 'org.mongodb.driver.reactivestreams'
     jar.manifest.attributes['Bundle-SymbolicName'] = 'org.mongodb.driver-reactivestreams'
     jar.manifest.attributes['Import-Package'] = [
-            'org.bson.*',
             'com.mongodb.crypt.capi.*;resolution:=optional',
-            'com.mongodb.*',
-            'reactor.core.*',
+            '*',
     ].join(',')
 }

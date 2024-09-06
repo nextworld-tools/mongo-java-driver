@@ -16,34 +16,31 @@
 
 package com.mongodb;
 
+import com.mongodb.annotations.Alpha;
 import com.mongodb.annotations.Immutable;
 import com.mongodb.annotations.NotThreadSafe;
+import com.mongodb.annotations.Reason;
 import com.mongodb.connection.ClusterConnectionMode;
 import com.mongodb.connection.ConnectionPoolSettings;
-import com.mongodb.connection.ServerSettings;
-import com.mongodb.connection.SocketSettings;
-import com.mongodb.connection.SslSettings;
 import com.mongodb.event.ClusterListener;
 import com.mongodb.event.CommandListener;
+import com.mongodb.event.ConnectionCreatedEvent;
 import com.mongodb.event.ConnectionPoolListener;
+import com.mongodb.event.ConnectionReadyEvent;
 import com.mongodb.event.ServerListener;
 import com.mongodb.event.ServerMonitorListener;
 import com.mongodb.lang.Nullable;
-import com.mongodb.selector.CompositeServerSelector;
 import com.mongodb.selector.ServerSelector;
 import org.bson.UuidRepresentation;
 import org.bson.codecs.configuration.CodecRegistry;
 
 import javax.net.ssl.SSLContext;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
-import static com.mongodb.assertions.Assertions.isTrueArgument;
 import static com.mongodb.assertions.Assertions.notNull;
-import static java.util.Collections.unmodifiableList;
+import static java.lang.Math.toIntExact;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
@@ -54,130 +51,16 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  */
 @Immutable
 public class MongoClientOptions {
-
-    private final String applicationName;
-    private final List<MongoCompressor> compressorList;
-    private final ReadPreference readPreference;
-    private final WriteConcern writeConcern;
-    private final boolean retryWrites;
-    private final boolean retryReads;
-    private final ReadConcern readConcern;
-    private final CodecRegistry codecRegistry;
-    private final UuidRepresentation uuidRepresentation;
-    private final ServerSelector serverSelector;
-
-    private final int minConnectionsPerHost;
-    private final int maxConnectionsPerHost;
-    private final int serverSelectionTimeout;
-    private final int maxWaitTime;
-    private final int maxConnectionIdleTime;
-    private final int maxConnectionLifeTime;
-
-    private final int connectTimeout;
-    private final int socketTimeout;
-    private final boolean sslEnabled;
-    private final boolean sslInvalidHostNameAllowed;
-    private final SSLContext sslContext;
-    private final int heartbeatFrequency;
-    private final int minHeartbeatFrequency;
-    private final int heartbeatConnectTimeout;
-    private final int heartbeatSocketTimeout;
-    private final int localThreshold;
-
-    private final String requiredReplicaSetName;
+    private final MongoClientSettings wrapped;
     private final DBDecoderFactory dbDecoderFactory;
     private final DBEncoderFactory dbEncoderFactory;
     private final boolean cursorFinalizerEnabled;
-    private final ConnectionPoolSettings connectionPoolSettings;
-    private final SocketSettings socketSettings;
-    private final ServerSettings serverSettings;
-    private final SocketSettings heartbeatSocketSettings;
-    private final SslSettings sslSettings;
-
-    private final List<ClusterListener> clusterListeners;
-    private final List<CommandListener> commandListeners;
-
-    private final AutoEncryptionSettings autoEncryptionSettings;
-    private final ServerApi serverApi;
 
     private MongoClientOptions(final Builder builder) {
-        applicationName = builder.applicationName;
-        compressorList = builder.compressorList;
-        minConnectionsPerHost = builder.minConnectionsPerHost;
-        maxConnectionsPerHost = builder.maxConnectionsPerHost;
-        serverSelectionTimeout = builder.serverSelectionTimeout;
-        maxWaitTime = builder.maxWaitTime;
-        maxConnectionIdleTime = builder.maxConnectionIdleTime;
-        maxConnectionLifeTime = builder.maxConnectionLifeTime;
-        connectTimeout = builder.connectTimeout;
-        socketTimeout = builder.socketTimeout;
-        readPreference = builder.readPreference;
-        writeConcern = builder.writeConcern;
-        retryWrites = builder.retryWrites;
-        retryReads = builder.retryReads;
-        readConcern = builder.readConcern;
-        codecRegistry = builder.codecRegistry;
-        uuidRepresentation = builder.uuidRepresentation;
-        serverSelector = builder.serverSelector;
-        sslEnabled = builder.sslEnabled;
-        sslInvalidHostNameAllowed = builder.sslInvalidHostNameAllowed;
-        sslContext = builder.sslContext;
-        heartbeatFrequency = builder.heartbeatFrequency;
-        minHeartbeatFrequency = builder.minHeartbeatFrequency;
-        heartbeatConnectTimeout = builder.heartbeatConnectTimeout;
-        heartbeatSocketTimeout = builder.heartbeatSocketTimeout;
-        localThreshold = builder.localThreshold;
-        requiredReplicaSetName = builder.requiredReplicaSetName;
+        wrapped = builder.wrapped.build();
         dbDecoderFactory = builder.dbDecoderFactory;
         dbEncoderFactory = builder.dbEncoderFactory;
         cursorFinalizerEnabled = builder.cursorFinalizerEnabled;
-
-        clusterListeners = unmodifiableList(builder.clusterListeners);
-        commandListeners = unmodifiableList(builder.commandListeners);
-        autoEncryptionSettings = builder.autoEncryptionSettings;
-        serverApi = builder.serverApi;
-
-        ConnectionPoolSettings.Builder connectionPoolSettingsBuilder = ConnectionPoolSettings.builder()
-                .minSize(getMinConnectionsPerHost())
-                .maxSize(getConnectionsPerHost())
-                .maxWaitTime(getMaxWaitTime(), MILLISECONDS)
-                .maxConnectionIdleTime(getMaxConnectionIdleTime(), MILLISECONDS)
-                .maxConnectionLifeTime(getMaxConnectionLifeTime(), MILLISECONDS);
-
-        for (ConnectionPoolListener connectionPoolListener : builder.connectionPoolListeners) {
-            connectionPoolSettingsBuilder.addConnectionPoolListener(connectionPoolListener);
-        }
-
-        connectionPoolSettings = connectionPoolSettingsBuilder.build();
-
-        socketSettings = SocketSettings.builder()
-                .connectTimeout(getConnectTimeout(), MILLISECONDS)
-                .readTimeout(getSocketTimeout(), MILLISECONDS)
-                .build();
-        heartbeatSocketSettings = SocketSettings.builder()
-                .connectTimeout(getHeartbeatConnectTimeout(), MILLISECONDS)
-                .readTimeout(getHeartbeatSocketTimeout(), MILLISECONDS)
-                .build();
-
-        ServerSettings.Builder serverSettingsBuilder = ServerSettings.builder()
-                .heartbeatFrequency(getHeartbeatFrequency(), MILLISECONDS)
-                .minHeartbeatFrequency(getMinHeartbeatFrequency(), MILLISECONDS);
-
-        for (ServerListener serverListener : builder.serverListeners) {
-            serverSettingsBuilder.addServerListener(serverListener);
-        }
-
-        for (ServerMonitorListener serverMonitorListener : builder.serverMonitorListeners) {
-            serverSettingsBuilder.addServerMonitorListener(serverMonitorListener);
-        }
-
-        serverSettings = serverSettingsBuilder.build();
-
-        sslSettings = SslSettings.builder()
-                .enabled(sslEnabled)
-                .invalidHostNameAllowed(sslInvalidHostNameAllowed)
-                .context(sslContext)
-                .build();
     }
 
     /**
@@ -227,44 +110,18 @@ public class MongoClientOptions {
                                                      @Nullable final String srvHost,
                                                      final ClusterConnectionMode clusterConnectionMode,
                                                      @Nullable final MongoCredential credential) {
-        MongoClientSettings.Builder mongoClientSettingsBuilder = MongoClientSettings.builder();
+        MongoClientSettings.Builder mongoClientSettingsBuilder = MongoClientSettings.builder(wrapped);
 
         Optional.ofNullable(credential).ifPresent(mongoClientSettingsBuilder::credential);
-        Optional.ofNullable(autoEncryptionSettings).ifPresent(mongoClientSettingsBuilder::autoEncryptionSettings);
-        Optional.ofNullable(serverApi).ifPresent(mongoClientSettingsBuilder::serverApi);
-        commandListeners.forEach(mongoClientSettingsBuilder::addCommandListener);
-
-        mongoClientSettingsBuilder
-                .writeConcern(writeConcern)
-                .readConcern(readConcern)
-                .applicationName(applicationName)
-                .readPreference(readPreference)
-                .codecRegistry(codecRegistry)
-                .compressorList(compressorList)
-                .uuidRepresentation(uuidRepresentation)
-                .retryReads(retryReads)
-                .retryWrites(retryWrites)
-                .applyToServerSettings(builder -> builder.applySettings(serverSettings))
-                .applyToConnectionPoolSettings(builder -> builder.applySettings(connectionPoolSettings))
-                .applyToSocketSettings(builder -> builder.applySettings(socketSettings))
-                .heartbeatConnectTimeoutMS(heartbeatConnectTimeout)
-                .heartbeatSocketTimeoutMS(heartbeatSocketTimeout)
-                .applyToSslSettings(builder -> builder.applySettings(sslSettings))
-                .applyToClusterSettings(builder -> {
-                    builder.mode(clusterConnectionMode);
-                    if (srvHost != null) {
-                        builder.srvHost(srvHost);
-                    }
-                    if (hosts != null) {
-                        builder.hosts(hosts);
-                    }
-                    builder.serverSelectionTimeout(serverSelectionTimeout, MILLISECONDS);
-                    builder.localThreshold(getLocalThreshold(), MILLISECONDS);
-                    clusterListeners.forEach(builder::addClusterListener);
-                    builder.requiredReplicaSetName(requiredReplicaSetName);
-                    builder.serverSelector(serverSelector);
-                });
-
+        mongoClientSettingsBuilder.applyToClusterSettings(builder -> {
+            builder.mode(clusterConnectionMode);
+            if (srvHost != null) {
+                builder.srvHost(srvHost);
+            }
+            if (hosts != null) {
+                builder.hosts(hosts);
+            }
+        });
         return mongoClientSettingsBuilder.build();
     }
 
@@ -280,7 +137,7 @@ public class MongoClientOptions {
      */
     @Nullable
     public String getApplicationName() {
-        return applicationName;
+        return wrapped.getApplicationName();
     }
 
     /**
@@ -294,7 +151,7 @@ public class MongoClientOptions {
      * @since 3.6
      */
     public List<MongoCompressor> getCompressorList() {
-        return compressorList;
+        return wrapped.getCompressorList();
     }
 
     /**
@@ -303,10 +160,10 @@ public class MongoClientOptions {
      *
      * <p>Default is 100.</p>
      *
-     * @return the maximum size of the connection pool per host
+     * @return the maximum size of the connection pool per host; if 0, then there is no limit.
      */
     public int getConnectionsPerHost() {
-        return maxConnectionsPerHost;
+        return wrapped.getConnectionPoolSettings().getMaxSize();
     }
 
     /**
@@ -318,7 +175,7 @@ public class MongoClientOptions {
      * @return the minimum size of the connection pool per host
      */
     public int getMinConnectionsPerHost() {
-        return minConnectionsPerHost;
+        return wrapped.getConnectionPoolSettings().getMinSize();
     }
 
     /**
@@ -331,7 +188,7 @@ public class MongoClientOptions {
      * @return the server selection timeout in milliseconds.
      */
     public int getServerSelectionTimeout() {
-        return serverSelectionTimeout;
+        return toIntExact(wrapped.getClusterSettings().getServerSelectionTimeout(MILLISECONDS));
     }
 
     /**
@@ -342,7 +199,7 @@ public class MongoClientOptions {
      * @return the maximum wait time.
      */
     public int getMaxWaitTime() {
-        return maxWaitTime;
+        return toIntExact(wrapped.getConnectionPoolSettings().getMaxWaitTime(MILLISECONDS));
     }
 
     /**
@@ -355,7 +212,7 @@ public class MongoClientOptions {
      * @since 2.12
      */
     public int getMaxConnectionIdleTime() {
-        return maxConnectionIdleTime;
+        return toIntExact(wrapped.getConnectionPoolSettings().getMaxConnectionIdleTime(MILLISECONDS));
     }
 
     /**
@@ -368,7 +225,49 @@ public class MongoClientOptions {
      * @since 2.12
      */
     public int getMaxConnectionLifeTime() {
-        return maxConnectionLifeTime;
+        return toIntExact(wrapped.getConnectionPoolSettings().getMaxConnectionLifeTime(MILLISECONDS));
+    }
+
+    /**
+     * The maximum number of connections a pool may be establishing concurrently.
+     * Establishment of a connection is a part of its life cycle
+     * starting after a {@link ConnectionCreatedEvent} and ending before a {@link ConnectionReadyEvent}.
+     * <p>
+     * Default is 2.</p>
+     *
+     * @return The maximum number of connections a pool may be establishing concurrently.
+     * @see Builder#maxConnecting(int)
+     * @see ConnectionPoolSettings#getMaxConnecting()
+     * @since 4.4
+     */
+    public int getMaxConnecting() {
+        return wrapped.getConnectionPoolSettings().getMaxConnecting();
+    }
+
+    /**
+     * Returns the period of time to wait before running the first maintenance job on each connection pool.
+     * <p>
+     * Default is 0 ms.</p>
+     *
+     * @return the time period to wait in milliseconds
+     * @see ConnectionPoolSettings#getMaintenanceInitialDelay
+     * @since 4.7
+     */
+    public long getMaintenanceInitialDelay() {
+        return wrapped.getConnectionPoolSettings().getMaintenanceInitialDelay(MILLISECONDS);
+    }
+
+    /**
+     * Returns the time period between runs of the maintenance job on each connection pool.
+     * <p>
+     * Default is 60,000 ms.</p>
+     *
+     * @return the time period between runs of the maintainance job in milliseconds
+     * @see ConnectionPoolSettings#getMaintenanceFrequency
+     * @since 4.7
+     */
+    public long getMaintenanceFrequency() {
+        return wrapped.getConnectionPoolSettings().getMaintenanceFrequency(MILLISECONDS);
     }
 
     /**
@@ -380,11 +279,11 @@ public class MongoClientOptions {
      * @return the socket connect timeout
      */
     public int getConnectTimeout() {
-        return connectTimeout;
+        return wrapped.getSocketSettings().getConnectTimeout(MILLISECONDS);
     }
 
     /**
-     * <p>The socket timeout in milliseconds. It is used for I/O socket read and write operations {@link
+     * <p>The socket timeout in milliseconds. It is used for I/O socket read operations {@link
      * java.net.Socket#setSoTimeout(int)}</p>
      *
      * <p>Default is 0 and means no timeout.</p>
@@ -392,7 +291,7 @@ public class MongoClientOptions {
      * @return the socket timeout, in milliseconds
      */
     public int getSocketTimeout() {
-        return socketTimeout;
+        return wrapped.getSocketSettings().getReadTimeout(MILLISECONDS);
     }
 
     /**
@@ -405,7 +304,7 @@ public class MongoClientOptions {
      * @since 2.12
      */
     public int getHeartbeatFrequency() {
-        return heartbeatFrequency;
+        return toIntExact(wrapped.getServerSettings().getHeartbeatFrequency(MILLISECONDS));
     }
 
     /**
@@ -418,7 +317,7 @@ public class MongoClientOptions {
      * @since 2.13
      */
     public int getMinHeartbeatFrequency() {
-        return minHeartbeatFrequency;
+        return toIntExact(wrapped.getServerSettings().getMinHeartbeatFrequency(MILLISECONDS));
     }
 
     /**
@@ -430,7 +329,7 @@ public class MongoClientOptions {
      * @since 2.12
      */
     public int getHeartbeatConnectTimeout() {
-        return heartbeatConnectTimeout;
+        return wrapped.getHeartbeatSocketSettings().getConnectTimeout(MILLISECONDS);
     }
 
     /**
@@ -442,7 +341,7 @@ public class MongoClientOptions {
      * @since 2.12
      */
     public int getHeartbeatSocketTimeout() {
-        return heartbeatSocketTimeout;
+        return wrapped.getHeartbeatSocketSettings().getReadTimeout(MILLISECONDS);
     }
 
     /**
@@ -463,7 +362,7 @@ public class MongoClientOptions {
      * @since 2.13.0
      */
     public int getLocalThreshold() {
-        return localThreshold;
+        return toIntExact(wrapped.getClusterSettings().getLocalThreshold(MILLISECONDS));
     }
 
     /**
@@ -480,7 +379,7 @@ public class MongoClientOptions {
      */
     @Nullable
     public String getRequiredReplicaSetName() {
-        return requiredReplicaSetName;
+        return wrapped.getClusterSettings().getRequiredReplicaSetName();
     }
 
     /**
@@ -492,7 +391,7 @@ public class MongoClientOptions {
      * @since 3.0
      */
     public boolean isSslEnabled() {
-        return sslEnabled;
+        return wrapped.getSslSettings().isEnabled();
     }
 
     /**
@@ -504,7 +403,7 @@ public class MongoClientOptions {
      * @return true if invalid host names are allowed.
      */
     public boolean isSslInvalidHostNameAllowed() {
-        return sslInvalidHostNameAllowed;
+        return wrapped.getSslSettings().isInvalidHostNameAllowed();
     }
 
     /**
@@ -515,7 +414,7 @@ public class MongoClientOptions {
      */
     @Nullable
     public SSLContext getSslContext() {
-        return sslContext;
+        return wrapped.getSslSettings().getContext();
     }
 
     /**
@@ -527,7 +426,7 @@ public class MongoClientOptions {
      * @see com.mongodb.ReadPreference#primary()
      */
     public ReadPreference getReadPreference() {
-        return readPreference;
+        return wrapped.getReadPreference();
     }
 
     /**
@@ -539,7 +438,7 @@ public class MongoClientOptions {
      * @see WriteConcern#ACKNOWLEDGED
      */
     public WriteConcern getWriteConcern() {
-        return writeConcern;
+        return wrapped.getWriteConcern();
     }
 
     /**
@@ -552,7 +451,7 @@ public class MongoClientOptions {
      * @since 3.6
      */
     public boolean getRetryWrites() {
-        return retryWrites;
+        return wrapped.getRetryWrites();
     }
 
     /**
@@ -563,7 +462,7 @@ public class MongoClientOptions {
      * @since 3.11
      */
     public boolean getRetryReads() {
-        return retryReads;
+        return wrapped.getRetryReads();
     }
 
     /**
@@ -575,7 +474,7 @@ public class MongoClientOptions {
      * @since 3.2
      */
     public ReadConcern getReadConcern() {
-        return readConcern;
+        return wrapped.getReadConcern();
     }
 
     /**
@@ -590,7 +489,7 @@ public class MongoClientOptions {
      * @since 3.0
      */
     public CodecRegistry getCodecRegistry() {
-        return codecRegistry;
+        return wrapped.getCodecRegistry();
     }
 
     /**
@@ -608,7 +507,38 @@ public class MongoClientOptions {
      * @since 3.12
      */
     public UuidRepresentation getUuidRepresentation() {
-        return uuidRepresentation;
+        return wrapped.getUuidRepresentation();
+    }
+
+    /**
+     * Gets the maximum number of hosts to connect to when using SRV protocol.
+     *
+     * @return the maximum number of hosts to connect to when using SRV protocol.  Defaults to null.
+     * @since 4.5
+     */
+    @Nullable
+    public Integer getSrvMaxHosts() {
+        return wrapped.getClusterSettings().getSrvMaxHosts();
+    }
+
+    /**
+     * Gets the SRV service name.
+     *
+     * <p>
+     * The SRV resource record (<a href="https://www.rfc-editor.org/rfc/rfc2782">RFC 2782</a>)
+     * service name, which is limited to 15 characters
+     * (<a href="https://www.rfc-editor.org/rfc/rfc6335#section-5.1">RFC 6335 section 5.1</a>).
+     * If specified, it is combined with the single host name as follows: {@code _srvServiceName._tcp.hostName}.
+     * The combined string is an SRV resource record
+     * name (<a href="https://www.rfc-editor.org/rfc/rfc1035#section-2.3.1">RFC 1035 section 2.3.1</a>), which is limited to 255
+     * characters (<a href="https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4">RFC 1035 section 2.3.4</a>).
+     * </p>
+     *
+     * @return the SRV service name, which defaults to {@code "mongodb"}
+     * @since 4.5
+     */
+    public String getSrvServiceName() {
+        return wrapped.getClusterSettings().getSrvServiceName();
     }
 
     /**
@@ -619,7 +549,39 @@ public class MongoClientOptions {
      */
     @Nullable
     public ServerApi getServerApi() {
-        return serverApi;
+        return wrapped.getServerApi();
+    }
+
+    /**
+     * The time limit for the full execution of an operation in Milliseconds.
+     *
+     * <p>If set the following deprecated options will be ignored:
+     * {@code waitQueueTimeoutMS}, {@code socketTimeoutMS}, {@code wTimeoutMS}, {@code maxTimeMS} and {@code maxCommitTimeMS}</p>
+     *
+     * <ul>
+     *   <li>{@code null} means that the timeout mechanism for operations will defer to using:
+     *    <ul>
+     *        <li>{@code waitQueueTimeoutMS}: The maximum wait time in milliseconds that a thread may wait for a connection to become
+     *        available</li>
+     *        <li>{@code socketTimeoutMS}: How long a send or receive on a socket can take before timing out.</li>
+     *        <li>{@code wTimeoutMS}: How long the server will wait for the write concern to be fulfilled before timing out.</li>
+     *        <li>{@code maxTimeMS}: The cumulative time limit for processing operations on a cursor.
+     *        See: <a href="https://docs.mongodb.com/manual/reference/method/cursor.maxTimeMS">cursor.maxTimeMS</a>.</li>
+     *        <li>{@code maxCommitTimeMS}: The maximum amount of time to allow a single {@code commitTransaction} command to execute.
+     *        See: {@link TransactionOptions#getMaxCommitTime}.</li>
+     *   </ul>
+     *   </li>
+     *   <li>{@code 0} means infinite timeout.</li>
+     *    <li>{@code > 0} The time limit to use for the full execution of an operation.</li>
+     * </ul>
+     *
+     * @return the timeout in milliseconds
+     * @since 5.2
+     */
+    @Alpha(Reason.CLIENT)
+    @Nullable
+    public Long getTimeout() {
+        return wrapped.getTimeout(MILLISECONDS);
     }
 
     /**
@@ -648,7 +610,7 @@ public class MongoClientOptions {
      */
     @Nullable
     public ServerSelector getServerSelector() {
-        return serverSelector;
+        return wrapped.getClusterSettings().getServerSelector();
     }
 
     /**
@@ -658,7 +620,7 @@ public class MongoClientOptions {
      * @since 3.3
      */
     public List<ClusterListener> getClusterListeners() {
-        return clusterListeners;
+        return wrapped.getClusterSettings().getClusterListeners();
     }
 
     /**
@@ -670,7 +632,7 @@ public class MongoClientOptions {
      * @since 3.1
      */
     public List<CommandListener> getCommandListeners() {
-        return commandListeners;
+        return wrapped.getCommandListeners();
     }
 
     /**
@@ -680,7 +642,7 @@ public class MongoClientOptions {
      * @since 3.5
      */
     public List<ConnectionPoolListener> getConnectionPoolListeners() {
-        return connectionPoolSettings.getConnectionPoolListeners();
+        return wrapped.getConnectionPoolSettings().getConnectionPoolListeners();
     }
 
     /**
@@ -690,7 +652,7 @@ public class MongoClientOptions {
      * @since 3.3
      */
     public List<ServerListener> getServerListeners() {
-        return serverSettings.getServerListeners();
+        return wrapped.getServerSettings().getServerListeners();
     }
 
     /**
@@ -700,7 +662,7 @@ public class MongoClientOptions {
      * @since 3.3
      */
     public List<ServerMonitorListener> getServerMonitorListeners() {
-        return serverSettings.getServerMonitorListeners();
+        return wrapped.getServerSettings().getServerMonitorListeners();
     }
 
     /**
@@ -747,27 +709,7 @@ public class MongoClientOptions {
      */
     @Nullable
     public AutoEncryptionSettings getAutoEncryptionSettings() {
-        return autoEncryptionSettings;
-    }
-
-    ConnectionPoolSettings getConnectionPoolSettings() {
-        return connectionPoolSettings;
-    }
-
-    SocketSettings getSocketSettings() {
-        return socketSettings;
-    }
-
-    ServerSettings getServerSettings() {
-        return serverSettings;
-    }
-
-    SocketSettings getHeartbeatSocketSettings() {
-        return heartbeatSocketSettings;
-    }
-
-    SslSettings getSslSettings() {
-        return sslSettings;
+        return wrapped.getAutoEncryptionSettings();
     }
 
     @Override
@@ -778,198 +720,26 @@ public class MongoClientOptions {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-
         MongoClientOptions that = (MongoClientOptions) o;
-
-        if (localThreshold != that.localThreshold) {
-            return false;
-        }
-        if (connectTimeout != that.connectTimeout) {
-            return false;
-        }
-        if (cursorFinalizerEnabled != that.cursorFinalizerEnabled) {
-            return false;
-        }
-        if (minHeartbeatFrequency != that.minHeartbeatFrequency) {
-            return false;
-        }
-        if (heartbeatConnectTimeout != that.heartbeatConnectTimeout) {
-            return false;
-        }
-        if (heartbeatFrequency != that.heartbeatFrequency) {
-            return false;
-        }
-        if (heartbeatSocketTimeout != that.heartbeatSocketTimeout) {
-            return false;
-        }
-        if (maxConnectionIdleTime != that.maxConnectionIdleTime) {
-            return false;
-        }
-        if (maxConnectionLifeTime != that.maxConnectionLifeTime) {
-            return false;
-        }
-        if (maxConnectionsPerHost != that.maxConnectionsPerHost) {
-            return false;
-        }
-        if (serverSelectionTimeout != that.serverSelectionTimeout) {
-            return false;
-        }
-        if (maxWaitTime != that.maxWaitTime) {
-            return false;
-        }
-        if (minConnectionsPerHost != that.minConnectionsPerHost) {
-            return false;
-        }
-        if (socketTimeout != that.socketTimeout) {
-            return false;
-        }
-        if (sslEnabled != that.sslEnabled) {
-            return false;
-        }
-        if (sslInvalidHostNameAllowed != that.sslInvalidHostNameAllowed) {
-            return false;
-        }
-        if (sslContext != null ? !sslContext.equals(that.sslContext) : that.sslContext != null) {
-            return false;
-        }
-        if (dbDecoderFactory != null ? !dbDecoderFactory.equals(that.dbDecoderFactory) : that.dbDecoderFactory != null) {
-            return false;
-        }
-        if (dbEncoderFactory != null ? !dbEncoderFactory.equals(that.dbEncoderFactory) : that.dbEncoderFactory != null) {
-            return false;
-        }
-        if (applicationName != null ? !applicationName.equals(that.applicationName) : that.applicationName != null) {
-            return false;
-        }
-        if (!readPreference.equals(that.readPreference)) {
-            return false;
-        }
-        if (!writeConcern.equals(that.writeConcern)) {
-            return false;
-        }
-        if (retryWrites != that.retryWrites) {
-            return false;
-        }
-        if (retryReads != that.retryReads) {
-            return false;
-        }
-        if (!readConcern.equals(that.readConcern)) {
-            return false;
-        }
-        if (!codecRegistry.equals(that.codecRegistry)) {
-            return false;
-        }
-        if (!uuidRepresentation.equals(that.uuidRepresentation)) {
-            return false;
-        }
-        if (serverSelector != null ? !serverSelector.equals(that.serverSelector) : that.serverSelector != null) {
-            return false;
-        }
-        if (!clusterListeners.equals(that.clusterListeners)) {
-            return false;
-        }
-        if (!commandListeners.equals(that.commandListeners)) {
-            return false;
-        }
-        if (requiredReplicaSetName != null ? !requiredReplicaSetName.equals(that.requiredReplicaSetName)
-                : that.requiredReplicaSetName != null) {
-            return false;
-        }
-        if (!compressorList.equals(that.compressorList)) {
-            return false;
-        }
-        if (autoEncryptionSettings != null ? !autoEncryptionSettings.equals(that.autoEncryptionSettings)
-                : that.autoEncryptionSettings != null) {
-            return false;
-        }
-        if (serverApi != null ? !serverApi.equals(that.serverApi) : that.serverApi != null) {
-            return false;
-        }
-
-        return true;
+        return wrapped.equals(that.wrapped)
+                && cursorFinalizerEnabled == that.cursorFinalizerEnabled
+                && dbDecoderFactory.equals(that.dbDecoderFactory)
+                && dbEncoderFactory.equals(that.dbEncoderFactory);
     }
 
     @Override
     public int hashCode() {
-        int result = (applicationName != null ? applicationName.hashCode() : 0);
-        result = 31 * result + readPreference.hashCode();
-        result = 31 * result + writeConcern.hashCode();
-        result = 31 * result + (retryWrites ? 1 : 0);
-        result = 31 * result + (retryReads ? 1 : 0);
-        result = 31 * result + (readConcern != null ? readConcern.hashCode() : 0);
-        result = 31 * result + codecRegistry.hashCode();
-        result = 31 * result + uuidRepresentation.hashCode();
-        result = 31 * result + (serverSelector != null ? serverSelector.hashCode() : 0);
-        result = 31 * result + clusterListeners.hashCode();
-        result = 31 * result + commandListeners.hashCode();
-        result = 31 * result + minConnectionsPerHost;
-        result = 31 * result + maxConnectionsPerHost;
-        result = 31 * result + serverSelectionTimeout;
-        result = 31 * result + maxWaitTime;
-        result = 31 * result + maxConnectionIdleTime;
-        result = 31 * result + maxConnectionLifeTime;
-        result = 31 * result + connectTimeout;
-        result = 31 * result + socketTimeout;
-        result = 31 * result + (sslEnabled ? 1 : 0);
-        result = 31 * result + (sslInvalidHostNameAllowed ? 1 : 0);
-        result = 31 * result + (sslContext != null ? sslContext.hashCode() : 0);
-        result = 31 * result + heartbeatFrequency;
-        result = 31 * result + minHeartbeatFrequency;
-        result = 31 * result + heartbeatConnectTimeout;
-        result = 31 * result + heartbeatSocketTimeout;
-        result = 31 * result + localThreshold;
-        result = 31 * result + (requiredReplicaSetName != null ? requiredReplicaSetName.hashCode() : 0);
-        result = 31 * result + (dbDecoderFactory != null ? dbDecoderFactory.hashCode() : 0);
-        result = 31 * result + (dbEncoderFactory != null ? dbEncoderFactory.hashCode() : 0);
-        result = 31 * result + (cursorFinalizerEnabled ? 1 : 0);
-        result = 31 * result + compressorList.hashCode();
-        result = 31 * result + (autoEncryptionSettings != null ? autoEncryptionSettings.hashCode() : 0);
-        result = 31 * result + (serverApi != null ? serverApi.hashCode() : 0);
-        return result;
+        return Objects.hash(wrapped, dbDecoderFactory, dbEncoderFactory, cursorFinalizerEnabled);
     }
 
     @Override
     public String toString() {
         return "MongoClientOptions{"
-               + ", applicationName='" + applicationName + '\''
-               + ", compressors='" + compressorList + '\''
-               + ", readPreference=" + readPreference
-               + ", writeConcern=" + writeConcern
-               + ", retryWrites=" + retryWrites
-               + ", retryReads=" + retryReads
-               + ", readConcern=" + readConcern
-               + ", codecRegistry=" + codecRegistry
-                + ", uuidRepresentation=" + uuidRepresentation
-               + ", serverSelector=" + serverSelector
-               + ", clusterListeners=" + clusterListeners
-               + ", commandListeners=" + commandListeners
-               + ", minConnectionsPerHost=" + minConnectionsPerHost
-               + ", maxConnectionsPerHost=" + maxConnectionsPerHost
-               + ", serverSelectionTimeout=" + serverSelectionTimeout
-               + ", maxWaitTime=" + maxWaitTime
-               + ", maxConnectionIdleTime=" + maxConnectionIdleTime
-               + ", maxConnectionLifeTime=" + maxConnectionLifeTime
-               + ", connectTimeout=" + connectTimeout
-               + ", socketTimeout=" + socketTimeout
-               + ", sslEnabled=" + sslEnabled
-               + ", sslInvalidHostNamesAllowed=" + sslInvalidHostNameAllowed
-               + ", sslContext=" + sslContext
-               + ", heartbeatFrequency=" + heartbeatFrequency
-               + ", minHeartbeatFrequency=" + minHeartbeatFrequency
-               + ", heartbeatConnectTimeout=" + heartbeatConnectTimeout
-               + ", heartbeatSocketTimeout=" + heartbeatSocketTimeout
-               + ", localThreshold=" + localThreshold
-               + ", requiredReplicaSetName='" + requiredReplicaSetName + '\''
-               + ", dbDecoderFactory=" + dbDecoderFactory
-               + ", dbEncoderFactory=" + dbEncoderFactory
-               + ", cursorFinalizerEnabled=" + cursorFinalizerEnabled
-               + ", connectionPoolSettings=" + connectionPoolSettings
-               + ", socketSettings=" + socketSettings
-               + ", serverSettings=" + serverSettings
-               + ", heartbeatSocketSettings=" + heartbeatSocketSettings
-               + ", autoEncryptionSettings="  + autoEncryptionSettings
-               + ", serverApi=" + serverApi
-               + '}';
+                + "wrapped=" + wrapped
+                + ", dbDecoderFactory=" + dbDecoderFactory
+                + ", dbEncoderFactory=" + dbEncoderFactory
+                + ", cursorFinalizerEnabled=" + cursorFinalizerEnabled
+                +    '}';
     }
 
     /**
@@ -979,51 +749,16 @@ public class MongoClientOptions {
      */
     @NotThreadSafe
     public static class Builder {
-        private final List<ClusterListener> clusterListeners = new ArrayList<ClusterListener>();
-        private final List<CommandListener> commandListeners = new ArrayList<CommandListener>();
-        private final List<ConnectionPoolListener> connectionPoolListeners = new ArrayList<ConnectionPoolListener>();
-        private final List<ServerListener> serverListeners = new ArrayList<ServerListener>();
-        private final List<ServerMonitorListener> serverMonitorListeners = new ArrayList<ServerMonitorListener>();
-
-        private String applicationName;
-        private List<MongoCompressor> compressorList = Collections.emptyList();
-        private ReadPreference readPreference = ReadPreference.primary();
-        private WriteConcern writeConcern = WriteConcern.ACKNOWLEDGED;
-        private boolean retryWrites = true;
-        private boolean retryReads = true;
-        private ReadConcern readConcern = ReadConcern.DEFAULT;
-        private CodecRegistry codecRegistry = MongoClientSettings.getDefaultCodecRegistry();
-        private UuidRepresentation uuidRepresentation = UuidRepresentation.UNSPECIFIED;
-        private ServerSelector serverSelector;
-        private int minConnectionsPerHost;
-        private int maxConnectionsPerHost = 100;
-        private int serverSelectionTimeout = 1000 * 30;
-        private int maxWaitTime = 1000 * 60 * 2;
-        private int maxConnectionIdleTime;
-        private int maxConnectionLifeTime;
-        private int connectTimeout = 1000 * 10;
-        private int socketTimeout = 0;
-        private boolean sslEnabled = false;
-        private boolean sslInvalidHostNameAllowed = false;
-        private SSLContext sslContext;
-
-        private int heartbeatFrequency = 10000;
-        private int minHeartbeatFrequency = 500;
-        private int heartbeatConnectTimeout = 20000;
-        private int heartbeatSocketTimeout = 20000;
-        private int localThreshold = 15;
-
-        private String requiredReplicaSetName;
+        private final MongoClientSettings.Builder wrapped;
         private DBDecoderFactory dbDecoderFactory = DefaultDBDecoder.FACTORY;
         private DBEncoderFactory dbEncoderFactory = DefaultDBEncoder.FACTORY;
         private boolean cursorFinalizerEnabled = true;
-        private AutoEncryptionSettings autoEncryptionSettings;
-        private ServerApi serverApi;
 
         /**
          * Creates a Builder for MongoClientOptions.
          */
         public Builder() {
+            wrapped = MongoClientSettings.builder();
         }
 
         /**
@@ -1032,82 +767,14 @@ public class MongoClientOptions {
          * @param options create a builder from existing options
          */
         public Builder(final MongoClientOptions options) {
-            applicationName = options.getApplicationName();
-            compressorList = options.getCompressorList();
-            minConnectionsPerHost = options.getMinConnectionsPerHost();
-            maxConnectionsPerHost = options.getConnectionsPerHost();
-            serverSelectionTimeout = options.getServerSelectionTimeout();
-            maxWaitTime = options.getMaxWaitTime();
-            maxConnectionIdleTime = options.getMaxConnectionIdleTime();
-            maxConnectionLifeTime = options.getMaxConnectionLifeTime();
-            connectTimeout = options.getConnectTimeout();
-            socketTimeout = options.getSocketTimeout();
-            readPreference = options.getReadPreference();
-            writeConcern = options.getWriteConcern();
-            retryWrites = options.getRetryWrites();
-            retryReads = options.getRetryReads();
-            readConcern = options.getReadConcern();
-            codecRegistry = options.getCodecRegistry();
-            uuidRepresentation = options.getUuidRepresentation();
-            serverSelector = options.getServerSelector();
-            sslEnabled = options.isSslEnabled();
-            sslInvalidHostNameAllowed = options.isSslInvalidHostNameAllowed();
-            sslContext = options.getSslContext();
-            heartbeatFrequency = options.getHeartbeatFrequency();
-            minHeartbeatFrequency = options.getMinHeartbeatFrequency();
-            heartbeatConnectTimeout = options.getHeartbeatConnectTimeout();
-            heartbeatSocketTimeout = options.getHeartbeatSocketTimeout();
-            localThreshold = options.getLocalThreshold();
-            requiredReplicaSetName = options.getRequiredReplicaSetName();
-            dbDecoderFactory = options.getDbDecoderFactory();
-            dbEncoderFactory = options.getDbEncoderFactory();
-            cursorFinalizerEnabled = options.isCursorFinalizerEnabled();
-            clusterListeners.addAll(options.getClusterListeners());
-            commandListeners.addAll(options.getCommandListeners());
-            connectionPoolListeners.addAll(options.getConnectionPoolListeners());
-            serverListeners.addAll(options.getServerListeners());
-            serverMonitorListeners.addAll(options.getServerMonitorListeners());
-            autoEncryptionSettings = options.getAutoEncryptionSettings();
-            serverApi = options.getServerApi();
+            wrapped = MongoClientSettings.builder(options.wrapped);
+            dbDecoderFactory = options.dbDecoderFactory;
+            dbEncoderFactory = options.dbEncoderFactory;
+            cursorFinalizerEnabled = options.cursorFinalizerEnabled;
         }
 
         Builder(final MongoClientSettings settings) {
-            applicationName = settings.getApplicationName();
-            compressorList = settings.getCompressorList();
-            minConnectionsPerHost = settings.getConnectionPoolSettings().getMinSize();
-            maxConnectionsPerHost = settings.getConnectionPoolSettings().getMaxSize();
-            serverSelectionTimeout = (int) settings.getClusterSettings().getServerSelectionTimeout(MILLISECONDS);
-            maxWaitTime = (int) settings.getConnectionPoolSettings().getMaxWaitTime(MILLISECONDS);
-            maxConnectionIdleTime = (int) settings.getConnectionPoolSettings().getMaxConnectionIdleTime(MILLISECONDS);
-            maxConnectionLifeTime = (int) settings.getConnectionPoolSettings().getMaxConnectionLifeTime(MILLISECONDS);
-            connectTimeout = settings.getSocketSettings().getConnectTimeout(MILLISECONDS);
-            socketTimeout = settings.getSocketSettings().getReadTimeout(MILLISECONDS);
-            readPreference = settings.getReadPreference();
-            writeConcern = settings.getWriteConcern();
-            retryWrites = settings.getRetryWrites();
-            retryReads = settings.getRetryReads();
-            readConcern = settings.getReadConcern();
-            codecRegistry = settings.getCodecRegistry();
-            uuidRepresentation = settings.getUuidRepresentation();
-            serverApi = settings.getServerApi();
-            ServerSelector serverSelector = settings.getClusterSettings().getServerSelector();
-            this.serverSelector = serverSelector instanceof CompositeServerSelector
-                    ? ((CompositeServerSelector) serverSelector).getServerSelectors().get(0) : null;
-            sslEnabled = settings.getSslSettings().isEnabled();
-            sslInvalidHostNameAllowed = settings.getSslSettings().isInvalidHostNameAllowed();
-            sslContext = settings.getSslSettings().getContext();
-            heartbeatFrequency = (int) settings.getServerSettings().getHeartbeatFrequency(MILLISECONDS);
-            minHeartbeatFrequency = (int) settings.getServerSettings().getMinHeartbeatFrequency(MILLISECONDS);
-            heartbeatConnectTimeout = settings.getHeartbeatSocketSettings().getConnectTimeout(MILLISECONDS);
-            heartbeatSocketTimeout = settings.getHeartbeatSocketSettings().getReadTimeout(MILLISECONDS);
-            localThreshold = (int) settings.getClusterSettings().getLocalThreshold(MILLISECONDS);
-            requiredReplicaSetName = settings.getClusterSettings().getRequiredReplicaSetName();
-            clusterListeners.addAll(settings.getClusterSettings().getClusterListeners());
-            commandListeners.addAll(settings.getCommandListeners());
-            connectionPoolListeners.addAll(settings.getConnectionPoolSettings().getConnectionPoolListeners());
-            serverListeners.addAll(settings.getServerSettings().getServerListeners());
-            serverMonitorListeners.addAll(settings.getServerSettings().getServerMonitorListeners());
-            autoEncryptionSettings = settings.getAutoEncryptionSettings();
+            wrapped = MongoClientSettings.builder(settings);
         }
 
         /**
@@ -1122,11 +789,7 @@ public class MongoClientOptions {
          * @since 3.4
          */
         public Builder applicationName(@Nullable final String applicationName) {
-            if (applicationName != null) {
-                isTrueArgument("applicationName UTF-8 encoding length <= 128",
-                        applicationName.getBytes(StandardCharsets.UTF_8).length <= 128);
-            }
-            this.applicationName = applicationName;
+            wrapped.applicationName(applicationName);
             return this;
         }
 
@@ -1141,8 +804,7 @@ public class MongoClientOptions {
          * @since 3.6
          */
         public Builder compressorList(final List<MongoCompressor> compressorList) {
-            notNull("compressorList", compressorList);
-            this.compressorList = Collections.unmodifiableList(new ArrayList<MongoCompressor>(compressorList));
+            wrapped.compressorList(compressorList);
             return this;
         }
 
@@ -1156,22 +818,20 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder minConnectionsPerHost(final int minConnectionsPerHost) {
-            isTrueArgument("minConnectionsPerHost must be >= 0", minConnectionsPerHost >= 0);
-            this.minConnectionsPerHost = minConnectionsPerHost;
+            wrapped.applyToConnectionPoolSettings(builder -> builder.minSize(minConnectionsPerHost));
             return this;
         }
 
         /**
          * Sets the maximum number of connections per host.
          *
-         * @param connectionsPerHost maximum number of connections
+         * @param connectionsPerHost the maximum size of the connection pool per host; if 0, then there is no limit.
          * @return {@code this}
-         * @throws IllegalArgumentException if {@code connectionsPerHost < 1}
+         * @throws IllegalArgumentException if {@code connectionsPerHost < 0}
          * @see MongoClientOptions#getConnectionsPerHost()
          */
         public Builder connectionsPerHost(final int connectionsPerHost) {
-            isTrueArgument("connectionPerHost must be > 0", connectionsPerHost > 0);
-            this.maxConnectionsPerHost = connectionsPerHost;
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maxSize(connectionsPerHost));
             return this;
         }
 
@@ -1187,7 +847,7 @@ public class MongoClientOptions {
          * @see com.mongodb.MongoClientOptions#getServerSelectionTimeout()
          */
         public Builder serverSelectionTimeout(final int serverSelectionTimeout) {
-            this.serverSelectionTimeout = serverSelectionTimeout;
+            wrapped.applyToClusterSettings(builder -> builder.serverSelectionTimeout(serverSelectionTimeout, MILLISECONDS));
             return this;
         }
 
@@ -1199,7 +859,7 @@ public class MongoClientOptions {
          * @see MongoClientOptions#getMaxWaitTime()
          */
         public Builder maxWaitTime(final int maxWaitTime) {
-            this.maxWaitTime = maxWaitTime;
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maxWaitTime(maxWaitTime, MILLISECONDS));
             return this;
         }
 
@@ -1214,7 +874,7 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder maxConnectionIdleTime(final int maxConnectionIdleTime) {
-            this.maxConnectionIdleTime = maxConnectionIdleTime;
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maxConnectionIdleTime(maxConnectionIdleTime, MILLISECONDS));
             return this;
         }
 
@@ -1229,10 +889,48 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder maxConnectionLifeTime(final int maxConnectionLifeTime) {
-            this.maxConnectionLifeTime = maxConnectionLifeTime;
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maxConnectionLifeTime(maxConnectionLifeTime, MILLISECONDS));
             return this;
         }
 
+        /**
+         * Sets the maximum number of connections a pool may be establishing concurrently.
+         *
+         * @param maxConnecting The maximum number of connections a pool may be establishing concurrently. Must be positive.
+         * @return {@code this}.
+         * @see MongoClientOptions#getMaxConnecting()
+         * @since 4.4
+         */
+        public Builder maxConnecting(final int maxConnecting) {
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maxConnecting(maxConnecting));
+            return this;
+        }
+
+        /**
+         * The period of time to wait before running the first maintenance job on each connection pool.
+         *
+         * @param maintenanceInitialDelay the time period to wait in milliseconds
+         * @return {@code this}.
+         * @see ConnectionPoolSettings.Builder#maintenanceInitialDelay
+         * @since 4.7
+         */
+        public Builder maintenanceInitialDelay(final long maintenanceInitialDelay) {
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maintenanceInitialDelay(maintenanceInitialDelay, MILLISECONDS));
+            return this;
+        }
+
+        /**
+         * The time period between runs of the maintenance job on each connection pool.
+         *
+         * @param maintenanceFrequency the time period between runs of the maintenance job in milliseconds
+         * @return {@code this}
+         * @see ConnectionPoolSettings.Builder#maintenanceFrequency
+         * @since 4.7
+         */
+        public Builder maintenanceFrequency(final long maintenanceFrequency) {
+            wrapped.applyToConnectionPoolSettings(builder -> builder.maintenanceFrequency(maintenanceFrequency, MILLISECONDS));
+            return this;
+        }
 
         /**
          * Sets the connection timeout.
@@ -1243,8 +941,7 @@ public class MongoClientOptions {
          * @see com.mongodb.MongoClientOptions#getConnectTimeout()
          */
         public Builder connectTimeout(final int connectTimeout) {
-            isTrueArgument("connectTimeout must be >= 0", connectTimeout >= 0);
-            this.connectTimeout = connectTimeout;
+            wrapped.applyToSocketSettings(builder -> builder.connectTimeout(connectTimeout, MILLISECONDS));
             return this;
         }
 
@@ -1256,7 +953,7 @@ public class MongoClientOptions {
          * @see com.mongodb.MongoClientOptions#getSocketTimeout()
          */
         public Builder socketTimeout(final int socketTimeout) {
-            this.socketTimeout = socketTimeout;
+            wrapped.applyToSocketSettings(builder -> builder.readTimeout(socketTimeout, MILLISECONDS));
             return this;
         }
 
@@ -1269,7 +966,7 @@ public class MongoClientOptions {
          * @since 3.0
          */
         public Builder sslEnabled(final boolean sslEnabled) {
-            this.sslEnabled = sslEnabled;
+            wrapped.applyToSslSettings(builder -> builder.enabled(sslEnabled));
             return this;
         }
 
@@ -1281,7 +978,7 @@ public class MongoClientOptions {
          * @return this
          */
         public Builder sslInvalidHostNameAllowed(final boolean sslInvalidHostNameAllowed) {
-            this.sslInvalidHostNameAllowed = sslInvalidHostNameAllowed;
+            wrapped.applyToSslSettings(builder -> builder.invalidHostNameAllowed(sslInvalidHostNameAllowed));
             return this;
         }
 
@@ -1294,7 +991,7 @@ public class MongoClientOptions {
          * @since 3.5
          */
         public Builder sslContext(final SSLContext sslContext) {
-            this.sslContext = sslContext;
+            wrapped.applyToSslSettings(builder -> builder.context(sslContext));
             return this;
         }
 
@@ -1306,7 +1003,7 @@ public class MongoClientOptions {
          * @see MongoClientOptions#getReadPreference()
          */
         public Builder readPreference(final ReadPreference readPreference) {
-            this.readPreference = notNull("readPreference", readPreference);
+            wrapped.readPreference(readPreference);
             return this;
         }
 
@@ -1318,7 +1015,7 @@ public class MongoClientOptions {
          * @see MongoClientOptions#getWriteConcern()
          */
         public Builder writeConcern(final WriteConcern writeConcern) {
-            this.writeConcern = notNull("writeConcern", writeConcern);
+            wrapped.writeConcern(writeConcern);
             return this;
         }
 
@@ -1334,7 +1031,7 @@ public class MongoClientOptions {
          * @since 3.6
          */
         public Builder retryWrites(final boolean retryWrites) {
-            this.retryWrites = retryWrites;
+            wrapped.retryWrites(retryWrites);
             return this;
         }
 
@@ -1348,7 +1045,7 @@ public class MongoClientOptions {
          * @since 3.11
          */
         public Builder retryReads(final boolean retryReads) {
-            this.retryReads = retryReads;
+            wrapped.retryReads(retryReads);
             return this;
         }
 
@@ -1363,7 +1060,7 @@ public class MongoClientOptions {
          * @since 3.2
          */
         public Builder readConcern(final ReadConcern readConcern) {
-            this.readConcern = notNull("readConcern", readConcern);
+            wrapped.readConcern(readConcern);
             return this;
         }
 
@@ -1379,7 +1076,7 @@ public class MongoClientOptions {
          * @since 3.0
          */
         public Builder codecRegistry(final CodecRegistry codecRegistry) {
-            this.codecRegistry = notNull("codecRegistry", codecRegistry);
+            wrapped.codecRegistry(codecRegistry);
             return this;
         }
 
@@ -1394,7 +1091,7 @@ public class MongoClientOptions {
          * @since 3.12
          */
         public Builder uuidRepresentation(final UuidRepresentation uuidRepresentation) {
-            this.uuidRepresentation = notNull("uuidRepresentation", uuidRepresentation);
+            wrapped.uuidRepresentation(uuidRepresentation);
             return this;
         }
 
@@ -1409,7 +1106,7 @@ public class MongoClientOptions {
          * @since 4.3
          */
         public Builder serverApi(final ServerApi serverApi) {
-            this.serverApi = notNull("serverApi", serverApi);
+            wrapped.serverApi(serverApi);
             return this;
         }
 
@@ -1423,7 +1120,7 @@ public class MongoClientOptions {
          * @since 3.6
          */
         public Builder serverSelector(final ServerSelector serverSelector) {
-            this.serverSelector = serverSelector;
+            wrapped.applyToClusterSettings(builder -> builder.serverSelector(serverSelector));
             return this;
         }
 
@@ -1435,7 +1132,7 @@ public class MongoClientOptions {
          * @since 3.1
          */
         public Builder addCommandListener(final CommandListener commandListener) {
-            commandListeners.add(notNull("commandListener", commandListener));
+            wrapped.addCommandListener(commandListener);
             return this;
         }
 
@@ -1447,7 +1144,7 @@ public class MongoClientOptions {
          * @since 3.5
          */
         public Builder addConnectionPoolListener(final ConnectionPoolListener connectionPoolListener) {
-            connectionPoolListeners.add(notNull("connectionPoolListener", connectionPoolListener));
+            wrapped.applyToConnectionPoolSettings(builder -> builder.addConnectionPoolListener(connectionPoolListener));
             return this;
         }
 
@@ -1459,7 +1156,7 @@ public class MongoClientOptions {
          * @since 3.3
          */
         public Builder addClusterListener(final ClusterListener clusterListener) {
-            clusterListeners.add(notNull("clusterListener", clusterListener));
+            wrapped.applyToClusterSettings(builder -> builder.addClusterListener(clusterListener));
             return this;
         }
 
@@ -1471,7 +1168,7 @@ public class MongoClientOptions {
          * @since 3.3
          */
         public Builder addServerListener(final ServerListener serverListener) {
-            serverListeners.add(notNull("serverListener", serverListener));
+            wrapped.applyToServerSettings(builder -> builder.addServerListener(serverListener));
             return this;
         }
 
@@ -1483,7 +1180,7 @@ public class MongoClientOptions {
          * @since 3.3
          */
         public Builder addServerMonitorListener(final ServerMonitorListener serverMonitorListener) {
-            serverMonitorListeners.add(notNull("serverMonitorListener", serverMonitorListener));
+            wrapped.applyToServerSettings(builder -> builder.addServerMonitorListener(serverMonitorListener));
             return this;
         }
 
@@ -1507,10 +1204,7 @@ public class MongoClientOptions {
          * @see MongoClientOptions#getDbDecoderFactory()
          */
         public Builder dbDecoderFactory(final DBDecoderFactory dbDecoderFactory) {
-            if (dbDecoderFactory == null) {
-                throw new IllegalArgumentException("null is not a legal value");
-            }
-            this.dbDecoderFactory = dbDecoderFactory;
+            this.dbDecoderFactory = notNull("dbDecoderFactory", dbDecoderFactory);
             return this;
         }
 
@@ -1522,10 +1216,7 @@ public class MongoClientOptions {
          * @see MongoClientOptions#getDbEncoderFactory()
          */
         public Builder dbEncoderFactory(final DBEncoderFactory dbEncoderFactory) {
-            if (dbEncoderFactory == null) {
-                throw new IllegalArgumentException("null is not a legal value");
-            }
-            this.dbEncoderFactory = dbEncoderFactory;
+            this.dbEncoderFactory = notNull("dbEncoderFactory", dbEncoderFactory);
             return this;
         }
 
@@ -1540,8 +1231,7 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder heartbeatFrequency(final int heartbeatFrequency) {
-            isTrueArgument("heartbeatFrequency must be > 0", heartbeatFrequency > 0);
-            this.heartbeatFrequency = heartbeatFrequency;
+            wrapped.applyToServerSettings(builder -> builder.heartbeatFrequency(heartbeatFrequency, MILLISECONDS));
             return this;
         }
 
@@ -1556,8 +1246,7 @@ public class MongoClientOptions {
          * @since 2.13
          */
         public Builder minHeartbeatFrequency(final int minHeartbeatFrequency) {
-            isTrueArgument("minHeartbeatFrequency must be > 0", minHeartbeatFrequency > 0);
-            this.minHeartbeatFrequency = minHeartbeatFrequency;
+            wrapped.applyToServerSettings(builder -> builder.minHeartbeatFrequency(minHeartbeatFrequency, MILLISECONDS));
             return this;
         }
 
@@ -1570,7 +1259,7 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder heartbeatConnectTimeout(final int connectTimeout) {
-            this.heartbeatConnectTimeout = connectTimeout;
+            wrapped.heartbeatConnectTimeoutMS(connectTimeout);
             return this;
         }
 
@@ -1583,7 +1272,7 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder heartbeatSocketTimeout(final int socketTimeout) {
-            this.heartbeatSocketTimeout = socketTimeout;
+            wrapped.heartbeatSocketTimeoutMS(socketTimeout);
             return this;
         }
 
@@ -1597,8 +1286,7 @@ public class MongoClientOptions {
          * @since 2.13.0
          */
         public Builder localThreshold(final int localThreshold) {
-            isTrueArgument("localThreshold must be >= 0", localThreshold >= 0);
-            this.localThreshold = localThreshold;
+            wrapped.applyToClusterSettings(builder -> builder.localThreshold(localThreshold, MILLISECONDS));
             return this;
         }
 
@@ -1611,7 +1299,7 @@ public class MongoClientOptions {
          * @since 2.12
          */
         public Builder requiredReplicaSetName(final String requiredReplicaSetName) {
-            this.requiredReplicaSetName = requiredReplicaSetName;
+            wrapped.applyToClusterSettings(builder -> builder.requiredReplicaSetName(requiredReplicaSetName));
             return this;
         }
 
@@ -1623,7 +1311,73 @@ public class MongoClientOptions {
          * @since 3.11
          */
         public Builder autoEncryptionSettings(final AutoEncryptionSettings autoEncryptionSettings) {
-            this.autoEncryptionSettings = autoEncryptionSettings;
+            wrapped.autoEncryptionSettings(autoEncryptionSettings);
+            return this;
+        }
+
+
+        /**
+         * Sets the maximum number of hosts to connect to when using SRV protocol.
+         *
+         * @param srvMaxHosts the maximum number of hosts to connect to when using SRV protocol
+         * @return this
+         * @since 4.5
+         */
+        public Builder srvMaxHosts(final Integer srvMaxHosts) {
+            wrapped.applyToClusterSettings(builder -> builder.srvMaxHosts(srvMaxHosts));
+            return this;
+        }
+
+        /**
+         * Sets the SRV service name.
+         *
+         * <p>
+         * The SRV resource record (<a href="https://www.rfc-editor.org/rfc/rfc2782">RFC 2782</a>)
+         * service name, which is limited to 15 characters
+         * (<a href="https://www.rfc-editor.org/rfc/rfc6335#section-5.1">RFC 6335 section 5.1</a>).
+         * If specified, it is combined with the single host name as follows: {@code _srvServiceName._tcp.hostName}.
+         * The combined string is an SRV resource record
+         * name (<a href="https://www.rfc-editor.org/rfc/rfc1035#section-2.3.1">RFC 1035 section 2.3.1</a>), which is limited to 255
+         * characters (<a href="https://www.rfc-editor.org/rfc/rfc1035#section-2.3.4">RFC 1035 section 2.3.4</a>).
+         * </p>
+         *
+         * @param srvServiceName the SRV service name
+         * @return this
+         * @since 4.5
+         */
+        public Builder srvServiceName(final String srvServiceName) {
+            wrapped.applyToClusterSettings(builder -> builder.srvServiceName(srvServiceName));
+            return this;
+        }
+
+        /**
+         * Sets the time limit, in milliseconds for the full execution of an operation.
+         *
+         * <ul>
+         *   <li>{@code null} means that the timeout mechanism for operations will defer to using:
+         *    <ul>
+         *        <li>{@code waitQueueTimeoutMS}: The maximum wait time in milliseconds that a thread may wait for a connection to become
+         *        available</li>
+         *        <li>{@code socketTimeoutMS}: How long a send or receive on a socket can take before timing out.</li>
+         *        <li>{@code wTimeoutMS}: How long the server will wait for the write concern to be fulfilled before timing out.</li>
+         *        <li>{@code maxTimeMS}: The cumulative time limit for processing operations on a cursor.
+         *        See: <a href="https://docs.mongodb.com/manual/reference/method/cursor.maxTimeMS">cursor.maxTimeMS</a>.</li>
+         *        <li>{@code maxCommitTimeMS}: The maximum amount of time to allow a single {@code commitTransaction} command to execute.
+         *        See: {@link TransactionOptions#getMaxCommitTime}.</li>
+         *   </ul>
+         *   </li>
+         *   <li>{@code 0} means infinite timeout.</li>
+         *    <li>{@code > 0} The time limit to use for the full execution of an operation.</li>
+         * </ul>
+         *
+         * @param timeoutMS the timeout in milliseconds
+         * @return this
+         * @since 5.2
+         * @see #getTimeout
+         */
+        @Alpha(Reason.CLIENT)
+        public Builder timeout(final long timeoutMS) {
+            wrapped.timeout(timeoutMS, MILLISECONDS);
             return this;
         }
 

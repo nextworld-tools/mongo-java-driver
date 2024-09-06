@@ -32,6 +32,7 @@ import org.bson.json.JsonReader;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Locale;
 
 import static com.mongodb.ClusterFixture.getServerApi;
 import static com.mongodb.connection.ConnectionDescription.getDefaultMaxMessageSize;
@@ -42,6 +43,10 @@ final class MessageHelper {
     private MessageHelper() {
     }
 
+    public static final String LEGACY_HELLO = "isMaster";
+    public static final String LEGACY_HELLO_LOWER = LEGACY_HELLO.toLowerCase(Locale.ROOT);
+
+
     public static ResponseBuffers buildSuccessfulReply(final String json) {
         return buildSuccessfulReply(0, json);
     }
@@ -50,24 +55,15 @@ final class MessageHelper {
         return buildReply(responseTo, json, 0);
     }
 
-    public static ResponseBuffers buildFailedReply(final String json) {
-        return buildFailedReply(0, json);
-    }
-
-    public static ResponseBuffers buildFailedReply(final int responseTo, final String json) {
-        return buildReply(responseTo, json, 2);
-    }
-
     public static ResponseBuffers buildReply(final int responseTo, final String json, final int responseFlags) {
         ByteBuf body = encodeJson(json);
         body.flip();
 
-        ReplyHeader header = buildReplyHeader(responseTo, 1, body.remaining(), responseFlags);
+        ReplyHeader header = buildReplyHeader(responseTo, body.remaining(), responseFlags);
         return new ResponseBuffers(header, body);
     }
 
-    private static ReplyHeader buildReplyHeader(final int responseTo, final int numDocuments, final int documentsSize,
-                                                final int responseFlags) {
+    private static ReplyHeader buildReplyHeader(final int responseTo, final int documentsSize, final int responseFlags) {
         ByteBuffer headerByteBuffer = ByteBuffer.allocate(36);
         headerByteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         headerByteBuffer.putInt(36 + documentsSize); // length
@@ -77,7 +73,7 @@ final class MessageHelper {
         headerByteBuffer.putInt(responseFlags); // responseFlags
         headerByteBuffer.putLong(0); // cursorId
         headerByteBuffer.putInt(0); // startingFrom
-        headerByteBuffer.putInt(numDocuments); //numberReturned
+        headerByteBuffer.putInt(1); //numberReturned
         ((Buffer) headerByteBuffer).flip();
 
         ByteBufNIO buffer = new ByteBufNIO(headerByteBuffer);
@@ -115,7 +111,7 @@ final class MessageHelper {
     }
 
     public static String getDbField(final String databaseName) {
-        return getServerApi() == null ? "" : ", \"$db\": \"" + databaseName + "\"";
+        return ", \"$db\": \"" + databaseName + "\"";
     }
 
     private static ByteBuf encodeJson(final String json) {

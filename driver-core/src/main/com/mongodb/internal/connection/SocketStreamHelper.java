@@ -16,22 +16,18 @@
 
 package com.mongodb.internal.connection;
 
-import com.mongodb.MongoInternalException;
 import com.mongodb.connection.SocketSettings;
 import com.mongodb.connection.SslSettings;
 
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLSocket;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketOption;
 
-import static com.mongodb.internal.connection.SslHelper.enableHostNameVerification;
-import static com.mongodb.internal.connection.SslHelper.enableSni;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static com.mongodb.internal.connection.SslHelper.configureSslSocket;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 final class SocketStreamHelper {
@@ -72,11 +68,21 @@ final class SocketStreamHelper {
         SET_OPTION_METHOD = setOptionMethod;
     }
 
-    static void initialize(final Socket socket, final InetSocketAddress inetSocketAddress, final SocketSettings settings,
-                           final SslSettings sslSettings) throws IOException {
+    static void initialize(final OperationContext operationContext, final Socket socket,
+            final InetSocketAddress inetSocketAddress, final SocketSettings settings,
+            final SslSettings sslSettings) throws IOException {
+        configureSocket(socket, operationContext, settings);
+        configureSslSocket(socket, sslSettings, inetSocketAddress);
+        socket.connect(inetSocketAddress, operationContext.getTimeoutContext().getConnectTimeoutMs());
+    }
+
+    static void configureSocket(final Socket socket, final OperationContext operationContext, final SocketSettings settings) throws SocketException {
         socket.setTcpNoDelay(true);
-        socket.setSoTimeout(settings.getReadTimeout(MILLISECONDS));
         socket.setKeepAlive(true);
+        int readTimeoutMS = (int) operationContext.getTimeoutContext().getReadTimeoutMS();
+        if (readTimeoutMS > 0) {
+            socket.setSoTimeout(readTimeoutMS);
+        }
 
         // Adding keep alive options for users of Java 11+. These options will be ignored for older Java versions.
         setExtendedSocketOptions(socket);
@@ -87,24 +93,6 @@ final class SocketStreamHelper {
         if (settings.getSendBufferSize() > 0) {
             socket.setSendBufferSize(settings.getSendBufferSize());
         }
-        if (sslSettings.isEnabled() || socket instanceof SSLSocket) {
-            if (!(socket instanceof SSLSocket)) {
-                throw new MongoInternalException("SSL is enabled but the socket is not an instance of javax.net.ssl.SSLSocket");
-            }
-            SSLSocket sslSocket = (SSLSocket) socket;
-            SSLParameters sslParameters = sslSocket.getSSLParameters();
-            if (sslParameters == null) {
-                sslParameters = new SSLParameters();
-            }
-
-            enableSni(inetSocketAddress.getHostName(), sslParameters);
-
-            if (!sslSettings.isInvalidHostNameAllowed()) {
-                enableHostNameVerification(sslParameters);
-            }
-            sslSocket.setSSLParameters(sslParameters);
-        }
-        socket.connect(inetSocketAddress, settings.getConnectTimeout(MILLISECONDS));
     }
 
     static void setExtendedSocketOptions(final Socket socket) {

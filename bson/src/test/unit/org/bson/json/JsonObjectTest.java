@@ -20,48 +20,48 @@ import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.codecs.BsonCodecProvider;
 import org.bson.codecs.JsonObjectCodecProvider;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JsonObjectTest {
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testNull() {
-        new JsonObject(null);
+        assertThrows(IllegalArgumentException.class, () -> new JsonObject(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testArray() {
-        new JsonObject("['A', 'B', 'C']");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject("['A', 'B', 'C']"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSpaceInvalidObject() {
-        new JsonObject(" ['A']");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject(" ['A']"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testLineFeedInvalidObject() {
-        new JsonObject("\nvalue");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject("\nvalue"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testCarriageReturnInvalidObject() {
-        new JsonObject("\r123");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject("\r123"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testHorizontalTabInvalidObject() {
-        new JsonObject("\t123");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject("\t123"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testOnlyWhitespace() {
-        new JsonObject("    \t\n  \r  ");
+        assertThrows(IllegalArgumentException.class, () ->new JsonObject("    \t\n  \r  "));
     }
 
     @Test
@@ -100,13 +100,13 @@ public class JsonObjectTest {
         JsonObject j2 = new JsonObject("{hello: 1}");
         JsonObject j3 = new JsonObject("{world: 2}");
 
-        assertTrue(j1.equals(j1));
-        assertTrue(j1.equals(j2));
-        assertTrue(j2.equals(j1));
-        assertFalse(j1.equals(j3));
-        assertFalse(j3.equals(j1));
-        assertFalse(j1.equals(null));
-        assertFalse(j1.equals("{hello: 1}"));
+        assertEquals(j1, j1);
+        assertEquals(j1, j2);
+        assertEquals(j2, j1);
+        assertNotEquals(j1, j3);
+        assertNotEquals(j3, j1);
+        assertNotEquals(null, j1);
+        assertNotEquals("{hello: 1}", j1);
 
         assertEquals(j1.hashCode(), j1.hashCode());
         assertEquals(j1.hashCode(), j2.hashCode());

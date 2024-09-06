@@ -21,6 +21,7 @@ import com.mongodb.client.model.Collation;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.internal.binding.AsyncReadBinding;
 import com.mongodb.internal.binding.ReadBinding;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
@@ -30,30 +31,33 @@ import org.bson.codecs.Decoder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static com.mongodb.assertions.Assertions.notNull;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 public class CountDocumentsOperation implements AsyncReadOperation<Long>, ReadOperation<Long> {
     private static final Decoder<BsonDocument> DECODER = new BsonDocumentCodec();
     private final MongoNamespace namespace;
     private boolean retryReads;
     private BsonDocument filter;
     private BsonValue hint;
+    private BsonValue comment;
     private long skip;
     private long limit;
-    private long maxTimeMS;
     private Collation collation;
 
     public CountDocumentsOperation(final MongoNamespace namespace) {
         this.namespace = notNull("namespace", namespace);
     }
 
+    @Nullable
     public BsonDocument getFilter() {
         return filter;
     }
 
-    public CountDocumentsOperation filter(final BsonDocument filter) {
+    public CountDocumentsOperation filter(@Nullable final BsonDocument filter) {
         this.filter = filter;
         return this;
     }
@@ -67,11 +71,12 @@ public class CountDocumentsOperation implements AsyncReadOperation<Long>, ReadOp
         return retryReads;
     }
 
+    @Nullable
     public BsonValue getHint() {
         return hint;
     }
 
-    public CountDocumentsOperation hint(final BsonValue hint) {
+    public CountDocumentsOperation hint(@Nullable final BsonValue hint) {
         this.hint = hint;
         return this;
     }
@@ -94,30 +99,31 @@ public class CountDocumentsOperation implements AsyncReadOperation<Long>, ReadOp
         return this;
     }
 
-    public long getMaxTime(final TimeUnit timeUnit) {
-        notNull("timeUnit", timeUnit);
-        return timeUnit.convert(maxTimeMS, TimeUnit.MILLISECONDS);
-    }
-
-    public CountDocumentsOperation maxTime(final long maxTime, final TimeUnit timeUnit) {
-        notNull("timeUnit", timeUnit);
-        this.maxTimeMS = TimeUnit.MILLISECONDS.convert(maxTime, timeUnit);
-        return this;
-    }
-
+    @Nullable
     public Collation getCollation() {
         return collation;
     }
 
-    public CountDocumentsOperation collation(final Collation collation) {
+    public CountDocumentsOperation collation(@Nullable final Collation collation) {
         this.collation = collation;
+        return this;
+    }
+
+    @Nullable
+    public BsonValue getComment() {
+        return comment;
+    }
+
+    public CountDocumentsOperation comment(@Nullable final BsonValue comment) {
+        this.comment = comment;
         return this;
     }
 
     @Override
     public Long execute(final ReadBinding binding) {
-        BatchCursor<BsonDocument> cursor = getAggregateOperation().execute(binding);
-        return cursor.hasNext() ? getCountFromAggregateResults(cursor.next()) : 0;
+        try (BatchCursor<BsonDocument> cursor = getAggregateOperation().execute(binding)) {
+            return cursor.hasNext() ? getCountFromAggregateResults(cursor.next()) : 0;
+        }
     }
 
     @Override
@@ -138,15 +144,15 @@ public class CountDocumentsOperation implements AsyncReadOperation<Long>, ReadOp
     }
 
     private AggregateOperation<BsonDocument> getAggregateOperation() {
-        return new AggregateOperation<BsonDocument>(namespace, getPipeline(), DECODER)
+        return new AggregateOperation<>(namespace, getPipeline(), DECODER)
                 .retryReads(retryReads)
                 .collation(collation)
-                .hint(hint)
-                .maxTime(maxTimeMS, TimeUnit.MILLISECONDS);
+                .comment(comment)
+                .hint(hint);
     }
 
     private List<BsonDocument> getPipeline() {
-        ArrayList<BsonDocument> pipeline = new ArrayList<BsonDocument>();
+        ArrayList<BsonDocument> pipeline = new ArrayList<>();
         pipeline.add(new BsonDocument("$match", filter != null ? filter : new BsonDocument()));
         if (skip > 0) {
             pipeline.add(new BsonDocument("$skip", new BsonInt64(skip)));
@@ -159,7 +165,7 @@ public class CountDocumentsOperation implements AsyncReadOperation<Long>, ReadOp
         return pipeline;
     }
 
-    private Long getCountFromAggregateResults(final List<BsonDocument> results) {
+    private Long getCountFromAggregateResults(@Nullable final List<BsonDocument> results) {
         if (results == null || results.isEmpty()) {
             return 0L;
         } else {

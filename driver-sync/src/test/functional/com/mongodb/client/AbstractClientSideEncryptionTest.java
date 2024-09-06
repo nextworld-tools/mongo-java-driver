@@ -17,22 +17,27 @@
 package com.mongodb.client;
 
 import com.mongodb.AutoEncryptionSettings;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoNamespace;
+import com.mongodb.MongoOperationTimeoutException;
 import com.mongodb.MongoWriteConcernException;
 import com.mongodb.WriteConcern;
 import com.mongodb.client.model.CreateCollectionOptions;
 import com.mongodb.client.model.ValidationOptions;
 import com.mongodb.client.test.CollectionHelper;
 import com.mongodb.event.CommandEvent;
-import com.mongodb.event.CommandListener;
+import com.mongodb.event.CommandStartedEvent;
 import com.mongodb.internal.connection.TestCommandListener;
+import com.mongodb.lang.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonBoolean;
 import org.bson.BsonDocument;
 import org.bson.BsonString;
+import org.bson.BsonUndefined;
 import org.bson.BsonValue;
 import org.bson.codecs.BsonDocumentCodec;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -47,7 +52,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+import static com.mongodb.ClusterFixture.getEnv;
 import static com.mongodb.ClusterFixture.hasEncryptionTestsEnabled;
 import static com.mongodb.JsonTestServerVersionChecker.skipTest;
 import static com.mongodb.client.CommandMonitoringTestHelper.assertEventsEquality;
@@ -64,7 +72,7 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public abstract class AbstractClientSideEncryptionTest {
 
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    @SuppressWarnings({"unused"})
     private final String filename;
     private final BsonDocument specDocument;
     private final String description;
@@ -85,19 +93,28 @@ public abstract class AbstractClientSideEncryptionTest {
         this.skipTest = skipTest;
     }
 
-    private boolean hasErrorContainsField(final BsonValue expectedResult) {
+    protected BsonDocument getDefinition() {
+        return definition;
+    }
+
+
+    private boolean hasTimeoutError(@Nullable final BsonValue expectedResult) {
+        return hasErrorField(expectedResult, "isTimeoutError");
+    }
+
+    private boolean hasErrorContainsField(@Nullable final BsonValue expectedResult) {
         return hasErrorField(expectedResult, "errorContains");
     }
 
-    private boolean hasErrorCodeNameField(final BsonValue expectedResult) {
+    private boolean hasErrorCodeNameField(@Nullable final BsonValue expectedResult) {
         return hasErrorField(expectedResult, "errorCodeName");
     }
 
-    private boolean hasErrorField(final BsonValue expectedResult, final String key) {
+    private boolean hasErrorField(@Nullable final BsonValue expectedResult, final String key) {
         return expectedResult != null && expectedResult.isDocument() && expectedResult.asDocument().containsKey(key);
     }
 
-    private String getErrorField(final BsonValue expectedResult, final String key) {
+    private String getErrorField(@Nullable final BsonValue expectedResult, final String key) {
         if (hasErrorField(expectedResult, key)) {
             return expectedResult.asDocument().getString(key).getValue();
         } else {
@@ -105,11 +122,11 @@ public abstract class AbstractClientSideEncryptionTest {
         }
     }
 
-    private String getErrorContainsField(final BsonValue expectedResult) {
+    private String getErrorContainsField(@Nullable final BsonValue expectedResult) {
         return getErrorField(expectedResult, "errorContains");
     }
 
-    private String getErrorCodeNameField(final BsonValue expectedResult) {
+    private String getErrorCodeNameField(@Nullable final BsonValue expectedResult) {
         return getErrorField(expectedResult, "errorCodeName");
     }
 
@@ -119,25 +136,28 @@ public abstract class AbstractClientSideEncryptionTest {
         assumeTrue("Client side encryption tests disabled", hasEncryptionTestsEnabled());
         assumeFalse("runOn requirements not satisfied", skipTest);
         assumeFalse("Skipping count tests", filename.startsWith("count."));
+
         assumeFalse(definition.getString("skipReason", new BsonString("")).getValue(), definition.containsKey("skipReason"));
 
         String databaseName = specDocument.getString("database_name").getValue();
         String collectionName = specDocument.getString("collection_name").getValue();
-        collectionHelper = new CollectionHelper<BsonDocument>(new BsonDocumentCodec(), new MongoNamespace(databaseName, collectionName));
+        collectionHelper = new CollectionHelper<>(new BsonDocumentCodec(), new MongoNamespace(databaseName, collectionName));
         MongoDatabase database = getMongoClient().getDatabase(databaseName);
-        MongoCollection<BsonDocument> collection = database
-                .getCollection(collectionName, BsonDocument.class);
-        collection.drop();
+        database.drop();
 
         /* Create the collection for auto encryption. */
+        CreateCollectionOptions createCollectionOptions = new CreateCollectionOptions();
         if (specDocument.containsKey("json_schema")) {
-            database.createCollection(collectionName, new CreateCollectionOptions()
-                    .validationOptions(new ValidationOptions()
-                            .validator(new BsonDocument("$jsonSchema", specDocument.getDocument("json_schema")))));
+            createCollectionOptions.validationOptions(new ValidationOptions()
+                            .validator(new BsonDocument("$jsonSchema", specDocument.getDocument("json_schema"))));
         }
+        if (specDocument.containsKey("encrypted_fields")) {
+            createCollectionOptions.encryptedFields(specDocument.getDocument("encrypted_fields"));
+        }
+        database.createCollection(collectionName, createCollectionOptions);
 
         /* Insert data into the collection */
-        List<BsonDocument> documents = new ArrayList<BsonDocument>();
+        List<BsonDocument> documents = new ArrayList<>();
         if (!data.isEmpty()) {
             for (BsonValue document : data) {
                 documents.add(document.asDocument());
@@ -147,41 +167,49 @@ public abstract class AbstractClientSideEncryptionTest {
 
         /* Insert data into the "keyvault.datakeys" key vault. */
         BsonArray data = specDocument.getArray("key_vault_data", new BsonArray());
-        collection = getMongoClient().getDatabase("keyvault").getCollection("datakeys", BsonDocument.class)
+        MongoCollection<BsonDocument> collection = getMongoClient().getDatabase("keyvault")
+                .getCollection("datakeys", BsonDocument.class)
                 .withWriteConcern(WriteConcern.MAJORITY);
         collection.drop();
         if (!data.isEmpty()) {
-            documents = new ArrayList<BsonDocument>();
+            documents = new ArrayList<>();
             for (BsonValue document : data) {
                 documents.add(document.asDocument());
             }
             collection.insertMany(documents);
         }
 
-
         commandListener = new TestCommandListener();
-
-        BsonDocument clientOptions = definition.getDocument("clientOptions");
-        BsonDocument cryptOptions = clientOptions.getDocument("autoEncryptOpts");
-        BsonDocument kmsProviders = cryptOptions.getDocument("kmsProviders");
+        BsonDocument clientOptions = definition.getDocument("clientOptions", new BsonDocument());
+        BsonDocument cryptOptions = clientOptions.getDocument("autoEncryptOpts", new BsonDocument());
+        BsonDocument kmsProviders = cryptOptions.getDocument("kmsProviders", new BsonDocument());
         boolean bypassAutoEncryption = cryptOptions.getBoolean("bypassAutoEncryption", BsonBoolean.FALSE).getValue();
+        boolean bypassQueryAnalysis = cryptOptions.getBoolean("bypassQueryAnalysis", BsonBoolean.FALSE).getValue();
 
-        Map<String, BsonDocument> namespaceToSchemaMap = new HashMap<String, BsonDocument>();
+        Map<String, BsonDocument> namespaceToSchemaMap = new HashMap<>();
 
         if (cryptOptions.containsKey("schemaMap")) {
             BsonDocument autoEncryptMapDocument = cryptOptions.getDocument("schemaMap");
-
             for (Map.Entry<String, BsonValue> entries : autoEncryptMapDocument.entrySet()) {
-                final BsonDocument autoEncryptOptionsDocument = entries.getValue().asDocument();
+                BsonDocument autoEncryptOptionsDocument = entries.getValue().asDocument();
                 namespaceToSchemaMap.put(entries.getKey(), autoEncryptOptionsDocument);
             }
         }
 
-        Map<String, Object> extraOptions = new HashMap<String, Object>();
+        Map<String, BsonDocument> encryptedFieldsMap = new HashMap<>();
+        if (cryptOptions.containsKey("encryptedFieldsMap")) {
+            BsonDocument encryptedFieldsMapDocument = cryptOptions.getDocument("encryptedFieldsMap");
+            for (Map.Entry<String, BsonValue> entries : encryptedFieldsMapDocument.entrySet()) {
+                encryptedFieldsMap.put(entries.getKey(), entries.getValue().asDocument());
+            }
+        }
+
+        Map<String, Object> extraOptions = new HashMap<>();
+        cryptSharedLibPathSysPropValue().ifPresent(path -> extraOptions.put("cryptSharedLibPath", path));
         if (cryptOptions.containsKey("extraOptions")) {
             BsonDocument extraOptionsDocument = cryptOptions.getDocument("extraOptions");
             if (extraOptionsDocument.containsKey("mongocryptdSpawnArgs")) {
-                List<String> mongocryptdSpawnArgsValue = new ArrayList<String>();
+                List<String> mongocryptdSpawnArgsValue = new ArrayList<>();
                 for (BsonValue cur: extraOptionsDocument.getArray("mongocryptdSpawnArgs")) {
                     mongocryptdSpawnArgsValue.add(cur.asString().getValue());
                 }
@@ -199,31 +227,39 @@ public abstract class AbstractClientSideEncryptionTest {
         for (String kmsProviderKey : kmsProviders.keySet()) {
             BsonDocument kmsProviderOptions = kmsProviders.get(kmsProviderKey).asDocument();
             Map<String, Object> kmsProviderMap = new HashMap<>();
-            if (kmsProviderKey.equals("aws")) {
-                kmsProviderMap.put("accessKeyId", System.getProperty("org.mongodb.test.awsAccessKeyId"));
-                kmsProviderMap.put("secretAccessKey", System.getProperty("org.mongodb.test.awsSecretAccessKey"));
-                kmsProvidersMap.put("aws", kmsProviderMap);
-            } else if (kmsProviderKey.equals("awsTemporary")) {
-                kmsProviderMap.put("accessKeyId", System.getProperty("org.mongodb.test.tmpAwsAccessKeyId"));
-                kmsProviderMap.put("secretAccessKey", System.getProperty("org.mongodb.test.tmpAwsSecretAccessKey"));
-                kmsProviderMap.put("sessionToken", System.getProperty("org.mongodb.test.tmpAwsSessionToken"));
-                kmsProvidersMap.put("aws", kmsProviderMap);
-            } else if (kmsProviderKey.equals("awsTemporaryNoSessionToken")) {
-                kmsProviderMap.put("accessKeyId", System.getProperty("org.mongodb.test.tmpAwsAccessKeyId"));
-                kmsProviderMap.put("secretAccessKey", System.getProperty("org.mongodb.test.tmpAwsSecretAccessKey"));
-                kmsProvidersMap.put("aws", kmsProviderMap);
-            } else if (kmsProviderKey.equals("azure")) {
-                kmsProviderMap.put("tenantId", System.getProperty("org.mongodb.test.azureTenantId"));
-                kmsProviderMap.put("clientId", System.getProperty("org.mongodb.test.azureClientId"));
-                kmsProviderMap.put("clientSecret", System.getProperty("org.mongodb.test.azureClientSecret"));
-                kmsProvidersMap.put("azure", kmsProviderMap);
-            } else if (kmsProviderKey.equals("gcp")) {
-                kmsProviderMap.put("email", System.getProperty("org.mongodb.test.gcpEmail"));
-                kmsProviderMap.put("privateKey", System.getProperty("org.mongodb.test.gcpPrivateKey"));
-                kmsProvidersMap.put("gcp", kmsProviderMap);
-            } else if (kmsProviderKey.equals("local")) {
-                kmsProviderMap.put("key", kmsProviderOptions.getBinary("key").getData());
-                kmsProvidersMap.put("local", kmsProviderMap);
+            kmsProvidersMap.put(kmsProviderKey.startsWith("aws") ? "aws" : kmsProviderKey, kmsProviderMap);
+            switch (kmsProviderKey) {
+                case "aws":
+                    kmsProviderMap.put("accessKeyId", getEnv("AWS_ACCESS_KEY_ID"));
+                    kmsProviderMap.put("secretAccessKey", getEnv("AWS_SECRET_ACCESS_KEY"));
+                    break;
+                case "awsTemporary":
+                    kmsProviderMap.put("accessKeyId", getEnv("AWS_TEMP_ACCESS_KEY_ID"));
+                    kmsProviderMap.put("secretAccessKey", getEnv("AWS_TEMP_SECRET_ACCESS_KEY"));
+                    kmsProviderMap.put("sessionToken", getEnv("AWS_TEMP_SESSION_TOKEN"));
+                    break;
+                case "awsTemporaryNoSessionToken":
+                    kmsProviderMap.put("accessKeyId", getEnv("AWS_TEMP_ACCESS_KEY_ID"));
+                    kmsProviderMap.put("secretAccessKey", getEnv("AWS_TEMP_SECRET_ACCESS_KEY"));
+                    break;
+                case "azure":
+                    kmsProviderMap.put("tenantId", getEnv("AZURE_TENANT_ID"));
+                    kmsProviderMap.put("clientId", getEnv("AZURE_CLIENT_ID"));
+                    kmsProviderMap.put("clientSecret", getEnv("AZURE_CLIENT_SECRET"));
+                    break;
+                case "gcp":
+                    kmsProviderMap.put("email", getEnv("GCP_EMAIL"));
+                    kmsProviderMap.put("privateKey", getEnv("GCP_PRIVATE_KEY"));
+                    break;
+                case "kmip":
+                    kmsProviderMap.put("endpoint", getEnv("org.mongodb.test.kmipEndpoint", "localhost:5698"));
+                    break;
+                case "local":
+                case "local:name2":
+                    kmsProviderMap.put("key", kmsProviderOptions.getBinary("key").getData());
+                    break;
+                default:
+                    throw new UnsupportedOperationException("Unsupported KMS provider: " + kmsProviderKey);
             }
         }
 
@@ -232,19 +268,44 @@ public abstract class AbstractClientSideEncryptionTest {
             keyVaultNamespace = cryptOptions.getString("keyVaultNamespace").getValue();
         }
 
-        createMongoClient(AutoEncryptionSettings.builder()
-                .keyVaultNamespace(keyVaultNamespace)
-                .kmsProviders(kmsProvidersMap)
-                .schemaMap(namespaceToSchemaMap)
-                .bypassAutoEncryption(bypassAutoEncryption)
-                .extraOptions(extraOptions)
-                .build(), commandListener);
+        MongoClientSettings.Builder mongoClientSettingsBuilder = Fixture.getMongoClientSettingsBuilder()
+                        .addCommandListener(commandListener);
 
+        if (clientOptions.containsKey("timeoutMS")) {
+            long timeoutMs = clientOptions.getInt32("timeoutMS").longValue();
+            mongoClientSettingsBuilder.timeout(timeoutMs, TimeUnit.MILLISECONDS);
+        }
+
+        if (!kmsProvidersMap.isEmpty()) {
+            mongoClientSettingsBuilder.autoEncryptionSettings(AutoEncryptionSettings.builder()
+                    .keyVaultNamespace(keyVaultNamespace)
+                    .kmsProviders(kmsProvidersMap)
+                    .schemaMap(namespaceToSchemaMap)
+                    .encryptedFieldsMap(encryptedFieldsMap)
+                    .bypassQueryAnalysis(bypassQueryAnalysis)
+                    .bypassAutoEncryption(bypassAutoEncryption)
+                    .extraOptions(extraOptions)
+                    .build());
+        }
+        createMongoClient(mongoClientSettingsBuilder.build());
         database = getDatabase(databaseName);
-        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection("default", BsonDocument.class));
+        helper = new JsonPoweredCrudTestHelper(description, database, database.getCollection(collectionName, BsonDocument.class));
+
+        if (definition.containsKey("failPoint")) {
+            collectionHelper.runAdminCommand(definition.getDocument("failPoint"));
+        }
     }
 
-    protected abstract void createMongoClient(AutoEncryptionSettings build, CommandListener commandListener);
+    @After
+    public void cleanUp() {
+        if (collectionHelper != null && definition.containsKey("failPoint")) {
+            collectionHelper.runAdminCommand(new BsonDocument("configureFailPoint",
+                    definition.getDocument("failPoint").getString("configureFailPoint"))
+                    .append("mode", new BsonString("off")));
+        }
+    }
+
+    protected abstract void createMongoClient(MongoClientSettings settings);
 
     protected abstract MongoDatabase getDatabase(String databaseName);
 
@@ -257,17 +318,22 @@ public abstract class AbstractClientSideEncryptionTest {
             BsonValue expectedResult = operation.get("result");
             try {
                 BsonDocument actualOutcome = helper.getOperationResults(operation);
+                assertFalse(String.format("Expected a timeout error but got: %s", actualOutcome.toJson()), hasTimeoutError(expectedResult));
+
                 if (expectedResult != null) {
-                    BsonValue actualResult = actualOutcome.get("result");
-                    assertEquals("Expected operation result differs from actual", expectedResult, actualResult);
+                    BsonValue actualResult = actualOutcome.get("result", new BsonString("No result or error"));
+                    assertBsonValue("Expected operation result differs from actual", expectedResult, actualResult);
                 }
 
                 assertFalse(String.format("Expected error '%s' but none thrown for operation %s",
                         getErrorContainsField(expectedResult), operationName), hasErrorContainsField(expectedResult));
                 assertFalse(String.format("Expected error code '%s' but none thrown for operation %s",
                         getErrorCodeNameField(expectedResult), operationName), hasErrorCodeNameField(expectedResult));
-            } catch (RuntimeException e) {
+            } catch (Exception e) {
                 boolean passedAssertion = false;
+               if (hasTimeoutError(expectedResult) && e instanceof MongoOperationTimeoutException){
+                   passedAssertion = true;
+               }
                 if (hasErrorContainsField(expectedResult)) {
                     String expectedError = getErrorContainsField(expectedResult);
                     assertTrue(String.format("Expected '%s' but got '%s' for operation %s", expectedError, e.getMessage(),
@@ -288,13 +354,11 @@ public abstract class AbstractClientSideEncryptionTest {
                     throw e;
                 }
             }
-
         }
 
         if (definition.containsKey("expectations")) {
-            List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), "default", null);
-            List<CommandEvent> events = commandListener.getCommandStartedEvents();
-
+            List<CommandEvent> expectedEvents = getExpectedEvents(definition.getArray("expectations"), specDocument.getString("database_name").getValue(), null);
+            List<CommandStartedEvent> events = commandListener.getCommandStartedEvents();
             assertEventsEquality(expectedEvents, events);
         }
 
@@ -311,19 +375,49 @@ public abstract class AbstractClientSideEncryptionTest {
                 assertEquals(expected, actual);
             }
         }
+    }
 
+    /**
+     * If the operation returns a raw command response, eg from runCommand, then compare only the fields present in the expected result
+     * document.
+     * <p>
+     * Otherwise, compare the method's return value to result using the same logic as the CRUD Spec Tests runner.
+     */
+    private void assertBsonValue(final String message, final BsonValue expectedResult, final BsonValue actualResult) {
+        if (expectedResult.isDocument() && actualResult.isDocument()) {
+            BsonDocument expectedResultDoc = expectedResult.asDocument();
+            BsonDocument actualResultDoc = actualResult.asDocument();
+            expectedResultDoc.keySet().forEach(k ->
+                    assertEquals(message, expectedResultDoc.get(k), actualResultDoc.get(k, new BsonUndefined()))
+            );
+        } else if (expectedResult.isArray() && actualResult.isArray()) {
+            BsonArray expectedResultArray = expectedResult.asArray();
+            BsonArray actualResultArray = actualResult.asArray();
+            assertEquals(expectedResultArray.size(), actualResultArray.size());
+            for (int i = 0; i < expectedResultArray.size(); i++) {
+                assertBsonValue(message + " Index: " + i, expectedResultArray.get(i), actualResultArray.get(i));
+            }
+        } else {
+            assertEquals(message, expectedResult, actualResult);
+        }
     }
 
     @Parameterized.Parameters(name = "{0}: {1}")
     public static Collection<Object[]> data() throws URISyntaxException, IOException {
-        List<Object[]> data = new ArrayList<Object[]>();
-        for (File file : JsonPoweredTestHelper.getTestFiles("/client-side-encryption")) {
+        List<Object[]> data = new ArrayList<>();
+        for (File file : JsonPoweredTestHelper.getTestFiles("/client-side-encryption/legacy")) {
             BsonDocument specDocument = JsonPoweredTestHelper.getTestDocument(file);
             for (BsonValue test : specDocument.getArray("tests")) {
                 data.add(new Object[]{file.getName(), test.asDocument().getString("description").getValue(), specDocument,
-                        specDocument.getArray("data", new BsonArray()), test.asDocument(), skipTest(specDocument, test.asDocument())});
+                        specDocument.getArray("data", new BsonArray()), test.asDocument(),
+                        skipTest(specDocument, test.asDocument())});
             }
         }
         return data;
+    }
+
+    static Optional<String> cryptSharedLibPathSysPropValue() {
+        String value = getEnv("CRYPT_SHARED_LIB_PATH", "");
+        return value.isEmpty() ? Optional.empty() : Optional.of(value);
     }
 }

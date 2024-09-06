@@ -48,9 +48,9 @@ public class ClientSideEncryptionBypassAutoEncryptionTest {
 
     @Before
     public void setUp() throws Throwable {
-        assumeTrue(serverVersionAtLeast(4, 1));
+        assumeTrue(serverVersionAtLeast(4, 2));
 
-        final byte[] localMasterKey = new byte[96];
+        byte[] localMasterKey = new byte[96];
         new SecureRandom().nextBytes(localMasterKey);
 
         Map<String, Map<String, Object>> kmsProviders = new HashMap<String, Map<String, Object>>() {{

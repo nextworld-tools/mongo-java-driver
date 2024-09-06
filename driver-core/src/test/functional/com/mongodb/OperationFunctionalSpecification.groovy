@@ -49,20 +49,19 @@ import com.mongodb.internal.connection.ServerHelper
 import com.mongodb.internal.connection.SplittablePayload
 import com.mongodb.internal.operation.AsyncReadOperation
 import com.mongodb.internal.operation.AsyncWriteOperation
-import com.mongodb.internal.operation.InsertOperation
+import com.mongodb.internal.operation.MixedBulkWriteOperation
 import com.mongodb.internal.operation.ReadOperation
 import com.mongodb.internal.operation.WriteOperation
 import com.mongodb.internal.session.SessionContext
-import com.mongodb.internal.validator.NoOpFieldNameValidator
 import org.bson.BsonDocument
 import org.bson.Document
-import org.bson.FieldNameValidator
 import org.bson.codecs.DocumentCodec
 import spock.lang.Shared
 import spock.lang.Specification
 
 import java.util.concurrent.TimeUnit
 
+import static com.mongodb.ClusterFixture.OPERATION_CONTEXT
 import static com.mongodb.ClusterFixture.TIMEOUT
 import static com.mongodb.ClusterFixture.checkReferenceCountReachesTarget
 import static com.mongodb.ClusterFixture.executeAsync
@@ -76,11 +75,19 @@ import static com.mongodb.internal.operation.OperationUnitSpecification.getMaxWi
 class OperationFunctionalSpecification extends Specification {
 
     def setup() {
+        setupInternal()
+    }
+
+    protected void setupInternal() {
         ServerHelper.checkPool(getPrimary())
         CollectionHelper.drop(getNamespace())
     }
 
-    def cleanup() {
+    void cleanup() {
+        cleanupInternal()
+    }
+
+    protected void cleanupInternal() {
         CollectionHelper.drop(getNamespace())
         checkReferenceCountReachesTarget(getBinding(), 1)
         checkReferenceCountReachesTarget(getAsyncBinding(), 1)
@@ -100,12 +107,14 @@ class OperationFunctionalSpecification extends Specification {
     }
 
     void acknowledgeWrite(final SingleConnectionBinding binding) {
-        new InsertOperation(getNamespace(), true, ACKNOWLEDGED, false, [new InsertRequest(new BsonDocument())]).execute(binding)
+        new MixedBulkWriteOperation(getNamespace(), [new InsertRequest(new BsonDocument())], true,
+                ACKNOWLEDGED, false).execute(binding)
         binding.release()
     }
 
     void acknowledgeWrite(final AsyncSingleConnectionBinding binding) {
-        executeAsync(new InsertOperation(getNamespace(), true, ACKNOWLEDGED, false, [new InsertRequest(new BsonDocument())]), binding)
+        executeAsync(new MixedBulkWriteOperation(getNamespace(), [new InsertRequest(new BsonDocument())],
+                true, ACKNOWLEDGED, false), binding)
         binding.release()
     }
 
@@ -121,6 +130,10 @@ class OperationFunctionalSpecification extends Specification {
         new CollectionHelper<Worker>(new WorkerCodec(), getNamespace())
     }
 
+    def execute(operation) {
+        execute(operation, false)
+    }
+
     def execute(operation, boolean async) {
         def executor = async ? ClusterFixture.&executeAsync : ClusterFixture.&executeSync
         executor(operation)
@@ -128,7 +141,9 @@ class OperationFunctionalSpecification extends Specification {
 
     def executeWithSession(operation, boolean async) {
         def executor = async ? ClusterFixture.&executeAsync : ClusterFixture.&executeSync
-        def binding = async ? new AsyncSessionBinding(getAsyncBinding()) : new SessionBinding(getBinding())
+        def binding = async ?
+                new AsyncSessionBinding(getAsyncBinding())
+                : new SessionBinding(getBinding())
         executor(operation, binding)
     }
 
@@ -188,58 +203,40 @@ class OperationFunctionalSpecification extends Specification {
         }
     }
 
-    def tryNext(cursor, boolean async) {
-        def next
-        if (async) {
-            def futureResultCallback = new FutureResultCallback<List<BsonDocument>>()
-            cursor.tryNext(futureResultCallback)
-            next = futureResultCallback.get(TIMEOUT, TimeUnit.SECONDS)
-        } else {
-            next = cursor.tryNext()
-        }
-        next
-    }
-
-    def consumeAsyncResults(cursor) {
-        def batch = next(cursor, true)
-        while (batch != null) {
-            batch = next(cursor, true)
-        }
-    }
-
     void testOperation(Map params) {
         params.async = params.async != null ? params.async : false
         params.result = params.result != null ? params.result : null
         params.checkCommand = params.checkCommand != null ? params.checkCommand : true
-        params.checkSlaveOk = params.checkSlaveOk != null ? params.checkSlaveOk : false
+        params.checkSecondaryOk = params.checkSecondaryOk != null ? params.checkSecondaryOk : false
         params.readPreference = params.readPreference != null ? params.readPreference : ReadPreference.primary()
         params.retryable = params.retryable != null ? params.retryable : false
         params.serverType = params.serverType != null ? params.serverType : ServerType.STANDALONE
         testOperation(params.operation, params.serverVersion, params.expectedCommand, params.async, params.result, params.checkCommand,
-                params.checkSlaveOk, params.readPreference, params.retryable, params.serverType)
+                params.checkSecondaryOk, params.readPreference, params.retryable, params.serverType)
     }
 
     void testOperationInTransaction(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
-                                    boolean checkCommand = true, boolean checkSlaveOk = false,
+                                    boolean checkCommand = true, boolean checkSecondaryOk = false,
                                     ReadPreference readPreference = ReadPreference.primary(), boolean retryable = false,
                                     ServerType serverType = ServerType.STANDALONE) {
-        testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSlaveOk,
+        testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSecondaryOk,
                 readPreference, retryable, serverType, true)
     }
 
     void testOperation(operation, List<Integer> serverVersion, BsonDocument expectedCommand, boolean async, result = null,
-                       boolean checkCommand = true, boolean checkSlaveOk = false, ReadPreference readPreference = ReadPreference.primary(),
-                       boolean retryable = false, ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
-        testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSlaveOk,
+                       boolean checkCommand = true, boolean checkSecondaryOk = false,
+                       ReadPreference readPreference = ReadPreference.primary(), boolean retryable = false,
+                       ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+        testOperation(operation, serverVersion, ReadConcern.DEFAULT, expectedCommand, async, result, checkCommand, checkSecondaryOk,
         readPreference, retryable, serverType, activeTransaction)
     }
 
     void testOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, BsonDocument expectedCommand, boolean async,
-                       result = null, boolean checkCommand = true, boolean checkSlaveOk = false,
+                       result = null, boolean checkCommand = true, boolean checkSecondaryOk = false,
                        ReadPreference readPreference = ReadPreference.primary(), boolean retryable = false,
                        ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
-        test(operation, serverVersion, readConcern, result, checkCommand, expectedCommand, checkSlaveOk, readPreference, retryable,
+        test(operation, serverVersion, readConcern, result, checkCommand, expectedCommand, checkSecondaryOk, readPreference, retryable,
                 serverType, activeTransaction)
     }
 
@@ -250,12 +247,12 @@ class OperationFunctionalSpecification extends Specification {
     }
 
     void testRetryableOperationThrowsOriginalError(operation, List<List<Integer>> serverVersions, List<ServerType> serverTypes,
-                                                   Throwable exception, boolean async) {
+                                                   Throwable exception, boolean async, int expectedConnectionReleaseCount = 2) {
         def test = async ? this.&testAyncRetryableOperationThrows : this.&testSyncRetryableOperationThrows
-        test(operation, serverVersions as Queue, serverTypes as Queue, exception)
+        test(operation, serverVersions as Queue, serverTypes as Queue, exception, expectedConnectionReleaseCount)
     }
 
-    void testOperationSlaveOk(operation, List<Integer> serverVersion, ReadPreference readPreference, boolean async, result = null) {
+    void testOperationSecondaryOk(operation, List<Integer> serverVersion, ReadPreference readPreference, boolean async, result = null) {
         def test = async ? this.&testAsyncOperation : this.&testSyncOperation
         test(operation, serverVersion, ReadConcern.DEFAULT, result, false, null, true, readPreference)
     }
@@ -271,9 +268,14 @@ class OperationFunctionalSpecification extends Specification {
     }
 
     def testSyncOperation(operation, List<Integer> serverVersion, ReadConcern readConcern, result, Boolean checkCommand=true,
-                          BsonDocument expectedCommand=null, Boolean checkSlaveOk=false,
+                          BsonDocument expectedCommand=null, Boolean checkSecondaryOk=false,
                           ReadPreference readPreference=ReadPreference.primary(), Boolean retryable = false,
                           ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+        def operationContext = OPERATION_CONTEXT
+                .withSessionContext(Stub(SessionContext) {
+                    hasActiveTransaction() >> activeTransaction
+                    getReadConcern() >> readConcern
+                })
         def connection = Mock(Connection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -285,7 +287,8 @@ class OperationFunctionalSpecification extends Specification {
             getConnection() >> {
                 connection
             }
-            getServerApi() >> null
+            getOperationContext() >> operationContext
+            getReadPreference() >> readPreference
             getServerDescription() >> {
                 def builder = ServerDescription.builder().address(Stub(ServerAddress)).state(ServerConnectionState.CONNECTED)
                 if (new ServerVersion(serverVersion).compareTo(new ServerVersion(3, 6)) >= 0) {
@@ -295,23 +298,13 @@ class OperationFunctionalSpecification extends Specification {
             }
         }
         def readBinding = Stub(ReadBinding) {
-            getReadConnectionSource() >> connectionSource
+            getReadConnectionSource(*_) >> connectionSource
             getReadPreference() >> readPreference
-            getServerApi() >> null
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> activeTransaction
-                getReadConcern() >> readConcern
-            }
+            getOperationContext() >> operationContext
         }
         def writeBinding = Stub(WriteBinding) {
             getWriteConnectionSource() >> connectionSource
-            getServerApi() >> null
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> activeTransaction
-                getReadConcern() >> readConcern
-            }
+            getOperationContext() >> operationContext
         }
 
         if (retryable) {
@@ -321,20 +314,20 @@ class OperationFunctionalSpecification extends Specification {
         if (checkCommand) {
             1 * connection.command(*_) >> {
                 assert it[1] == expectedCommand
-                if (it.size() == 10) {
-                    SplittablePayload payload = it[8]
+                if (it.size() > 6) {
+                    SplittablePayload payload = it[7]
                     payload.setPosition(payload.size())
                 }
                 result
             }
-        } else if (checkSlaveOk) {
+        } else if (checkSecondaryOk) {
             1 * connection.command(*_) >> {
                 it[4] == readPreference
                 result
             }
         }
 
-        0 * connection.command(_, _, _, _, _, _, null) >> {
+        0 * connection.command(*_) >> {
             // Unexpected Command
             result
         }
@@ -352,9 +345,14 @@ class OperationFunctionalSpecification extends Specification {
     }
 
     def testAsyncOperation(operation = operation, List<Integer> serverVersion = serverVersion, ReadConcern readConcern, result = null,
-                           Boolean checkCommand = true, BsonDocument expectedCommand = null, Boolean checkSlaveOk = false,
+                           Boolean checkCommand = true, BsonDocument expectedCommand = null, Boolean checkSecondaryOk = false,
                            ReadPreference readPreference = ReadPreference.primary(), Boolean retryable = false,
                            ServerType serverType = ServerType.STANDALONE, Boolean activeTransaction = false) {
+        def operationContext = OPERATION_CONTEXT
+                .withSessionContext(Stub(SessionContext) {
+                    hasActiveTransaction() >> activeTransaction
+                    getReadConcern() >> readConcern
+                })
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> getMaxWireVersionForServerVersion(serverVersion)
@@ -364,7 +362,8 @@ class OperationFunctionalSpecification extends Specification {
 
         def connectionSource = Stub(AsyncConnectionSource) {
             getConnection(_) >> { it[0].onResult(connection, null) }
-            getServerApi() >> null
+            getReadPreference() >> readPreference
+            getOperationContext() >> operationContext
             getServerDescription() >> {
                 def builder = ServerDescription.builder().address(Stub(ServerAddress)).state(ServerConnectionState.CONNECTED)
                 if (new ServerVersion(serverVersion).compareTo(new ServerVersion(3, 6)) >= 0) {
@@ -374,23 +373,13 @@ class OperationFunctionalSpecification extends Specification {
             }
         }
         def readBinding = Stub(AsyncReadBinding) {
-            getReadConnectionSource(_) >> { it[0].onResult(connectionSource, null) }
+            getReadConnectionSource(*_) >> { it.last().onResult(connectionSource, null) }
             getReadPreference() >> readPreference
-            getServerApi() >> null
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> activeTransaction
-                getReadConcern() >> readConcern
-            }
+            getOperationContext() >> operationContext
         }
         def writeBinding = Stub(AsyncWriteBinding) {
             getWriteConnectionSource(_) >> { it[0].onResult(connectionSource, null) }
-            getServerApi() >> null
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> activeTransaction
-                getReadConcern() >> readConcern
-            }
+            getOperationContext() >> operationContext
         }
         def callback = new FutureResultCallback()
 
@@ -403,22 +392,22 @@ class OperationFunctionalSpecification extends Specification {
         if (checkCommand) {
             1 * connection.commandAsync(*_) >> {
                 assert it[1] == expectedCommand
-                if (it.size() == 11) {
-                    SplittablePayload payload = it[8]
+                if (it.size() > 7) {
+                    SplittablePayload payload = it[7]
                     payload.setPosition(payload.size())
                 }
                 it.last().onResult(result, null)
             }
-        } else if (checkSlaveOk) {
+        } else if (checkSecondaryOk) {
             1 * connection.commandAsync(*_) >> {
                 it[4] == readPreference
                 it.last().onResult(result, null)
             }
         }
 
-        0 * connection.commandAsync(_, _, _, _, _, _, _) >> {
+        0 * connection.commandAsync(*_) >> {
             // Unexpected Command
-            it[5].onResult(result, null)
+            it.last().onResult(result, null)
         }
 
         if (retryable) {
@@ -440,8 +429,7 @@ class OperationFunctionalSpecification extends Specification {
     }
 
     def testSyncRetryableOperationThrows(operation, Queue<List<Integer>> serverVersions, Queue<ServerType> serverTypes,
-                                         Throwable exception) {
-        def serverVersionSize = serverVersions.size()
+                                         Throwable exception, int expectedConnectionReleaseCount) {
         def connection = Mock(Connection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> {
@@ -453,6 +441,13 @@ class OperationFunctionalSpecification extends Specification {
             }
         }
 
+        def operationContext = OPERATION_CONTEXT.withSessionContext(
+                Stub(SessionContext) {
+                    hasSession() >> true
+                    hasActiveTransaction() >> false
+                    getReadConcern() >> ReadConcern.DEFAULT
+                })
+
         def connectionSource = Stub(ConnectionSource) {
             getConnection() >> {
                 if (serverVersions.isEmpty()){
@@ -461,33 +456,23 @@ class OperationFunctionalSpecification extends Specification {
                     connection
                 }
             }
-            getServerApi() >> null
+            getOperationContext() >> operationContext
         }
         def writeBinding = Stub(WriteBinding) {
             getWriteConnectionSource() >> connectionSource
-            getServerApi() >> null
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> false
-                getReadConcern() >> ReadConcern.DEFAULT
-            }
+            getOperationContext() >> operationContext
         }
 
         1 * connection.command(*_) >> {
             throw exception
         }
 
-        if (serverVersionSize == 2) {
-            1 * connection.release()
-        } else {
-            2 * connection.release()
-        }
+        expectedConnectionReleaseCount * connection.release()
         operation.execute(writeBinding)
     }
 
     def testAyncRetryableOperationThrows(operation, Queue<List<Integer>> serverVersions, Queue<ServerType> serverTypes,
-                                         Throwable exception) {
-        def serverVersionSize = serverVersions.size()
+                                         Throwable exception, int expectedConnectionReleaseCount) {
         def connection = Mock(AsyncConnection) {
             _ * getDescription() >> Stub(ConnectionDescription) {
                 getMaxWireVersion() >> {
@@ -499,8 +484,14 @@ class OperationFunctionalSpecification extends Specification {
             }
         }
 
+        def operationContext = OPERATION_CONTEXT.withSessionContext(
+                Stub(SessionContext) {
+                    hasSession() >> true
+                    hasActiveTransaction() >> false
+                    getReadConcern() >> ReadConcern.DEFAULT
+                })
+
         def connectionSource = Stub(AsyncConnectionSource) {
-            getServerApi() >> null
             getConnection(_) >> {
                 if (serverVersions.isEmpty()) {
                     it[0].onResult(null,
@@ -509,25 +500,17 @@ class OperationFunctionalSpecification extends Specification {
                     it[0].onResult(connection, null)
                 }
             }
+            getOperationContext() >> operationContext
         }
 
         def writeBinding = Stub(AsyncWriteBinding) {
-            getServerApi() >> null
             getWriteConnectionSource(_) >> { it[0].onResult(connectionSource, null) }
-            getSessionContext() >> Stub(SessionContext) {
-                hasSession() >> true
-                hasActiveTransaction() >> false
-                getReadConcern() >> ReadConcern.DEFAULT
-            }
+            getOperationContext() >> operationContext
         }
         def callback = new FutureResultCallback()
 
         1 * connection.commandAsync(*_) >> { it.last().onResult(null, exception) }
-        if (serverVersionSize == 2) {
-            1 * connection.release()
-        } else {
-            2 * connection.release()
-        }
+        expectedConnectionReleaseCount * connection.release()
 
         operation.executeAsync(writeBinding, callback)
         callback.get(1000, TimeUnit.MILLISECONDS)
@@ -551,10 +534,4 @@ class OperationFunctionalSpecification extends Specification {
             .locale('en')
             .collationStrength(CollationStrength.SECONDARY)
             .build()
-
-    static final FieldNameValidator NO_OP_FIELD_NAME_VALIDATOR = new NoOpFieldNameValidator()
-
-    static boolean serverVersionIsGreaterThan(List<Integer> actualVersion, List<Integer> minVersion) {
-        new ServerVersion(actualVersion).compareTo(new ServerVersion(minVersion)) >= 0
-    }
 }

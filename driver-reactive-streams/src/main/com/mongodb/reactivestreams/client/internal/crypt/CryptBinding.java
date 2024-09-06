@@ -18,17 +18,16 @@ package com.mongodb.reactivestreams.client.internal.crypt;
 
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
-import com.mongodb.ServerApi;
 import com.mongodb.connection.ServerDescription;
 import com.mongodb.internal.async.SingleResultCallback;
 import com.mongodb.internal.binding.AsyncClusterAwareReadWriteBinding;
 import com.mongodb.internal.binding.AsyncConnectionSource;
-import com.mongodb.internal.binding.AsyncReadWriteBinding;
 import com.mongodb.internal.connection.AsyncConnection;
-import com.mongodb.internal.connection.Cluster;
-import com.mongodb.internal.session.SessionContext;
-import com.mongodb.lang.Nullable;
+import com.mongodb.internal.connection.OperationContext;
 
+/**
+ * <p>This class is not part of the public API and may be removed or changed at any time</p>
+ */
 public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
 
     private final AsyncClusterAwareReadWriteBinding wrapped;
@@ -56,14 +55,8 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
     }
 
     @Override
-    public SessionContext getSessionContext() {
-        return wrapped.getSessionContext();
-    }
-
-    @Override
-    @Nullable
-    public ServerApi getServerApi() {
-        return wrapped.getServerApi();
+    public OperationContext getOperationContext() {
+        return wrapped.getOperationContext();
     }
 
     @Override
@@ -76,6 +69,19 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
             }
         });
     }
+
+    @Override
+    public void getReadConnectionSource(final int minWireVersion, final ReadPreference fallbackReadPreference,
+            final SingleResultCallback<AsyncConnectionSource> callback) {
+        wrapped.getReadConnectionSource(minWireVersion, fallbackReadPreference, (result, t) -> {
+            if (t != null) {
+                callback.onResult(null, t);
+            } else {
+                callback.onResult(new CryptConnectionSource(result), null);
+            }
+        });
+    }
+
 
     @Override
     public void getConnectionSource(final ServerAddress serverAddress, final SingleResultCallback<AsyncConnectionSource> callback) {
@@ -94,19 +100,14 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
     }
 
     @Override
-    public AsyncReadWriteBinding retain() {
+    public AsyncClusterAwareReadWriteBinding retain() {
         wrapped.retain();
         return this;
     }
 
     @Override
-    public void release() {
-        wrapped.release();
-    }
-
-    @Override
-    public Cluster getCluster() {
-        return wrapped.getCluster();
+    public int release() {
+        return wrapped.release();
     }
 
     private class CryptConnectionSource implements AsyncConnectionSource {
@@ -123,14 +124,13 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
         }
 
         @Override
-        public SessionContext getSessionContext() {
-            return wrapped.getSessionContext();
+        public OperationContext getOperationContext() {
+            return wrapped.getOperationContext();
         }
 
         @Override
-        @Nullable
-        public ServerApi getServerApi() {
-            return wrapped.getServerApi();
+        public ReadPreference getReadPreference() {
+            return wrapped.getReadPreference();
         }
 
         @Override
@@ -156,8 +156,8 @@ public class CryptBinding implements AsyncClusterAwareReadWriteBinding {
         }
 
         @Override
-        public void release() {
-            wrapped.release();
+        public int release() {
+            return wrapped.release();
         }
     }
 }

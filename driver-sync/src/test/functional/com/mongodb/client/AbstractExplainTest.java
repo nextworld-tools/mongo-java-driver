@@ -54,8 +54,6 @@ public abstract class AbstractExplainTest {
 
     @Test
     public void testExplainOfFind() {
-        assumeTrue(serverVersionAtLeast(3, 0));
-
         MongoCollection<BsonDocument> collection = client.getDatabase(getDefaultDatabaseName())
                 .getCollection("explainTest", BsonDocument.class);
         collection.drop();
@@ -99,32 +97,54 @@ public abstract class AbstractExplainTest {
         AggregateIterable<BsonDocument> iterable = collection
                 .aggregate(singletonList(Aggregates.match(Filters.eq("_id", 1))));
 
-        Document explainDocument = iterable.explain();
-        assertNotNull(explainDocument);
+        Document explainDocument = getAggregateExplainDocument(iterable.explain());
         assertTrue(explainDocument.containsKey("queryPlanner"));
         assertTrue(explainDocument.containsKey("executionStats"));
 
-        explainDocument = iterable.explain(ExplainVerbosity.QUERY_PLANNER);
+        explainDocument = getAggregateExplainDocument(iterable.explain(ExplainVerbosity.QUERY_PLANNER));
         assertNotNull(explainDocument);
         assertTrue(explainDocument.containsKey("queryPlanner"));
         assertFalse(explainDocument.containsKey("executionStats"));
 
-        BsonDocument explainBsonDocument = iterable.explain(BsonDocument.class);
+        BsonDocument explainBsonDocument = getAggregateExplainDocument(iterable.explain(BsonDocument.class));
         assertNotNull(explainBsonDocument);
         assertTrue(explainBsonDocument.containsKey("queryPlanner"));
         assertTrue(explainBsonDocument.containsKey("executionStats"));
 
-        explainBsonDocument = iterable.explain(BsonDocument.class, ExplainVerbosity.QUERY_PLANNER);
+        explainBsonDocument = getAggregateExplainDocument(iterable.explain(BsonDocument.class, ExplainVerbosity.QUERY_PLANNER));
         assertNotNull(explainBsonDocument);
         assertTrue(explainBsonDocument.containsKey("queryPlanner"));
         assertFalse(explainBsonDocument.containsKey("executionStats"));
+    }
+
+    // Post-MongoDB 7.0, sharded cluster responses move the explain plan document into a "shards" document, which a plan for each shard.
+    // This method grabs the explain plan document from the first shard when this new structure is present.
+    private static Document getAggregateExplainDocument(final Document rootAggregateExplainDocument) {
+        assertNotNull(rootAggregateExplainDocument);
+        Document aggregateExplainDocument = rootAggregateExplainDocument;
+        if (rootAggregateExplainDocument.containsKey("shards")) {
+            Document shardDocument = rootAggregateExplainDocument.get("shards", Document.class);
+            String firstKey = shardDocument.keySet().iterator().next();
+            aggregateExplainDocument = shardDocument.get(firstKey, Document.class);
+        }
+        return aggregateExplainDocument;
+    }
+
+    private static BsonDocument getAggregateExplainDocument(final BsonDocument rootAggregateExplainDocument) {
+        assertNotNull(rootAggregateExplainDocument);
+        BsonDocument aggregateExplainDocument = rootAggregateExplainDocument;
+        if (rootAggregateExplainDocument.containsKey("shards")) {
+            BsonDocument shardDocument = rootAggregateExplainDocument.getDocument("shards");
+            String firstKey = shardDocument.getFirstKey();
+            aggregateExplainDocument = shardDocument.getDocument(firstKey);
+        }
+        return aggregateExplainDocument;
     }
 
     @Test
     public void testExplainOfAggregateWithOldResponseStructure() {
         // Aggregate explain is supported on earlier versions, but the structure of the response on which we're asserting in this test
         // changed radically in 4.2. So here we just assert that we got a non-error respinse
-        assumeTrue(serverVersionAtLeast(3, 6));
         assumeTrue(serverVersionLessThan(4, 2));
 
         MongoCollection<BsonDocument> collection = client.getDatabase(getDefaultDatabaseName())

@@ -17,22 +17,16 @@
 package com.mongodb.reactivestreams.client.internal.crypt;
 
 import com.mongodb.MongoClientException;
-import com.mongodb.MongoNamespace;
 import com.mongodb.ReadPreference;
-import com.mongodb.ServerApi;
-import com.mongodb.WriteConcernResult;
 import com.mongodb.connection.ConnectionDescription;
 import com.mongodb.internal.async.SingleResultCallback;
-import com.mongodb.internal.bulk.DeleteRequest;
-import com.mongodb.internal.bulk.InsertRequest;
-import com.mongodb.internal.bulk.UpdateRequest;
 import com.mongodb.internal.connection.AsyncConnection;
 import com.mongodb.internal.connection.Connection;
 import com.mongodb.internal.connection.MessageSettings;
-import com.mongodb.internal.connection.QueryResult;
+import com.mongodb.internal.connection.OperationContext;
 import com.mongodb.internal.connection.SplittablePayload;
 import com.mongodb.internal.connection.SplittablePayloadBsonWriter;
-import com.mongodb.internal.session.SessionContext;
+import com.mongodb.internal.time.Timeout;
 import com.mongodb.internal.validator.MappedFieldNameValidator;
 import com.mongodb.lang.Nullable;
 import org.bson.BsonBinaryReader;
@@ -54,7 +48,6 @@ import org.bson.io.BasicOutputBuffer;
 import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -86,8 +79,8 @@ class CryptConnection implements AsyncConnection {
     }
 
     @Override
-    public void release() {
-        wrapped.release();
+    public int release() {
+        return wrapped.release();
     }
 
     @Override
@@ -97,16 +90,16 @@ class CryptConnection implements AsyncConnection {
 
     @Override
     public <T> void commandAsync(final String database, final BsonDocument command, final FieldNameValidator fieldNameValidator,
-                                 final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
-                                 final SessionContext sessionContext, final ServerApi serverApi, final SingleResultCallback<T> callback) {
-        commandAsync(database, command, fieldNameValidator, readPreference, commandResultDecoder, sessionContext, serverApi,
-                true, null, null, callback);
+                                 @Nullable final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
+                                 final OperationContext operationContext, final SingleResultCallback<T> callback) {
+        commandAsync(database, command, fieldNameValidator, readPreference, commandResultDecoder,
+                operationContext, true, null, null, callback);
     }
 
     @Override
     public <T> void commandAsync(final String database, final BsonDocument command, final FieldNameValidator commandFieldNameValidator,
-                                 final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
-                                 final SessionContext sessionContext, final ServerApi serverApi, final boolean responseExpected,
+                                 @Nullable final ReadPreference readPreference, final Decoder<T> commandResultDecoder,
+                                 final OperationContext operationContext, final boolean responseExpected,
                                  @Nullable final SplittablePayload payload, @Nullable final FieldNameValidator payloadFieldNameValidator,
                                  final SingleResultCallback<T> callback) {
 
@@ -125,14 +118,14 @@ class CryptConnection implements AsyncConnection {
                     : new SplittablePayloadBsonWriter(bsonBinaryWriter, bsonOutput, createSplittablePayloadMessageSettings(), payload,
                                                       MAX_SPLITTABLE_DOCUMENT_SIZE);
 
+            Timeout operationTimeout = operationContext.getTimeoutContext().getTimeout();
+
             getEncoder(command).encode(writer, command, EncoderContext.builder().build());
-            crypt.encrypt(database, new RawBsonDocument(bsonOutput.getInternalBuffer(), 0, bsonOutput.getSize()))
+            crypt.encrypt(database, new RawBsonDocument(bsonOutput.getInternalBuffer(), 0, bsonOutput.getSize()), operationTimeout)
                     .flatMap((Function<RawBsonDocument, Mono<RawBsonDocument>>) encryptedCommand ->
                             Mono.create(sink -> wrapped.commandAsync(database, encryptedCommand, commandFieldNameValidator, readPreference,
-                                                                     new RawBsonDocumentCodec(), sessionContext, serverApi,
-                                                                     responseExpected, null,
-                                                                     null, sinkToCallback(sink))))
-                    .flatMap(crypt::decrypt)
+                                    new RawBsonDocumentCodec(), operationContext, responseExpected, null, null, sinkToCallback(sink))))
+                    .flatMap(rawBsonDocument -> crypt.decrypt(rawBsonDocument, operationTimeout))
                     .map(decryptedResponse ->
                         commandResultDecoder.decode(new BsonBinaryReader(decryptedResponse.getByteBuffer().asNIO()),
                                                     DecoderContext.builder().build())
@@ -166,46 +159,6 @@ class CryptConnection implements AsyncConnection {
                 .maxMessageSize(getDescription().getMaxMessageSize())
                 .maxDocumentSize(getDescription().getMaxDocumentSize())
                 .build();
-    }
-
-
-    // UNSUPPORTED METHODS for encryption/decryption
-
-    @Override
-    public void insertAsync(final MongoNamespace namespace, final boolean ordered, final InsertRequest insertRequest,
-                            final SingleResultCallback<WriteConcernResult> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
-    }
-
-    @Override
-    public void updateAsync(final MongoNamespace namespace, final boolean ordered, final UpdateRequest updateRequest,
-                            final SingleResultCallback<WriteConcernResult> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
-    }
-
-    @Override
-    public void deleteAsync(final MongoNamespace namespace, final boolean ordered, final DeleteRequest deleteRequest,
-                            final SingleResultCallback<WriteConcernResult> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
-    }
-
-    @Override
-    public <T> void queryAsync(final MongoNamespace namespace, final BsonDocument queryDocument, final BsonDocument fields,
-                               final int skip, final int limit, final int batchSize, final boolean slaveOk, final boolean tailableCursor,
-                               final boolean awaitData, final boolean noCursorTimeout, final boolean partial, final boolean oplogReplay,
-                               final Decoder<T> resultDecoder, final SingleResultCallback<QueryResult<T>> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
-    }
-
-    @Override
-    public <T> void getMoreAsync(final MongoNamespace namespace, final long cursorId, final int numberToReturn,
-                                 final Decoder<T> resultDecoder, final SingleResultCallback<QueryResult<T>> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
-    }
-
-    @Override
-    public void killCursorAsync(final MongoNamespace namespace, final List<Long> cursors, final SingleResultCallback<Void> callback) {
-        callback.onResult(null, new UnsupportedOperationException());
     }
 
     @Override

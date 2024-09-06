@@ -19,43 +19,41 @@ package com.mongodb.reactivestreams.client;
 import com.mongodb.ClientSessionOptions;
 import com.mongodb.MongoClientException;
 import org.bson.Document;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
 import static com.mongodb.ClusterFixture.isSharded;
 import static com.mongodb.ClusterFixture.serverVersionLessThan;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TransactionFailureTest extends DatabaseTestCase {
     public TransactionFailureTest() {
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         assumeTrue(canRunTests());
         super.setUp();
     }
 
-    @Test(expected = MongoClientException.class)
+    @Test
     public void testTransactionFails() {
-        final ClientSession clientSession = createSession();
-
-        try {
+        try (ClientSession clientSession = createSession()) {
             clientSession.startTransaction();
-            Mono.from(collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"))).block(TIMEOUT_DURATION);
-        } finally {
-            clientSession.close();
+            assertThrows(MongoClientException.class, () ->
+                    Mono.from(collection.insertOne(clientSession, Document.parse("{_id: 1, a: 1}"))).block(TIMEOUT_DURATION));
         }
     }
 
     private ClientSession createSession() {
-        final ClientSessionOptions options = ClientSessionOptions.builder().build();
+        ClientSessionOptions options = ClientSessionOptions.builder().build();
         return Mono.from(client.startSession(options)).block(TIMEOUT_DURATION);
     }
 
     private boolean canRunTests() {
-        return serverVersionLessThan("4.0") || (serverVersionLessThan("4.1.0") && isSharded());
+        return serverVersionLessThan(4, 0) || (serverVersionLessThan(4, 2) && isSharded());
     }
 }

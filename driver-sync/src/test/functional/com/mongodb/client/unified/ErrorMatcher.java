@@ -20,28 +20,37 @@ import com.mongodb.MongoBulkWriteException;
 import com.mongodb.MongoClientException;
 import com.mongodb.MongoCommandException;
 import com.mongodb.MongoException;
-import com.mongodb.MongoQueryException;
+import com.mongodb.MongoSecurityException;
+import com.mongodb.MongoExecutionTimeoutException;
+import com.mongodb.MongoOperationTimeoutException;
+import com.mongodb.MongoServerException;
 import com.mongodb.MongoSocketException;
+import com.mongodb.MongoWriteConcernException;
+import com.mongodb.MongoWriteException;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.spockframework.util.Assert.fail;
 
 final class ErrorMatcher {
     private static final Set<String> EXPECTED_ERROR_FIELDS = new HashSet<>(
-            asList("isError", "expectError", "isClientError", "errorCode", "errorCodeName", "errorContains",
-                    "isClientError", "errorLabelsOmit", "errorLabelsContain", "expectResult"));
+            asList("isError", "expectError", "isClientError", "errorCode", "errorCodeName", "errorContains", "errorResponse",
+                    "isClientError", "isTimeoutError", "errorLabelsOmit", "errorLabelsContain", "expectResult"));
 
     private final AssertionContext context;
+    private final ValueMatcher valueMatcher;
 
-    ErrorMatcher(final AssertionContext context) {
+    ErrorMatcher(final AssertionContext context, final ValueMatcher valueMatcher) {
         this.context = context;
+        this.valueMatcher = valueMatcher;
     }
 
     void assertErrorsMatch(final BsonDocument expectedError, final Exception e) {
@@ -54,32 +63,58 @@ final class ErrorMatcher {
             assertTrue(context.getMessage("isError must be true"), expectedError.getBoolean("isError").getValue());
         }
         if (expectedError.containsKey("isClientError")) {
-            assertEquals(context.getMessage("Exception must be of type MongoClientException or IllegalArgumentException"),
+            assertEquals(context.getMessage("Exception must be of type MongoClientException or IllegalArgumentException"
+                            + " or IllegalStateException or MongoSocketException or MongoInternalException"),
                     expectedError.getBoolean("isClientError").getValue(),
-                    e instanceof MongoClientException || e instanceof IllegalArgumentException || e instanceof MongoSocketException);
+                    e instanceof MongoClientException || e instanceof IllegalArgumentException || e instanceof IllegalStateException
+                            || e instanceof MongoSocketException);
         }
+
+        if (expectedError.containsKey("isTimeoutError")) {
+            assertEquals(context.getMessage("Exception must be of type MongoOperationTimeoutException when checking for results"),
+                    expectedError.getBoolean("isTimeoutError").getValue(),
+                    e instanceof MongoOperationTimeoutException
+            );
+        }
+
         if (expectedError.containsKey("errorContains")) {
             String errorContains = expectedError.getString("errorContains").getValue();
             assertTrue(context.getMessage("Error message does not contain expected string: " + errorContains),
-                    e.getMessage().contains(errorContains));
+                    e.getMessage().toLowerCase(Locale.ROOT).contains(errorContains.toLowerCase(Locale.ROOT)));
+        }
+        if (expectedError.containsKey("errorResponse")) {
+            valueMatcher.assertValuesMatch(expectedError.getDocument("errorResponse"), ((MongoCommandException) e).getResponse());
         }
         if (expectedError.containsKey("errorCode")) {
-            assertTrue(context.getMessage("Exception must be of type MongoCommandException or MongoQueryException when checking"
-                            + " for error codes"),
-                    e instanceof MongoCommandException || e instanceof MongoQueryException);
-            int errorCode = (e instanceof MongoCommandException)
-                    ? ((MongoCommandException) e).getErrorCode()
-                    : ((MongoQueryException) e).getErrorCode();
+            Exception errorCodeException = e;
+            if (e instanceof MongoSecurityException && e.getCause() instanceof MongoCommandException) {
+                errorCodeException = (Exception) e.getCause();
+            }
+            assertTrue(context.getMessage("Exception must be of type MongoCommandException or MongoWriteException when checking"
+                            + " for error codes, but was " + e.getClass().getSimpleName()),
+                    errorCodeException instanceof MongoCommandException
+                            || errorCodeException instanceof MongoWriteException);
+            int errorCode = (errorCodeException instanceof MongoCommandException)
+                    ? ((MongoCommandException) errorCodeException).getErrorCode()
+                    : ((MongoWriteException) errorCodeException).getCode();
 
             assertEquals(context.getMessage("Error codes must match"), expectedError.getNumber("errorCode").intValue(),
                     errorCode);
         }
         if (expectedError.containsKey("errorCodeName")) {
-            assertTrue(context.getMessage("Exception must be of type MongoCommandException when checking for error codes"),
-                    e instanceof MongoCommandException);
-            MongoCommandException mongoCommandException = (MongoCommandException) e;
-            assertEquals(context.getMessage("Error code names must match"), expectedError.getString("errorCodeName").getValue(),
-                    mongoCommandException.getErrorCodeName());
+            String expectedErrorCodeName = expectedError.getString("errorCodeName").getValue();
+            if (e instanceof MongoExecutionTimeoutException) {
+                assertEquals(context.getMessage("Error code names must match"), expectedErrorCodeName, "MaxTimeMSExpired");
+            } else if (e instanceof MongoWriteConcernException) {
+                assertEquals(context.getMessage("Error code names must match"), expectedErrorCodeName,
+                        ((MongoWriteConcernException) e).getWriteConcernError().getCodeName());
+            } else if (e instanceof MongoServerException) {
+                assertEquals(context.getMessage("Error code names must match"), expectedErrorCodeName,
+                        ((MongoServerException) e).getErrorCodeName());
+            } else {
+                fail(context.getMessage(String.format("Unexpected exception type %s when asserting error code name",
+                        e.getClass().getSimpleName())));
+            }
         }
         if (expectedError.containsKey("errorLabelsOmit")) {
             assertTrue(context.getMessage("Exception must be of type MongoException when checking for error labels"),
@@ -100,10 +135,11 @@ final class ErrorMatcher {
             }
         }
         if (expectedError.containsKey("expectResult")) {
-            // MongoBulkWriteException does not include information about the successful writes, so this is the only check
-            // that can currently be done
-            assertTrue(context.getMessage("Exception must be of type MongoBulkWriteException when checking for results"),
-                    e instanceof MongoBulkWriteException);
+            // Neither MongoBulkWriteException nor MongoSocketException includes information about the successful writes, so this
+            // is the only check that can currently be done
+            assertTrue(context.getMessage("Exception must be of type MongoBulkWriteException or MongoSocketException "
+                            + "when checking for results, but actual type is " + e.getClass().getSimpleName()),
+                    e instanceof MongoBulkWriteException || e instanceof MongoSocketException);
         }
         context.pop();
     }

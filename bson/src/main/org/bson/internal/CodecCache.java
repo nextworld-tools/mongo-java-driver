@@ -17,38 +17,65 @@
 package org.bson.internal;
 
 import org.bson.codecs.Codec;
-import org.bson.codecs.configuration.CodecConfigurationException;
 
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static java.lang.String.format;
+import static org.bson.assertions.Assertions.assertNotNull;
 
 final class CodecCache {
-    private final ConcurrentMap<Class<?>, Optional<Codec<?>>> codecCache = new ConcurrentHashMap<>();
 
-    public boolean containsKey(final Class<?> clazz) {
-        return codecCache.containsKey(clazz);
-    }
+    static final class CodecCacheKey {
+        private final Class<?> clazz;
+        private final List<Type> types;
 
-    public void put(final Class<?> clazz, final Codec<?> codec){
-        codecCache.put(clazz, Optional.ofNullable(codec));
-    }
-
-    @SuppressWarnings("unchecked")
-    public synchronized <T> Codec<T> putIfMissing(final Class<T> clazz, final Codec<T> codec) {
-        Optional<Codec<?>> cachedCodec = codecCache.computeIfAbsent(clazz, clz -> Optional.of(codec));
-        if (cachedCodec.isPresent()) {
-            return (Codec<T>) cachedCodec.get();
+        CodecCacheKey(final Class<?> clazz, final List<Type> types) {
+            this.clazz = clazz;
+            this.types = types;
         }
-        codecCache.put(clazz, Optional.of(codec));
-        return codec;
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            CodecCacheKey that = (CodecCacheKey) o;
+            return clazz.equals(that.clazz) && Objects.equals(types, that.types);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(clazz, types);
+        }
+
+        @Override
+        public String toString() {
+            return "CodecCacheKey{"
+                    + "clazz=" + clazz
+                    + ", types=" + types
+                    + '}';
+        }
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> Codec<T> getOrThrow(final Class<T> clazz) {
-        return (Codec<T>) codecCache.getOrDefault(clazz, Optional.empty()).orElseThrow(
-                () -> new CodecConfigurationException(format("Can't find a codec for %s.", clazz)));
+    private final ConcurrentMap<CodecCacheKey, Codec<?>> codecCache = new ConcurrentHashMap<>();
+
+    public <T> Codec<T> putIfAbsent(final CodecCacheKey codecCacheKey, final Codec<T> codec) {
+        assertNotNull(codec);
+        @SuppressWarnings("unchecked")
+        Codec<T> prevCodec = (Codec<T>) codecCache.putIfAbsent(codecCacheKey, codec);
+        return prevCodec == null ? codec : prevCodec;
+    }
+
+    public <T> Optional<Codec<T>> get(final CodecCacheKey codecCacheKey) {
+        @SuppressWarnings("unchecked")
+        Codec<T> codec = (Codec<T>) codecCache.get(codecCacheKey);
+        return Optional.ofNullable(codec);
     }
 }

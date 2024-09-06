@@ -21,12 +21,17 @@ import com.mongodb.ServerAddress;
 import com.mongodb.TransactionOptions;
 import com.mongodb.client.ClientSession;
 import com.mongodb.client.TransactionBody;
+import com.mongodb.internal.TimeoutContext;
+import com.mongodb.lang.Nullable;
 import com.mongodb.session.ServerSession;
 import org.bson.BsonDocument;
 import org.bson.BsonTimestamp;
 import reactor.core.publisher.Mono;
 
 import static com.mongodb.ClusterFixture.TIMEOUT_DURATION;
+import static com.mongodb.internal.thread.InterruptionUtil.interruptAndCreateMongoInterruptedException;
+import static com.mongodb.reactivestreams.client.syncadapter.ContextHelper.CONTEXT;
+import static com.mongodb.reactivestreams.client.syncadapter.SyncMongoClient.getSleepAfterSessionClose;
 
 class SyncClientSession implements ClientSession {
     private final com.mongodb.reactivestreams.client.ClientSession wrapped;
@@ -107,6 +112,17 @@ class SyncClientSession implements ClientSession {
     }
 
     @Override
+    public void setSnapshotTimestamp(final BsonTimestamp snapshotTimestamp) {
+        wrapped.setSnapshotTimestamp(snapshotTimestamp);
+    }
+
+    @Override
+    @Nullable
+    public BsonTimestamp getSnapshotTimestamp() {
+        return wrapped.getSnapshotTimestamp();
+    }
+
+    @Override
     public BsonDocument getClusterTime() {
         return wrapped.getClusterTime();
     }
@@ -114,6 +130,7 @@ class SyncClientSession implements ClientSession {
     @Override
     public void close() {
         wrapped.close();
+        sleep(getSleepAfterSessionClose());
     }
 
     @Override
@@ -148,12 +165,12 @@ class SyncClientSession implements ClientSession {
 
     @Override
     public void commitTransaction() {
-        Mono.from(wrapped.commitTransaction()).block(TIMEOUT_DURATION);
+        Mono.from(wrapped.commitTransaction()).contextWrite(CONTEXT).block(TIMEOUT_DURATION);
     }
 
     @Override
     public void abortTransaction() {
-        Mono.from(wrapped.abortTransaction()).block(TIMEOUT_DURATION);
+        Mono.from(wrapped.abortTransaction()).contextWrite(CONTEXT).block(TIMEOUT_DURATION);
     }
 
     @Override
@@ -164,5 +181,18 @@ class SyncClientSession implements ClientSession {
     @Override
     public <T> T withTransaction(final TransactionBody<T> transactionBody, final TransactionOptions options) {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TimeoutContext getTimeoutContext() {
+        return wrapped.getTimeoutContext();
+    }
+
+    private static void sleep(final long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            throw interruptAndCreateMongoInterruptedException(null, e);
+        }
     }
 }

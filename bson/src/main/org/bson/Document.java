@@ -16,11 +16,18 @@
 
 package org.bson;
 
+import org.bson.codecs.BsonValueCodecProvider;
+import org.bson.codecs.Codec;
+import org.bson.codecs.CollectionCodecProvider;
 import org.bson.codecs.Decoder;
 import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
+import org.bson.codecs.DocumentCodecProvider;
 import org.bson.codecs.Encoder;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.IterableCodecProvider;
+import org.bson.codecs.MapCodecProvider;
+import org.bson.codecs.ValueCodecProvider;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.json.JsonMode;
@@ -45,8 +52,11 @@ import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
 import static org.bson.assertions.Assertions.isTrue;
 import static org.bson.assertions.Assertions.notNull;
+import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
+import static org.bson.codecs.configuration.CodecRegistries.withUuidRepresentation;
 
 /**
  * A representation of a document as a {@code Map}.  All iterators will traverse the elements in insertion order, as with {@code
@@ -56,19 +66,31 @@ import static org.bson.assertions.Assertions.notNull;
  * @since 3.0.0
  */
 public class Document implements Map<String, Object>, Serializable, Bson {
+    private static final Codec<Document> DEFAULT_CODEC =
+            withUuidRepresentation(fromProviders(asList(new ValueCodecProvider(),
+                    new CollectionCodecProvider(), new IterableCodecProvider(),
+                    new BsonValueCodecProvider(), new DocumentCodecProvider(), new MapCodecProvider())), UuidRepresentation.STANDARD)
+                    .get(Document.class);
+
     private static final long serialVersionUID = 6297731997167536582L;
 
     /**
+<<<<<<< HEAD
      * Nextworld mod
      * Changed from final to <nothing>
      */
     private LinkedHashMap<String, Object> documentAsMap;
+=======
+     * The map of keys to values.
+     */
+    private final LinkedHashMap<String, Object> documentAsMap;
+>>>>>>> fc7084d89f77472b0dc0cb720f3ac7e3a40df87d
 
     /**
      * Creates an empty Document instance.
      */
     public Document() {
-        documentAsMap = new LinkedHashMap<String, Object>();
+        documentAsMap = new LinkedHashMap<>();
     }
 
     /**
@@ -78,7 +100,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param value value
      */
     public Document(final String key, final Object value) {
-        documentAsMap = new LinkedHashMap<String, Object>();
+        documentAsMap = new LinkedHashMap<>();
         documentAsMap.put(key, value);
     }
 
@@ -87,8 +109,8 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param map initial map
      */
-    public Document(final Map<String, Object> map) {
-        documentAsMap = new LinkedHashMap<String, Object>(map);
+    public Document(final Map<String, ?> map) {
+        documentAsMap = new LinkedHashMap<>(map);
     }
 
 
@@ -101,7 +123,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
      */
     public static Document parse(final String json) {
-        return parse(json, new DocumentCodec());
+        return parse(json, DEFAULT_CODEC);
     }
 
     /**
@@ -121,7 +143,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
 
     @Override
     public <C> BsonDocument toBsonDocument(final Class<C> documentClass, final CodecRegistry codecRegistry) {
-        return new BsonDocumentWrapper<Document>(this, codecRegistry.get(Document.class));
+        return new BsonDocumentWrapper<>(this, codecRegistry.get(Document.class));
     }
 
     /**
@@ -176,7 +198,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * Gets the value in an embedded document, casting it to the given {@code Class<T>}.  The list of keys represents a path to the
      * embedded value, drilling down into an embedded document for each key. This is useful to avoid having casts in
      * client code, though the effect is the same.
-     *
+     * <p>
      * The generic type of the keys list is {@code ?} to be consistent with the corresponding {@code get} methods, but in practice
      * the actual type of the argument should be {@code List<String>}. So to get the embedded value of a key list that is of type String,
      * you would write {@code String name = doc.getEmbedded(List.of("employee", "manager", "name"), String.class)} instead of
@@ -200,7 +222,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * Gets the value in an embedded document, casting it to the given {@code Class<T>} or returning the default value if null.
      * The list of keys represents a path to the embedded value, drilling down into an embedded document for each key.
      * This is useful to avoid having casts in client code, though the effect is the same.
-     *
+     * <p>
      * The generic type of the keys list is {@code ?} to be consistent with the corresponding {@code get} methods, but in practice
      * the actual type of the argument should be {@code List<String>}. So to get the embedded value of a key list that is of type String,
      * you would write {@code String name = doc.getEmbedded(List.of("employee", "manager", "name"), "John Smith")} instead of
@@ -382,17 +404,17 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     // A ClassCastException will be thrown if an element in the list is not of type T.
     @SuppressWarnings("unchecked")
     private <T> List<T> constructValuesList(final Object key, final Class<T> clazz, final List<T> defaultValue) {
-        List<?> value = get(key, List.class);
+        List<T> value = get(key, List.class);
         if (value == null) {
             return defaultValue;
         }
 
         for (Object item : value) {
-            if (!clazz.isAssignableFrom(item.getClass())) {
+            if (item != null && !clazz.isAssignableFrom(item.getClass())) {
                 throw new ClassCastException(format("List element cannot be cast to %s", clazz.getName()));
             }
         }
-        return (List<T>) value;
+        return value;
     }
 
     /**
@@ -404,7 +426,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @see #toJson(JsonWriterSettings)
      * @see JsonWriterSettings
      */
-    @SuppressWarnings("deprecation")
     public String toJson() {
         return toJson(JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build());
     }
@@ -419,7 +440,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @throws org.bson.codecs.configuration.CodecConfigurationException if the document contains types not in the default registry
      */
     public String toJson(final JsonWriterSettings writerSettings) {
-        return toJson(writerSettings, new DocumentCodec());
+        return toJson(writerSettings, DEFAULT_CODEC);
     }
 
     /**
@@ -431,7 +452,6 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @return a JSON representation of this document
      * @throws org.bson.codecs.configuration.CodecConfigurationException if the registry does not contain a codec for the document values.
      */
-    @SuppressWarnings("deprecation")
     public String toJson(final Encoder<Document> encoder) {
         return toJson(JsonWriterSettings.builder().outputMode(JsonMode.RELAXED).build(), encoder);
     }
