@@ -65,6 +65,7 @@ import static java.lang.String.format;
  */
 public class JsonReader extends AbstractBsonReader {
 
+    private final boolean intern;
     private final JsonScanner scanner;
     private JsonToken pushedToken;
     private Object currentValue;
@@ -76,6 +77,16 @@ public class JsonReader extends AbstractBsonReader {
      */
     public JsonReader(final String json) {
         this(new JsonScanner(json));
+    }
+
+    /**
+     * Constructs a new instance with the given string positioned at a JSON object with option to intern
+     * all keys and string values.
+     *
+     * @param json     A string representation of a JSON object.
+     */
+    public JsonReader(final String json, final boolean intern) {
+        this(new JsonScanner(json), intern);
     }
 
     /**
@@ -93,8 +104,13 @@ public class JsonReader extends AbstractBsonReader {
     }
 
     private JsonReader(final JsonScanner scanner) {
+        this(scanner, false);
+    }
+
+    private JsonReader(final JsonScanner scanner, final boolean intern) {
         super();
         this.scanner = scanner;
+        this.intern = intern;
         setContext(new Context(null, BsonContextType.TOP_LEVEL));
     }
 
@@ -142,6 +158,11 @@ public class JsonReader extends AbstractBsonReader {
                      * NextWorld mod
                      */
                     String name = nameToken.getValue(String.class);
+
+                    if (intern) {
+                        name = name.intern();
+                    }
+
                     setCurrentName(name);
                     if (name.equals("CurrencyBigDecimalValue")){
                         nextWorldIsCurrencyBigDecimal = true;
@@ -244,7 +265,14 @@ public class JsonReader extends AbstractBsonReader {
                 break;
             case STRING:
                 setCurrentBsonType(BsonType.STRING);
-                currentValue = token.getValue();
+
+                String stringValue = (String) token.getValue();
+
+                if (intern) {
+                    stringValue = stringValue.intern();
+                }
+
+                currentValue = stringValue;
                 break;
             case UNQUOTED_STRING:
                 String value = token.getValue(String.class);

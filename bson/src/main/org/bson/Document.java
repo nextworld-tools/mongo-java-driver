@@ -21,6 +21,7 @@ import org.bson.codecs.DecoderContext;
 import org.bson.codecs.DocumentCodec;
 import org.bson.codecs.Encoder;
 import org.bson.codecs.EncoderContext;
+import org.bson.codecs.configuration.CodecConfigurationException;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.conversions.Bson;
 import org.bson.json.JsonMode;
@@ -97,7 +98,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param json the JSON string
      * @return a corresponding {@code Document} object
-     * @see org.bson.json.JsonReader
+     * @see JsonReader
      * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
      */
     public static Document parse(final String json) {
@@ -110,12 +111,27 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param json the JSON string
      * @param decoder the {@code Decoder} to use to parse the JSON string into a {@code Document}
      * @return a corresponding {@code Document} object
-     * @see org.bson.json.JsonReader
+     * @see JsonReader
      * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
      */
     public static Document parse(final String json, final Decoder<Document> decoder) {
         notNull("codec", decoder);
         JsonReader bsonReader = new JsonReader(json);
+        return decoder.decode(bsonReader, DecoderContext.builder().build());
+    }
+
+    /**
+     * NEXTWORLD MODIFICATION
+     * Parses a string in MongoDB Extended JSON format to a {@code Document}, interns all keys and string values.
+     *
+     * @param json the JSON string
+     * @return a corresponding {@code Document} object
+     * @see JsonReader
+     * @mongodb.driver.manual reference/mongodb-extended-json/ MongoDB Extended JSON
+     */
+    public static Document parseIntern(final String json) {
+        final JsonReader bsonReader = new JsonReader(json, true);
+        final Decoder<Document> decoder = new DocumentCodec();
         return decoder.decode(bsonReader, DecoderContext.builder().build());
     }
 
@@ -247,7 +263,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as an integer, which may be null
-     * @throws java.lang.ClassCastException if the value is not an integer
+     * @throws ClassCastException if the value is not an integer
      */
     public Integer getInteger(final Object key) {
         return (Integer) get(key);
@@ -259,7 +275,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param key          the key
      * @param defaultValue what to return if the value is null
      * @return the value as an integer, which may be null
-     * @throws java.lang.ClassCastException if the value is not an integer
+     * @throws ClassCastException if the value is not an integer
      */
     public int getInteger(final Object key, final int defaultValue) {
         return get(key, defaultValue);
@@ -270,7 +286,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as a long, which may be null
-     * @throws java.lang.ClassCastException if the value is not an long
+     * @throws ClassCastException if the value is not an long
      */
     public Long getLong(final Object key) {
         return (Long) get(key);
@@ -281,7 +297,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as a double, which may be null
-     * @throws java.lang.ClassCastException if the value is not an double
+     * @throws ClassCastException if the value is not an double
      */
     public Double getDouble(final Object key) {
         return (Double) get(key);
@@ -292,7 +308,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as a String, which may be null
-     * @throws java.lang.ClassCastException if the value is not a String
+     * @throws ClassCastException if the value is not a String
      */
     public String getString(final Object key) {
         return (String) get(key);
@@ -303,7 +319,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as a Boolean, which may be null
-     * @throws java.lang.ClassCastException if the value is not an boolean
+     * @throws ClassCastException if the value is not an boolean
      */
     public Boolean getBoolean(final Object key) {
         return (Boolean) get(key);
@@ -315,7 +331,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param key          the key
      * @param defaultValue what to return if the value is null
      * @return the value as a primitive boolean
-     * @throws java.lang.ClassCastException if the value is not a boolean
+     * @throws ClassCastException if the value is not a boolean
      */
     public boolean getBoolean(final Object key, final boolean defaultValue) {
         return get(key, defaultValue);
@@ -326,7 +342,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as an ObjectId, which may be null
-     * @throws java.lang.ClassCastException if the value is not an ObjectId
+     * @throws ClassCastException if the value is not an ObjectId
      */
     public ObjectId getObjectId(final Object key) {
         return (ObjectId) get(key);
@@ -337,7 +353,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param key the key
      * @return the value as a Date, which may be null
-     * @throws java.lang.ClassCastException if the value is not a Date
+     * @throws ClassCastException if the value is not a Date
      */
     public Date getDate(final Object key) {
         return (Date) get(key);
@@ -396,11 +412,11 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     /**
-     * Gets a JSON representation of this document using the {@link org.bson.json.JsonMode#RELAXED} output mode, and otherwise the default
+     * Gets a JSON representation of this document using the {@link JsonMode#RELAXED} output mode, and otherwise the default
      * settings of {@link JsonWriterSettings.Builder} and {@link DocumentCodec}.
      *
      * @return a JSON representation of this document
-     * @throws org.bson.codecs.configuration.CodecConfigurationException if the document contains types not in the default registry
+     * @throws CodecConfigurationException if the document contains types not in the default registry
      * @see #toJson(JsonWriterSettings)
      * @see JsonWriterSettings
      */
@@ -416,7 +432,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param writerSettings the json writer settings to use when encoding
      * @return a JSON representation of this document
-     * @throws org.bson.codecs.configuration.CodecConfigurationException if the document contains types not in the default registry
+     * @throws CodecConfigurationException if the document contains types not in the default registry
      */
     public String toJson(final JsonWriterSettings writerSettings) {
         return toJson(writerSettings, new DocumentCodec());
@@ -429,7 +445,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      *
      * @param encoder the document codec instance to use to encode the document
      * @return a JSON representation of this document
-     * @throws org.bson.codecs.configuration.CodecConfigurationException if the registry does not contain a codec for the document values.
+     * @throws CodecConfigurationException if the registry does not contain a codec for the document values.
      */
     @SuppressWarnings("deprecation")
     public String toJson(final Encoder<Document> encoder) {
@@ -442,7 +458,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
      * @param writerSettings the json writer settings to use when encoding
      * @param encoder the document codec instance to use to encode the document
      * @return a JSON representation of this document
-     * @throws org.bson.codecs.configuration.CodecConfigurationException if the registry does not contain a codec for the document values.
+     * @throws CodecConfigurationException if the registry does not contain a codec for the document values.
      */
     public String toJson(final JsonWriterSettings writerSettings, final Encoder<Document> encoder) {
         JsonWriter writer = new JsonWriter(new StringWriter(), writerSettings);
@@ -508,7 +524,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
     }
 
     @Override
-    public Set<Map.Entry<String, Object>> entrySet() {
+    public Set<Entry<String, Object>> entrySet() {
         return documentAsMap.entrySet();
     }
 
@@ -644,7 +660,7 @@ public class Document implements Map<String, Object>, Serializable, Bson {
 
     /**
      * Nextworld Mod
-     * @param Object value the value for which to generate a checksum
+     * @param value value the value for which to generate a checksum
      * @return Long checksum
      */
     public static long generateCheckSum(Object value){
